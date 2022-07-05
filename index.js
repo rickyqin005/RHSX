@@ -53,47 +53,43 @@ class Trader {
 // Orders
 class Order {
     static #nextId = 1;
-    static #getNextId() {
-        return this.#nextId++;
-    }
+    static #getNextId() {return this.#nextId++;}
     static NOT_FILLED = 0;
     static PARTIALLY_FILLED = 1;
     static COMPLETELY_FILLED = 2;
+    static UNFULFILLABLE = 0;
 
     #id;
     #user;
     #direction;
     #type;
     #ticker;
-    #quantity;
-    #quantityFilled;
-    #price;
 
-    constructor(user, direction, type, ticker, quantity, price) {
+    constructor(user, direction, type, ticker) {
         this.#id = Order.#getNextId();
         this.#user = user;
         this.#direction = direction;
         this.#type = type;
         this.#ticker = ticker;
-        this.#quantity = quantity;
-        this.#quantityFilled = 0;
-        this.#price = price;
     }
 
     toString() {
-        return `Id: ${this.#id}, User: ${this.#user.tag}, ${this.#direction} ${this.#type} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.#ticker} @${this.#price}`;
+        return `Id: ${this.getId()}, User: ${this.getUser().tag}`;
     }
-
     toShortString() {
-        return `Id: ${this.#id}, ${this.#direction} ${this.#type} x${this.getQuantity()} ${this.#ticker} @${this.#price}`;
+        return `Id: ${this.getId()}`;
     }
-
     orderSubmittedString() {
         return `${getPingString(this.#user)} Your order: \`${this.toShortString()}\` is submitted.`;
     }
-
     orderFilledString() {
         return `${getPingString(this.#user)} Your order: \`${this.toShortString()}\` is filled.`;
+    }
+    orderCancelledString(reason) {
+        if(reason == Order.UNFULFILLABLE) {
+            return `${getPingString(this.#user)} Your order: \`${this.toShortString()}\` is cancelled because it cannot be fulfilled.`;
+        }
+        return `${getPingString(this.#user)} Your order: \`${this.toShortString()}\` is cancelled`;
     }
 
     getId() {
@@ -111,11 +107,38 @@ class Order {
     getTicker() {
         return this.#ticker;
     }
+}
+
+class LimitOrder extends Order {
+    #quantity;
+    #quantityFilled;
+    #price;
+
+    constructor(user, direction, ticker, quantity, price) {
+        super(user, direction, 'LIMIT', ticker);
+        this.#quantity = quantity;
+        this.#quantityFilled = 0;
+        this.#price = price;
+    }
+
+    toString() {
+        return `${super.toString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}`;
+    }
+    toShortString() {
+        return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+    }
+
     getQuantity() {
         return this.#quantity;
     }
     getQuantityFilled() {
         return this.#quantityFilled;
+    }
+    getQuantityUnfilled() {
+        return this.#quantity - this.#quantityFilled;
+    }
+    getPrice() {
+        return this.#price;
     }
 
     getStatus() {
@@ -137,16 +160,61 @@ class Order {
             case Order.COMPLETELY_FILLED:
                 channel.send(this.orderFilledString());
                 break;
-        
+
         }
         return this.getStatus();
     }
+}
 
+class MarketOrder extends Order {
+    #quantity;
+    #quantityFilled;
+
+    constructor(user, direction, ticker, quantity) {
+        super(user, direction, 'MARKET', ticker);
+        this.#quantity = quantity;
+        this.#quantityFilled = 0;
+    }
+
+    toString() {
+        return `${super.toString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()}`;
+    }
+    toShortString() {
+        return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()}`;
+    }
+
+    getQuantity() {
+        return this.#quantity;
+    }
+    getQuantityFilled() {
+        return this.#quantityFilled;
+    }
     getQuantityUnfilled() {
         return this.#quantity - this.#quantityFilled;
     }
-    getPrice() {
-        return this.#price;
+
+    getStatus() {
+        if(this.#quantityFilled == 0) return Order.NOT_FILLED;
+        else if(this.#quantityFilled < this.#quantity) return Order.PARTIALLY_FILLED;
+        else if(this.#quantityFilled == this.#quantity) return Order.COMPLETELY_FILLED;
+    }
+
+    increaseQuantityFilled(amount, channel) {
+        this.#quantityFilled += amount;
+
+        switch(this.getStatus()) {
+            case Order.NOT_FILLED:
+                break;
+
+            case Order.PARTIALLY_FILLED:
+                break;
+
+            case Order.COMPLETELY_FILLED:
+                channel.send(this.orderFilledString());
+                break;
+
+        }
+        return this.getStatus();
     }
 }
 
@@ -187,12 +255,16 @@ class PriorityQueue {
         this.#array.splice(0,1);
     }
 
+    forEach(funct) {
+        this.#array.forEach(funct);
+    }
+
     // prints all the elements in order of the priority queue
     printAll() {
         if(this.#array.length == 0) {
             return 'No items present.' + '\n';
         }
-    
+
         let str = '';
         for(let i = 0; i < this.#array.length; i++) {
             str += this.#array[i].toString() + '\n';
@@ -205,7 +277,7 @@ class PriorityQueue {
         if(this.#array.length == 0) {
             return 'No items present.' + '\n';
         }
-    
+
         let str = '';
         for(let i = this.#array.length-1; i >= 0; i--) {
             str += this.#array[i].toString() + '\n';
@@ -251,18 +323,37 @@ class OrderBook {
 
         let str = '';
         str += 'Bids:' + '\n';
+        // str += `Order depth: ${this.getBidsDepth(ticker)}` + '\n';
         str += '```';
         str += this.#getTicker(ticker).bids.printAllReverse();
         str += '```';
         str += '\n';
 
         str += 'Asks:' + '\n';
+        // str += `Order depth: ${this.getAsksDepth(ticker)}` + '\n';
         str += '```';
         str += this.#getTicker(ticker).asks.printAll();
         str += '```';
         return str;
     }
 
+    getBidsDepth(ticker) {
+        if(!this.#hasTicker(ticker)) return 0;
+        let sum = 0;
+        this.#getTicker(ticker).bids.forEach(bid => {
+            sum += bid.getQuantityUnfilled();
+        });
+        return sum;
+    }
+
+    getAsksDepth(ticker) {
+        if(!this.#hasTicker(ticker)) return 0;
+        let sum = 0;
+        this.#getTicker(ticker).asks.forEach(ask => {
+            sum += ask.getQuantityUnfilled();
+        });
+        return sum;
+    }
 
     #getTicker(ticker) {
         return this.#tickers.get(ticker);
@@ -271,71 +362,95 @@ class OrderBook {
         return OrderBook.VALID_TICKERS.includes(ticker);
     }
 
-    submitOrder(order, channel) {
+    submitLimitOrder(order, channel) {
         if(!this.#hasTicker(order.getTicker())) {
             channel.send('Invalid ticker.'); return;
         }
 
         if(order.getDirection() == 'BUY') {
-            switch(order.getType()) {
-                case 'LIMIT': {
-                    traders.get(order.getUser()).addOrder(order);
-                    channel.send(order.orderSubmittedString());
-                    let orderStatus = Order.NOT_FILLED;
+            channel.send(order.orderSubmittedString());
 
-                    let asks = this.#getTicker(order.getTicker()).asks;
-                    let bids = this.#getTicker(order.getTicker()).bids;
-                    while(!asks.empty() && orderStatus != Order.COMPLETELY_FILLED) {
-                        let bestAsk = asks.peek();
-                        if(order.getPrice() < bestAsk.getPrice()) break;
+            let orderStatus = Order.NOT_FILLED;
+            let asks = this.#getTicker(order.getTicker()).asks;
+            let bids = this.#getTicker(order.getTicker()).bids;
+            while(!asks.empty() && orderStatus != Order.COMPLETELY_FILLED) {
+                let bestAsk = asks.peek();
+                if(order.getPrice() < bestAsk.getPrice()) break;
 
-                        let quantityTradable = Math.min(order.getQuantityUnfilled(), bestAsk.getQuantityUnfilled());
-                        orderStatus = order.increaseQuantityFilled(quantityTradable, channel);
-                        let bestAskStatus = bestAsk.increaseQuantityFilled(quantityTradable, channel);
-                        if(bestAskStatus == Order.COMPLETELY_FILLED) asks.poll();
-                    }
-                    if(orderStatus != Order.COMPLETELY_FILLED) bids.add(order);
-
-                    break;
-                }
-                case 'MARKET': {
-                    traders.get(order.getUser()).addOrder(order);
-                    channel.send(order.orderSubmittedString());
-                    break;
-                }
-                case 'STOPLOSS': {
-                    traders.get(order.getUser()).addOrder(order);
-                    channel.send(order.orderSubmittedString());
-                    break;
-                }
+                let quantityTradable = Math.min(order.getQuantityUnfilled(), bestAsk.getQuantityUnfilled());
+                orderStatus = order.increaseQuantityFilled(quantityTradable, channel);
+                let bestAskStatus = bestAsk.increaseQuantityFilled(quantityTradable, channel);
+                if(bestAskStatus == Order.COMPLETELY_FILLED) asks.poll();
             }
+            if(orderStatus != Order.COMPLETELY_FILLED) bids.add(order);
+            traders.get(order.getUser()).addOrder(order);
 
         } else if(order.getDirection() == 'SELL') {
-            switch(order.getType()) {
-                case 'LIMIT': {
-                    channel.send(order.orderSubmittedString());
-                    let orderStatus = Order.NOT_FILLED;
+            channel.send(order.orderSubmittedString());
 
-                    let asks = this.#getTicker(order.getTicker()).asks;
-                    let bids = this.#getTicker(order.getTicker()).bids;
-                    while(!bids.empty() && orderStatus != Order.COMPLETELY_FILLED) {
-                        let bestBid = bids.peek();
-                        if(bestBid.getPrice() < order.getPrice()) break;
-            
-                        let quantityTradable = Math.min(order.getQuantityUnfilled(), bestBid.getQuantityUnfilled());
-                        orderStatus = order.increaseQuantityFilled(quantityTradable, channel);
-                        let bestBidStatus = bestBid.increaseQuantityFilled(quantityTradable, channel);
-                        if(bestBidStatus == Order.COMPLETELY_FILLED) bids.poll();
-                    }
-                    if(orderStatus != Order.COMPLETELY_FILLED) asks.add(order);
+            let orderStatus = Order.NOT_FILLED;
+            let asks = this.#getTicker(order.getTicker()).asks;
+            let bids = this.#getTicker(order.getTicker()).bids;
+            while(!bids.empty() && orderStatus != Order.COMPLETELY_FILLED) {
+                let bestBid = bids.peek();
+                if(bestBid.getPrice() < order.getPrice()) break;
 
-                    break;
-                }
-                case 'MARKET':
-                    break;
-                case 'STOPLOSS':
-                    break;
+                let quantityTradable = Math.min(order.getQuantityUnfilled(), bestBid.getQuantityUnfilled());
+                orderStatus = order.increaseQuantityFilled(quantityTradable, channel);
+                let bestBidStatus = bestBid.increaseQuantityFilled(quantityTradable, channel);
+                if(bestBidStatus == Order.COMPLETELY_FILLED) bids.poll();
             }
+            if(orderStatus != Order.COMPLETELY_FILLED) asks.add(order);
+            traders.get(order.getUser()).addOrder(order);
+
+        }
+    }
+
+    submitMarketOrder(order, channel) {
+        if(!this.#hasTicker(order.getTicker())) {
+            channel.send('Invalid ticker.'); return;
+        }
+
+        if(order.getDirection() == 'BUY') {
+            channel.send(order.orderSubmittedString());
+            if(order.getQuantity() > this.getAsksDepth(order.getTicker())) {
+                channel.send(order.orderCancelledString(Order.UNFULFILLABLE)); return;
+            }
+
+            let orderStatus = Order.NOT_FILLED;
+            let asks = this.#getTicker(order.getTicker()).asks;
+            let bids = this.#getTicker(order.getTicker()).bids;
+            while(orderStatus != Order.COMPLETELY_FILLED) {
+                let bestAsk = asks.peek();
+
+                let quantityTradable = Math.min(order.getQuantityUnfilled(), bestAsk.getQuantityUnfilled());
+                orderStatus = order.increaseQuantityFilled(quantityTradable, channel);
+                let bestAskStatus = bestAsk.increaseQuantityFilled(quantityTradable, channel);
+                if(bestAskStatus == Order.COMPLETELY_FILLED) asks.poll();
+            }
+
+            traders.get(order.getUser()).addOrder(order);
+
+        } else if(order.getDirection() == 'SELL') {
+            channel.send(order.orderSubmittedString());
+            if(order.getQuantity() > this.getBidsDepth(order.getTicker())) {
+                channel.send(order.orderCancelledString(Order.UNFULFILLABLE)); return;
+            }
+
+            let orderStatus = Order.NOT_FILLED;
+            let asks = this.#getTicker(order.getTicker()).asks;
+            let bids = this.#getTicker(order.getTicker()).bids;
+            while(orderStatus != Order.COMPLETELY_FILLED) {
+                let bestBid = bids.peek();
+
+                let quantityTradable = Math.min(order.getQuantityUnfilled(), bestBid.getQuantityUnfilled());
+                orderStatus = order.increaseQuantityFilled(quantityTradable, channel);
+                let bestBidStatus = bestBid.increaseQuantityFilled(quantityTradable, channel);
+                if(bestBidStatus == Order.COMPLETELY_FILLED) bids.poll();
+            }
+
+            traders.get(order.getUser()).addOrder(order);
+
         }
     }
 }
@@ -353,14 +468,16 @@ client.on('messageCreate', (msg) => {
 
     switch(args[0]) {
         case '!help': {
-            let infoString = 
-                '!help' + '\n' + 
-                '!join' + '\n' + 
-                '!buy LIMIT [ticker] [quantity] [price]' + '\n' + 
-                '!buy MARKET [ticker] [quantity]' + '\n' + 
-                '!sell LIMIT [ticker] [quantity] [price]' + '\n' + 
-                '!sell MARKET [ticker] [quantity]' + '\n' + 
-                '!orderbook [ticker]' + '\n' + 
+            let infoString =
+                '!help' + '\n' +
+                '!join' + '\n' +
+                '!buy LIMIT [ticker] [quantity] [price]' + '\n' +
+                '!sell LIMIT [ticker] [quantity] [price]' + '\n' +
+                '!buy MARKET [ticker] [quantity]' + '\n' +
+                '!sell MARKET [ticker] [quantity]' + '\n' +
+                // '!buy STOPLOSS [ticker] [quantity] [trigger price] [trade price]' + '\n' +
+                // '!sell STOPLOSS [ticker] [quantity] [trigger price] [trade price]' + '\n' +
+                '!orderbook [ticker]' + '\n' +
                 '!tickerlist';
 
             msg.channel.send('```' + infoString + '```');
@@ -375,17 +492,47 @@ client.on('messageCreate', (msg) => {
 
         case '!buy': {
             if(!isValidTrader(msg.author)) return;
-      
-            let order = new Order(msg.author, 'BUY', args[1], args[2], parseInt(args[3]), parseInt(args[4]));
-            orderBook.submitOrder(order, msg.channel);
+
+            switch(args[1]) {
+                case 'LIMIT': {
+                    let order = new LimitOrder(msg.author, 'BUY', args[2], parseInt(args[3]), parseInt(args[4]));
+                    orderBook.submitLimitOrder(order, msg.channel);
+                    break;
+                }
+                case 'MARKET': {
+                    let order = new MarketOrder(msg.author, 'BUY', args[2], parseInt(args[3]));
+                    orderBook.submitMarketOrder(order, msg.channel);
+                    break;
+                }
+                case 'STOPLOSS': {
+                    let order = new StopLossOrder(msg.author, 'BUY', args[2], parseInt(args[3]), parseInt(args[4]), parseInt(args[5]));
+                    orderBook.submitStopLossOrder(order, msg.channel);
+                    break;
+                }
+            }
             break;
         }
 
         case '!sell': {
             if(!isValidTrader(msg.author)) return;
 
-            let order = new Order(msg.author, 'SELL', args[1], args[2], parseInt(args[3]), parseInt(args[4]));
-            orderBook.submitOrder(order, msg.channel);
+            switch(args[1]) {
+                case 'LIMIT': {
+                    let order = new LimitOrder(msg.author, 'SELL', args[2], parseInt(args[3]), parseInt(args[4]));
+                    orderBook.submitLimitOrder(order, msg.channel);
+                    break;
+                }
+                case 'MARKET': {
+                    let order = new MarketOrder(msg.author, 'SELL', args[2], parseInt(args[3]));
+                    orderBook.submitMarketOrder(order, msg.channel);
+                    break;
+                }
+                case 'STOPLOSS': {
+                    let order = new StopLossOrder(msg.author, 'SELL', args[2], parseInt(args[3]), parseInt(args[4]), parseInt(args[5]));
+                    orderBook.submitStopLossOrder(order, msg.channel);
+                    break;
+                }
+            }
             break;
         }
 
