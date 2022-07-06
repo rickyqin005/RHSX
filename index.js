@@ -28,11 +28,31 @@ class Trader {
 
     toString() {
         let str = '';
-        str += `Username: ${this.#user.tag}` + '\n';
         str += `Balance: ${this.#balance}` + '\n';
-        for(let i = 0; i < orders.length; i++) {
-            str += orders[i].toShortString();
+        str += '\n';
+        str += `Pending Orders:` + '\n';
+        let pendingOrdersCount = 0;
+        for(let i = 0; i < this.#orders.length; i++) {
+            if(this.#orders[i].getStatus() != Order.COMPLETELY_FILLED) {
+                str += `\`${this.#orders[i].toNonUserString()}\`` + '\n';
+                pendingOrdersCount++;
+            }
         }
+        if(pendingOrdersCount == 0) str += '`None`';
+        return str;
+    }
+
+    getTradeHistoryString() {
+        let str = '';
+        let tradeCount = 0;
+        for(let i = 0; i < this.#orders.length; i++) {
+            if(this.#orders[i].getStatus() == Order.COMPLETELY_FILLED) {
+                str += `\`${this.#orders[i].toShortString()}\`` + '\n';
+                tradeCount++;
+            }
+        }
+        if(tradeCount == 0) str += '`Empty`';
+        return str;
     }
 
     getUser() {
@@ -75,6 +95,9 @@ class Order {
 
     toString() {
         return `Id: ${this.getId()}, User: ${this.getUser().tag}`;
+    }
+    toNonUserString() {
+        return `Id: ${this.getId()}`;
     }
     toShortString() {
         return `Id: ${this.getId()}`;
@@ -123,6 +146,9 @@ class LimitOrder extends Order {
 
     toString() {
         return `${super.toString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}`;
+    }
+    toNonUserString() {
+        return `${super.toNonUserString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}`;
     }
     toShortString() {
         return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
@@ -177,10 +203,13 @@ class MarketOrder extends Order {
     }
 
     toString() {
-        return `${super.toString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()}`;
+        return `${super.toString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
+    }
+    toNonUserString() {
+        return `${super.toNonUserString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
     }
     toShortString() {
-        return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()}`;
+        return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
     }
 
     getQuantity() {
@@ -286,12 +315,26 @@ class PriorityQueue {
     }
 }
 
+class Ticker {
+    symbol;
+    lastTradedPrice;
+    bids;
+    asks;
+
+    constructor(symbol) {
+        this.symbol = symbol;
+        this.lastTradedPrice = 50;
+        this.bids = new PriorityQueue(OrderBook.BIDS_COMPARATOR);
+        this.asks = new PriorityQueue(OrderBook.ASKS_COMPARATOR);
+    }
+}
+
 class OrderBook {
-    static #BIDS_COMPARATOR = function(a, b) {
+    static BIDS_COMPARATOR = function(a, b) {
         if(a.getPrice() == b.getPrice()) return a.getId() < b.getId();
         return a.getPrice() > b.getPrice();
     }
-    static #ASKS_COMPARATOR = function(a, b) {
+    static ASKS_COMPARATOR = function(a, b) {
         if(a.getPrice() == b.getPrice()) return a.getId() < b.getId();
         return a.getPrice() < b.getPrice();
     }
@@ -307,14 +350,10 @@ class OrderBook {
     }
 
     #tickers = new Map();
-    #orders = [];
 
     constructor() {
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
-            this.#tickers.set(OrderBook.VALID_TICKERS[i], new class {
-                bids = new PriorityQueue(OrderBook.#BIDS_COMPARATOR);
-                asks = new PriorityQueue(OrderBook.#ASKS_COMPARATOR);
-            });
+            this.#tickers.set(OrderBook.VALID_TICKERS[i], new Ticker(OrderBook.VALID_TICKERS[i]));
         }
     }
 
@@ -453,6 +492,10 @@ class OrderBook {
 
         }
     }
+
+    submitStopLossOrder(order, channel) {
+
+    }
 }
 let orderBook = new OrderBook();
 
@@ -471,6 +514,8 @@ client.on('messageCreate', (msg) => {
             let infoString =
                 '!help' + '\n' +
                 '!join' + '\n' +
+                '!position' + '\n' +
+                '!tradehistory' + '\n' +
                 '!buy LIMIT [ticker] [quantity] [price]' + '\n' +
                 '!sell LIMIT [ticker] [quantity] [price]' + '\n' +
                 '!buy MARKET [ticker] [quantity]' + '\n' +
@@ -488,6 +533,16 @@ client.on('messageCreate', (msg) => {
             if(isValidTrader(msg.author)) return;
             msg.channel.send(`${getPingString(msg.author)} You've been added to the trader list.`);
             traders.set(msg.author, new Trader(msg.author));
+            break;
+
+        case '!position':
+            if(!isValidTrader(msg.author)) return;
+            msg.channel.send(traders.get(msg.author).toString());
+            break;
+
+        case '!tradehistory':
+            if(!isValidTrader(msg.author)) return;
+            msg.channel.send(traders.get(msg.author).getTradeHistoryString());
             break;
 
         case '!buy': {
