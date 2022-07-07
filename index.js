@@ -74,7 +74,9 @@ class Trader {
 // Orders
 class Order {
     static #nextId = 1;
-    static #getNextId() {return this.#nextId++;}
+    static #getNextId() {
+        return this.#nextId++;
+    }
     static NOT_FILLED = 0;
     static PARTIALLY_FILLED = 1;
     static COMPLETELY_FILLED = 2;
