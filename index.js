@@ -520,7 +520,7 @@ class OrderBook {
     }
 
     submitStopLossOrder(order, channel) {
-        if(!validateOrder(order, channel)) return;
+        if(!this.#validateOrder(order, channel)) return;
         channel.send(order.orderSubmittedString());
 
         this.#getTicker(order.getTicker()).stops.push(order);
