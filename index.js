@@ -374,13 +374,13 @@ class Ticker {
 
         str += 'Bids:' + '\n';
         str += '```';
-        str += this.#getTicker(ticker).bids.printAllReverse();
+        str += this.bids.printAllReverse();
         str += '```';
         str += '\n';
 
         str += 'Asks:' + '\n';
         str += '```';
-        str += this.#getTicker(ticker).asks.printAll();
+        str += this.asks.printAll();
         str += '```';
         return str;
     }
