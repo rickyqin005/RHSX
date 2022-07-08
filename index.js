@@ -259,7 +259,7 @@ class StopLossOrder extends Order {
     }
 
     isExecuted() {
-        return #isExecuted;
+        return this.#isExecuted;
     }
 }
 
