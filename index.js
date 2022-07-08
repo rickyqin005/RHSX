@@ -378,13 +378,15 @@ class Ticker {
         for(let i = 0; i < this.stops.length; i++) {
             if(this.stops[i].getDirection() == 'BUY' && tickDirection == 'BUY') {
                 if(currPrice < this.stops[i].getTriggerPrice() && this.stops[i].getTriggerPrice() <= newPrice) {
+                    let stop = this.stops[i];
                     this.stops.splice(i, 1); i--;
-                    this.stops[i].execute(channel);
+                    stop.execute(channel);
                 }
             } else if(this.stops[i].getDirection() == 'SELL' && tickDirection == 'SELL') {
                 if(newPrice <= this.stops[i].getTriggerPrice() && this.stops[i].getTriggerPrice() < currPrice) {
+                    let stop = this.stops[i];
                     this.stops.splice(i, 1); i--;
-                    this.stops[i].execute(channel);
+                    stop.execute(channel);
                 }
             }
         }
@@ -424,7 +426,7 @@ class OrderBook {
     }
 
     toString(ticker) {
-        if(!this.#hasTicker(ticker)) return 'Invalid ticker.';
+        if(!this.hasTicker(ticker)) return 'Invalid ticker.';
 
         let str = '';
         str += 'Bids:' + '\n';
@@ -443,7 +445,7 @@ class OrderBook {
     }
 
     getBidsDepth(ticker) {
-        if(!this.#hasTicker(ticker)) return 0;
+        if(!this.hasTicker(ticker)) return 0;
         let sum = 0;
         this.#getTicker(ticker).bids.forEach(bid => {
             sum += bid.getQuantityUnfilled();
@@ -452,7 +454,7 @@ class OrderBook {
     }
 
     getAsksDepth(ticker) {
-        if(!this.#hasTicker(ticker)) return 0;
+        if(!this.hasTicker(ticker)) return 0;
         let sum = 0;
         this.#getTicker(ticker).asks.forEach(ask => {
             sum += ask.getQuantityUnfilled();
@@ -463,12 +465,12 @@ class OrderBook {
     #getTicker(ticker) {
         return this.#tickers.get(ticker);
     }
-    #hasTicker(ticker) {
+    hasTicker(ticker) {
         return OrderBook.VALID_TICKERS.includes(ticker);
     }
 
     #validateOrder(order, channel) {
-        if(!this.#hasTicker(order.getTicker())) {
+        if(!this.hasTicker(order.getTicker())) {
             channel.send('Invalid ticker.'); return false;
         }
         return true;
