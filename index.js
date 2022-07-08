@@ -208,6 +208,9 @@ class LimitOrder extends NormalOrder {
     toShortString() {
         return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
+    toNonIdNonUserShortString() {
+        return `${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+    }
 
     getPrice() {
         return this.#price;
@@ -229,6 +232,9 @@ class MarketOrder extends NormalOrder {
     toShortString() {
         return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
     }
+    toNonIdNonUserShortString() {
+        return `${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
+    }
 }
 
 class StopLossOrder extends Order {
@@ -241,6 +247,16 @@ class StopLossOrder extends Order {
         this.#triggerPrice = triggerPrice;
         this.#executedOrder = executedOrder;
         this.#isExecuted = false;
+    }
+
+    toString() {
+        return `${super.toString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toString()}`;
+    }
+    toNonUserString() {
+        return `${super.toNonUserString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toString()}`;
+    }
+    toShortString() {
+        return `${super.toShortString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toString()}`;
     }
 
     getTriggerPrice() {
