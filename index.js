@@ -368,7 +368,10 @@ class Ticker {
         this.#infoMessage.edit(this.toString());
     }
 
-    toString() {
+    refresh() {
+        this.#infoMessage.edit(this.#toString());
+    }
+    #toString() {
         let str = '';
         str += `Ticker: ${this.getSymbol()}` + '\n\n';
 
@@ -458,7 +461,7 @@ class OrderBook {
         let channel = await client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID']);
         let orderBookMessageId = process.env['ORDERBOOK_MESSAGE_ID'];
         this.#infoMessage = await channel.messages.fetch(orderBookMessageId);
-        this.#update();
+        this.refresh();
 
         let tickerMessageIds = JSON.parse(process.env['TICKER_MESSAGE_IDS']);
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
@@ -467,10 +470,10 @@ class OrderBook {
 
     }
 
-    #update() {
-        this.#infoMessage.edit(this.#toDisplayBoardString());
+    refresh() {
+        this.#infoMessage.edit(this.#toString());
     }
-    #toDisplayBoardString() {
+    #toString() {
         let str = '```' + '\n';
 
         str += setW('Ticker', 10) + setW('Price', 15) + '\n';
@@ -562,7 +565,8 @@ class OrderBook {
 
         }
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
-        this.#update();
+        this.refresh();
+        this.#getTicker(order.getTicker()).refresh();
     }
 
     submitMarketOrder(order, channel) {
@@ -606,7 +610,8 @@ class OrderBook {
 
         }
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
-        this.#update();
+        this.refresh();
+        this.#getTicker(order.getTicker()).refresh();
     }
 
     submitStopLossOrder(order, channel) {
@@ -614,7 +619,6 @@ class OrderBook {
         channel.send(order.orderSubmittedString());
 
         this.#getTicker(order.getTicker()).addStop(order);
-        this.#update();
     }
 }
 let orderBook = new OrderBook();
