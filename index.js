@@ -357,13 +357,15 @@ class Ticker {
     asks;
     #stops = [];
 
-    async constructor(symbol, infoMessageChannel, infoMessageId) {
+    constructor(symbol) {
         this.#symbol = symbol;
-        this.#infoMessage = await infoMessageChannel.messages.fetch(infoMessageId);
-        this.#infoMessage.edit('edited message');
         this.#lastTradedPrice = Ticker.#DEFAULT_STARTING_PRICE;
         this.bids = new PriorityQueue(OrderBook.BIDS_COMPARATOR);
         this.asks = new PriorityQueue(OrderBook.ASKS_COMPARATOR);
+    }
+    async initialize(infoMessageChannel, infoMessageId) {
+        this.#infoMessage = await infoMessageChannel.messages.fetch(infoMessageId);
+        this.#infoMessage.edit('edited message');
     }
 
     getSymbol() {
@@ -429,11 +431,18 @@ class OrderBook {
 
     #tickers = new Map();
 
-    async constructor(channel) {
+    constructor() {
+        for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
+            this.#tickers.set(OrderBook.VALID_TICKERS[i], new Ticker(OrderBook.VALID_TICKERS[i]));
+        }
+    }
+    async initialize() {
+        let channel = await client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID']);
         let messageIds = JSON.parse(process.env['STOCK_INFO_MESSAGE_IDS']);
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
-            this.#tickers.set(OrderBook.VALID_TICKERS[i], await new Ticker(OrderBook.VALID_TICKERS[i], channel, messageIds[i]));
+            this.#tickers.get(OrderBook.VALID_TICKERS[i]).initialize(channel, messageIds[i]);
         }
+
     }
 
     toString(ticker) {
@@ -586,16 +595,13 @@ class OrderBook {
         this.#getTicker(order.getTicker()).addStop(order);
     }
 }
-let orderBook;
+let orderBook = new OrderBook(channel);;
 
 client.once('ready', c => {
     console.log(`Ready! Logged in as ${c.user.tag}`);
 });
-client.on('ready', () => {
-    client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID'])
-        .then(channel => {
-            orderBook = await new OrderBook(channel);
-        });
+client.on('ready', async() => {
+    await orderBook.initialize();
 });
 
 client.on('messageCreate', (msg) => {
