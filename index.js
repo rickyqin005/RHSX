@@ -595,7 +595,7 @@ class OrderBook {
         this.#getTicker(order.getTicker()).addStop(order);
     }
 }
-let orderBook = new OrderBook(channel);;
+let orderBook = new OrderBook();
 
 client.once('ready', c => {
     console.log(`Ready! Logged in as ${c.user.tag}`);
