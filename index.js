@@ -364,11 +364,28 @@ class Ticker {
     }
 
     setLastTradedPrice(newPrice) {
-        if(newPrice == this.lastTradedPrice) return;
+        if(this.#lastTradedPrice == newPrice) return;
+
+        let currPrice = this.#lastTradedPrice;
+        let tickDirection = '';
+        if(currPrice < newPrice) tickDirection = 'BUY';
+        else tickDirection = 'SELL';
 
         for(let i = 0; i < this.stops.length; i++) {
-
+            if(this.stops[i].getDirection() == 'BUY' && tickDirection == 'BUY') {
+                if(currPrice < this.stops[i].getTriggerPrice() && this.stops[i].getTriggerPrice() <= newPrice) {
+                    this.stops.splice(i, 1); i--;
+                    this.stops[i].execute();
+                }
+            } else if(this.stops[i].getDirection() == 'SELL' && tickDirection == 'SELL') {
+                if(newPrice <= this.stops[i].getTriggerPrice() && this.stops[i].getTriggerPrice() < currPrice) {
+                    this.stops.splice(i, 1); i--;
+                    this.stops[i].execute();
+                }
+            }
         }
+
+        this.#lastTradedPrice = newPrice;
     }
 }
 
@@ -465,8 +482,10 @@ class OrderBook {
         if(!this.#validateOrder(order, channel)) return;
         channel.send(order.orderSubmittedString());
 
-        let asks = this.#getTicker(order.getTicker()).asks;
-        let bids = this.#getTicker(order.getTicker()).bids;
+        let ticker = this.#getTicker(order.getTicker());
+        let asks = ticker.asks;
+        let bids = ticker.bids;
+        let newLastTradedPrice = ticker.getLastTradedPrice();
 
         if(order.getDirection() == 'BUY') {
             while(!asks.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
@@ -476,6 +495,7 @@ class OrderBook {
                 if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) {
                     channel.send(bestAsk.orderFilledString());
                     asks.poll();
+                    newLastTradedPrice = bestAsk.getPrice();
                 }
             }
             if(order.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
@@ -489,20 +509,24 @@ class OrderBook {
                 if(bestBid.getStatus() == Order.COMPLETELY_FILLED) {
                     channel.send(bestBid.orderFilledString());
                     bids.poll();
+                    newLastTradedPrice = bestBid.getPrice();
                 }
             }
             if(order.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
             else asks.add(order);
 
         }
+        ticker.setLastTradedPrice(newLastTradedPrice);
     }
 
     submitMarketOrder(order, channel) {
         if(!this.#validateOrder(order, channel)) return;
         channel.send(order.orderSubmittedString());
 
-        let asks = this.#getTicker(order.getTicker()).asks;
-        let bids = this.#getTicker(order.getTicker()).bids;
+        let ticker = this.#getTicker(order.getTicker());
+        let asks = ticker.asks;
+        let bids = ticker.bids;
+        let newLastTradedPrice = ticker.getLastTradedPrice();
 
         if(order.getDirection() == 'BUY') {
             if(order.getQuantity() > this.getAsksDepth(order.getTicker())) {
@@ -515,6 +539,7 @@ class OrderBook {
                 if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) {
                     channel.send(bestAsk.orderFilledString());
                     asks.poll();
+                    newLastTradedPrice = bestAsk.getPrice();
                 }
             }
 
@@ -529,10 +554,12 @@ class OrderBook {
                 if(bestBid.getStatus() == Order.COMPLETELY_FILLED) {
                     channel.send(bestBid.orderFilledString());
                     bids.poll();
+                    newLastTradedPrice = bestBid.getPrice();
                 }
             }
 
         }
+        ticker.setLastTradedPrice(newLastTradedPrice);
     }
 
     submitStopLossOrder(order, channel) {
