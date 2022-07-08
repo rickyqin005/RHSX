@@ -365,7 +365,7 @@ class Ticker {
     }
     async initialize(infoMessageChannel, infoMessageId) {
         this.#infoMessage = await infoMessageChannel.messages.fetch(infoMessageId);
-        this.#infoMessage.edit('edited message');
+        this.#infoMessage.edit('```edited message```');
     }
 
     getSymbol() {
@@ -430,6 +430,7 @@ class OrderBook {
     }
 
     #tickers = new Map();
+    #infoMessage;
 
     constructor() {
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
@@ -438,13 +439,29 @@ class OrderBook {
     }
     async initialize() {
         let channel = await client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID']);
-        let messageIds = JSON.parse(process.env['STOCK_INFO_MESSAGE_IDS']);
+        let orderBookMessageId = process.env['ORDERBOOK_MESSAGE_ID'];
+        this.#infoMessage = await channel.messages.fetch(orderBookMessageId);
+        this.#infoMessage.edit(this.toDisplayBoardString());
+
+        let tickerMessageIds = JSON.parse(process.env['TICKER_MESSAGE_IDS']);
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
-            this.#tickers.get(OrderBook.VALID_TICKERS[i]).initialize(channel, messageIds[i]);
+            this.#tickers.get(OrderBook.VALID_TICKERS[i]).initialize(channel, tickerMessageIds[i]);
         }
 
     }
 
+    toDisplayBoardString() {
+        let str = '```' + '\n';
+
+        str += setW('Ticker', 10) + setW('Price', 15) + '\n';
+
+        for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
+            let ticker = this.#tickers.get(OrderBook.VALID_TICKERS[i]);
+            str += setW(ticker.getSymbol(), 10) + setW(ticker.getLastTradedPrice(), 15) + '\n';
+        }
+        str += '```';
+        return str;
+    }
     toString(ticker) {
         if(!this.hasTicker(ticker)) return 'Invalid ticker.';
 
@@ -738,4 +755,7 @@ client.login(process.env['BOT_TOKEN']);
 // Utility functions
 function getPingString(user) {
     return `<@${user.id}>`;
+}
+function setW(string, length) {
+    return string + ' '.repeat(Math.max(length - string.length, 0));
 }
