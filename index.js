@@ -365,7 +365,24 @@ class Ticker {
     }
     async initialize(infoMessageChannel, infoMessageId) {
         this.#infoMessage = await infoMessageChannel.messages.fetch(infoMessageId);
-        this.#infoMessage.edit('```edited message```');
+        this.#infoMessage.edit(this.toString());
+    }
+
+    toString() {
+        let str = '';
+        str += `Ticker: ${this.getSymbol()}` + '\n\n';
+
+        str += 'Bids:' + '\n';
+        str += '```';
+        str += this.#getTicker(ticker).bids.printAllReverse();
+        str += '```';
+        str += '\n';
+
+        str += 'Asks:' + '\n';
+        str += '```';
+        str += this.#getTicker(ticker).asks.printAll();
+        str += '```';
+        return str;
     }
 
     getSymbol() {
@@ -441,7 +458,7 @@ class OrderBook {
         let channel = await client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID']);
         let orderBookMessageId = process.env['ORDERBOOK_MESSAGE_ID'];
         this.#infoMessage = await channel.messages.fetch(orderBookMessageId);
-        this.#infoMessage.edit(this.toDisplayBoardString());
+        this.#update();
 
         let tickerMessageIds = JSON.parse(process.env['TICKER_MESSAGE_IDS']);
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
@@ -450,7 +467,10 @@ class OrderBook {
 
     }
 
-    toDisplayBoardString() {
+    #update() {
+        this.#infoMessage.edit(this.#toDisplayBoardString());
+    }
+    #toDisplayBoardString() {
         let str = '```' + '\n';
 
         str += setW('Ticker', 10) + setW('Price', 15) + '\n';
@@ -459,24 +479,6 @@ class OrderBook {
             let ticker = this.#tickers.get(OrderBook.VALID_TICKERS[i]);
             str += setW(ticker.getSymbol(), 10) + setW(ticker.getLastTradedPrice(), 15) + '\n';
         }
-        str += '```';
-        return str;
-    }
-    toString(ticker) {
-        if(!this.hasTicker(ticker)) return 'Invalid ticker.';
-
-        let str = '';
-        str += 'Bids:' + '\n';
-        // str += `Order depth: ${this.getBidsDepth(ticker)}` + '\n';
-        str += '```';
-        str += this.#getTicker(ticker).bids.printAllReverse();
-        str += '```';
-        str += '\n';
-
-        str += 'Asks:' + '\n';
-        // str += `Order depth: ${this.getAsksDepth(ticker)}` + '\n';
-        str += '```';
-        str += this.#getTicker(ticker).asks.printAll();
         str += '```';
         return str;
     }
@@ -560,6 +562,7 @@ class OrderBook {
 
         }
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
+        this.#update();
     }
 
     submitMarketOrder(order, channel) {
@@ -603,6 +606,7 @@ class OrderBook {
 
         }
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
+        this.#update();
     }
 
     submitStopLossOrder(order, channel) {
@@ -610,6 +614,7 @@ class OrderBook {
         channel.send(order.orderSubmittedString());
 
         this.#getTicker(order.getTicker()).addStop(order);
+        this.#update();
     }
 }
 let orderBook = new OrderBook();
@@ -639,7 +644,6 @@ client.on('messageCreate', (msg) => {
                 '!sell MARKET [ticker] [quantity]' + '\n' +
                 '!buy STOPLOSS [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
                 '!sell STOPLOSS [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
-                '!orderbook [ticker]' + '\n' +
                 '!tickerlist';
 
             msg.channel.send('```' + infoString + '```');
@@ -732,12 +736,6 @@ client.on('messageCreate', (msg) => {
             }
             break;
         }
-
-        case '!orderbook':
-            if(!isValidTrader(msg.author)) return;
-
-            msg.channel.send(orderBook.toString(args[1]));
-            break;
 
         case '!tickerlist':
             if(!isValidTrader(msg.author)) return;
