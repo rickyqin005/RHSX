@@ -593,17 +593,18 @@ client.on('messageCreate', (msg) => {
                 }
                 case 'STOPLOSS': {
                     switch (args[4]) {
-                        case 'LIMIT':
+                        case 'LIMIT': {
                             let executedOrder = new LimitOrder(msg.author, 'BUY', args[2], args[5], args[6]);
                             let order = new StopLossOrder(msg.author, 'BUY', args[2], parseInt(args[3]), executedOrder);
                             orderBook.submitStopLossOrder(order, msg.channel);
                             break;
-
-                        case 'MARKET':
+                        }
+                        case 'MARKET': {
                             let executedOrder = new MarketOrder(msg.author, 'BUY', args[2], args[5]);
                             let order = new StopLossOrder(msg.author, 'BUY', args[2], parseInt(args[3]), executedOrder);
                             orderBook.submitStopLossOrder(order, msg.channel);
                             break;
+                        }
                     }
                 }
             }
@@ -626,17 +627,18 @@ client.on('messageCreate', (msg) => {
                 }
                 case 'STOPLOSS': {
                     switch (args[4]) {
-                        case 'LIMIT':
+                        case 'LIMIT': {
                             let executedOrder = new LimitOrder(msg.author, 'SELL', args[2], args[5], args[6]);
                             let order = new StopLossOrder(msg.author, 'SELL', args[2], parseInt(args[3]), executedOrder);
                             orderBook.submitStopLossOrder(order, msg.channel);
                             break;
-
-                        case 'MARKET':
+                        }
+                        case 'MARKET': {
                             let executedOrder = new MarketOrder(msg.author, 'SELL', args[2], args[5]);
                             let order = new StopLossOrder(msg.author, 'SELL', args[2], parseInt(args[3]), executedOrder);
                             orderBook.submitStopLossOrder(order, msg.channel);
                             break;
+                        }
                     }
                 }
             }
