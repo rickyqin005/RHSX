@@ -350,19 +350,22 @@ class PriorityQueue {
 
 class Ticker {
     static #DEFAULT_STARTING_PRICE = 50;
-    symbol;
+    #symbol;
     #lastTradedPrice;
     bids;
     asks;
-    stops = [];
+    #stops = [];
 
     constructor(symbol) {
-        this.symbol = symbol;
-        this.lastTradedPrice = Ticker.#DEFAULT_STARTING_PRICE;
+        this.#symbol = symbol;
+        this.#lastTradedPrice = Ticker.#DEFAULT_STARTING_PRICE;
         this.bids = new PriorityQueue(OrderBook.BIDS_COMPARATOR);
         this.asks = new PriorityQueue(OrderBook.ASKS_COMPARATOR);
     }
 
+    getSymbol() {
+        return this.#symbol;
+    }
     getLastTradedPrice() {
         return this.#lastTradedPrice;
     }
@@ -375,23 +378,27 @@ class Ticker {
         if(currPrice < newPrice) tickDirection = 'BUY';
         else tickDirection = 'SELL';
 
-        for(let i = 0; i < this.stops.length; i++) {
-            if(this.stops[i].getDirection() == 'BUY' && tickDirection == 'BUY') {
-                if(currPrice < this.stops[i].getTriggerPrice() && this.stops[i].getTriggerPrice() <= newPrice) {
-                    let stop = this.stops[i];
-                    this.stops.splice(i, 1); i--;
+        for(let i = 0; i < this.#stops.length; i++) {
+            if(this.#stops[i].getDirection() == 'BUY' && tickDirection == 'BUY') {
+                if(currPrice < this.#stops[i].getTriggerPrice() && this.#stops[i].getTriggerPrice() <= newPrice) {
+                    let stop = this.#stops[i];
+                    this.#stops.splice(i, 1); i--;
                     stop.execute(channel);
                 }
-            } else if(this.stops[i].getDirection() == 'SELL' && tickDirection == 'SELL') {
-                if(newPrice <= this.stops[i].getTriggerPrice() && this.stops[i].getTriggerPrice() < currPrice) {
-                    let stop = this.stops[i];
-                    this.stops.splice(i, 1); i--;
+            } else if(this.#stops[i].getDirection() == 'SELL' && tickDirection == 'SELL') {
+                if(newPrice <= this.#stops[i].getTriggerPrice() && this.#stops[i].getTriggerPrice() < currPrice) {
+                    let stop = this.#stops[i];
+                    this.#stops.splice(i, 1); i--;
                     stop.execute(channel);
                 }
             }
         }
 
         this.#lastTradedPrice = newPrice;
+    }
+
+    addStop(stop) {
+        this.#stops.push(stop);
     }
 }
 
@@ -419,7 +426,7 @@ class OrderBook {
 
     #tickers = new Map();
 
-    constructor() {
+    constructor(channel) {
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
             this.#tickers.set(OrderBook.VALID_TICKERS[i], new Ticker(OrderBook.VALID_TICKERS[i]));
         }
@@ -572,10 +579,10 @@ class OrderBook {
         if(!this.#validateOrder(order, channel)) return;
         channel.send(order.orderSubmittedString());
 
-        this.#getTicker(order.getTicker()).stops.push(order);
+        this.#getTicker(order.getTicker()).addStop(order);
     }
 }
-let orderBook = new OrderBook();
+let orderBook;
 
 client.on('messageCreate', (msg) => {
     if(msg.author == process.env['BOT_ID']) return;
@@ -712,8 +719,12 @@ client.once('ready', c => {
     console.log(`Ready! Logged in as ${c.user.tag}`);
 });
 client.on('ready', () => {
-  client.channels.fetch(process.env['STOCK_PRICES_CHANNEL_ID'])
-    .then(channel => channel.send('``` ```'));
+    client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID'])
+        .then(channel => {
+            channel.send('``` ```');
+            channel.send('``` ```');
+        }
+    );
 });
 
 // Utility functions
