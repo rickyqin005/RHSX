@@ -267,8 +267,8 @@ class StopLossOrder extends Order {
     }
 
     execute(channel) {
-        channel.send(orderExecutedString());
-        orderBook.submitOrder(executedOrder, channel);
+        channel.send(this.orderExecutedString());
+        orderBook.submitOrder(this.#executedOrder, channel);
         this.#isExecuted = true;
     }
 
