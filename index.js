@@ -76,7 +76,7 @@ class MarketObject {
     #id;
 
     constructor() {
-        this.#id = Order.#getNextId();
+        this.#id = MarketObject.#getNextId();
     }
 
     getId() {
