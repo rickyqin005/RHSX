@@ -250,13 +250,13 @@ class StopLossOrder extends Order {
     }
 
     toString() {
-        return `${super.toString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toString()}`;
+        return `${super.toString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toNonIdNonUserShortString()}`;
     }
     toNonUserString() {
-        return `${super.toNonUserString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toString()}`;
+        return `${super.toNonUserString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toNonIdNonUserShortString()}`;
     }
     toShortString() {
-        return `${super.toShortString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toString()}`;
+        return `${super.toShortString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toNonIdNonUserShortString()}`;
     }
 
     getTriggerPrice() {
