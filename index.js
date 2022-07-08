@@ -20,7 +20,6 @@ class Trader {
     static #DEFAULT_POSITION_LIMIT = 100000;
     #user;
     #positionLimit;
-    #
     #orders = [];
 
     constructor(user) {
