@@ -351,13 +351,16 @@ class PriorityQueue {
 class Ticker {
     static #DEFAULT_STARTING_PRICE = 50;
     #symbol;
+    #infoMessage;
     #lastTradedPrice;
     bids;
     asks;
     #stops = [];
 
-    constructor(symbol) {
+    constructor(symbol, infoMessageChannel, infoMessageId) {
         this.#symbol = symbol;
+        this.#infoMessage = await infoMessageChannel.messages.fetch(infoMessageId);
+        this.#infoMessage.edit('edited message');
         this.#lastTradedPrice = Ticker.#DEFAULT_STARTING_PRICE;
         this.bids = new PriorityQueue(OrderBook.BIDS_COMPARATOR);
         this.asks = new PriorityQueue(OrderBook.ASKS_COMPARATOR);
@@ -427,8 +430,9 @@ class OrderBook {
     #tickers = new Map();
 
     constructor(channel) {
+        let messageIds = JSON.parse(process.env['STOCK_INFO_MESSAGE_IDS']);
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
-            this.#tickers.set(OrderBook.VALID_TICKERS[i], new Ticker(OrderBook.VALID_TICKERS[i]));
+            this.#tickers.set(OrderBook.VALID_TICKERS[i], new Ticker(OrderBook.VALID_TICKERS[i], channel, messageIds[i]));
         }
     }
 
@@ -584,6 +588,16 @@ class OrderBook {
 }
 let orderBook;
 
+client.once('ready', c => {
+    console.log(`Ready! Logged in as ${c.user.tag}`);
+});
+client.on('ready', () => {
+    client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID'])
+        .then(channel => {
+            orderBook = new OrderBook(channel);
+        });
+});
+
 client.on('messageCreate', (msg) => {
     if(msg.author == process.env['BOT_ID']) return;
 
@@ -714,18 +728,6 @@ client.on('messageCreate', (msg) => {
 client.on('debug', console.log);
 
 client.login(process.env['BOT_TOKEN']);
-
-client.once('ready', c => {
-    console.log(`Ready! Logged in as ${c.user.tag}`);
-});
-client.on('ready', () => {
-    client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID'])
-        .then(channel => {
-            channel.send('``` ```');
-            channel.send('``` ```');
-        }
-    );
-});
 
 // Utility functions
 function getPingString(user) {
