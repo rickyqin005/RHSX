@@ -208,8 +208,8 @@ class LimitOrder extends NormalOrder {
     toShortString() {
         return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
-    toNonIdNonUserShortString() {
-        return `${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+    toStopLossString() {
+        return `${this.getDirection()} ${this.getType()} x${this.getQuantity()} @${this.getPrice()}`;
     }
 
     getPrice() {
@@ -232,8 +232,8 @@ class MarketOrder extends NormalOrder {
     toShortString() {
         return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
     }
-    toNonIdNonUserShortString() {
-        return `${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
+    toStopLossString() {
+        return `${this.getDirection()} ${this.getType()} x${this.getQuantity()}`;
     }
 }
 
@@ -250,13 +250,13 @@ class StopLossOrder extends Order {
     }
 
     toString() {
-        return `${super.toString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toNonIdNonUserShortString()}`;
+        return `${super.toString()}, ${this.executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
     }
     toNonUserString() {
-        return `${super.toNonUserString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toNonIdNonUserShortString()}`;
+        return `${super.toNonUserString()}, ${this.executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
     }
     toShortString() {
-        return `${super.toShortString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toNonIdNonUserShortString()}`;
+        return `${super.toShortString()}, ${this.executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
     }
 
     getTriggerPrice() {
