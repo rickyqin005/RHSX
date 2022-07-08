@@ -215,7 +215,7 @@ class LimitOrder extends NormalOrder {
 class MarketOrder extends NormalOrder {
 
     constructor(user, direction, ticker, quantity) {
-        super(user, direction, 'MARKET', ticker);
+        super(user, direction, 'MARKET', ticker, quantity);
     }
 
     toString() {
