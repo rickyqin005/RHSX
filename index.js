@@ -357,7 +357,7 @@ class Ticker {
     asks;
     #stops = [];
 
-    constructor(symbol, infoMessageChannel, infoMessageId) {
+    async constructor(symbol, infoMessageChannel, infoMessageId) {
         this.#symbol = symbol;
         this.#infoMessage = await infoMessageChannel.messages.fetch(infoMessageId);
         this.#infoMessage.edit('edited message');
@@ -429,10 +429,10 @@ class OrderBook {
 
     #tickers = new Map();
 
-    constructor(channel) {
+    async constructor(channel) {
         let messageIds = JSON.parse(process.env['STOCK_INFO_MESSAGE_IDS']);
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
-            this.#tickers.set(OrderBook.VALID_TICKERS[i], new Ticker(OrderBook.VALID_TICKERS[i], channel, messageIds[i]));
+            this.#tickers.set(OrderBook.VALID_TICKERS[i], await new Ticker(OrderBook.VALID_TICKERS[i], channel, messageIds[i]));
         }
     }
 
@@ -594,7 +594,7 @@ client.once('ready', c => {
 client.on('ready', () => {
     client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID'])
         .then(channel => {
-            orderBook = new OrderBook(channel);
+            orderBook = await new OrderBook(channel);
         });
 });
 
