@@ -243,12 +243,6 @@ class StopLossOrder extends Order {
         this.#isExecuted = false;
     }
 
-    getUser() {
-        return this.#user;
-    }
-    getDirection() {
-        return this.#direction;
-    }
     getTriggerPrice() {
         return this.#triggerPrice;
     }
