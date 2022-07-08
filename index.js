@@ -258,13 +258,17 @@ class StopLossOrder extends Order {
     toShortString() {
         return `${super.toShortString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
     }
+    orderExecutedString() {
+        return `${getPingString(this.getUser())} Your stop order: \`${this.toShortString()}\` is triggered.`;
+    }
 
     getTriggerPrice() {
         return this.#triggerPrice;
     }
 
-    execute() {
-        orderBook.submitOrder(executedOrder);
+    execute(channel) {
+        channel.send(orderExecutedString());
+        orderBook.submitOrder(executedOrder, channel);
         this.#isExecuted = true;
     }
 
@@ -363,7 +367,7 @@ class Ticker {
         return this.#lastTradedPrice;
     }
 
-    setLastTradedPrice(newPrice) {
+    setLastTradedPrice(newPrice, channel) {
         if(this.#lastTradedPrice == newPrice) return;
 
         let currPrice = this.#lastTradedPrice;
@@ -375,12 +379,12 @@ class Ticker {
             if(this.stops[i].getDirection() == 'BUY' && tickDirection == 'BUY') {
                 if(currPrice < this.stops[i].getTriggerPrice() && this.stops[i].getTriggerPrice() <= newPrice) {
                     this.stops.splice(i, 1); i--;
-                    this.stops[i].execute();
+                    this.stops[i].execute(channel);
                 }
             } else if(this.stops[i].getDirection() == 'SELL' && tickDirection == 'SELL') {
                 if(newPrice <= this.stops[i].getTriggerPrice() && this.stops[i].getTriggerPrice() < currPrice) {
                     this.stops.splice(i, 1); i--;
-                    this.stops[i].execute();
+                    this.stops[i].execute(channel);
                 }
             }
         }
@@ -516,7 +520,7 @@ class OrderBook {
             else asks.add(order);
 
         }
-        ticker.setLastTradedPrice(newLastTradedPrice);
+        ticker.setLastTradedPrice(newLastTradedPrice, channel);
     }
 
     submitMarketOrder(order, channel) {
@@ -559,7 +563,7 @@ class OrderBook {
             }
 
         }
-        ticker.setLastTradedPrice(newLastTradedPrice);
+        ticker.setLastTradedPrice(newLastTradedPrice, channel);
     }
 
     submitStopLossOrder(order, channel) {
