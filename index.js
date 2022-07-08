@@ -577,11 +577,6 @@ class OrderBook {
 }
 let orderBook = new OrderBook();
 
-
-client.once('ready', c => {
-    console.log(`Ready! Logged in as ${c.user.tag}`);
-});
-
 client.on('messageCreate', (msg) => {
     if(msg.author == process.env['BOT_ID']) return;
 
@@ -713,6 +708,13 @@ client.on('debug', console.log);
 
 client.login(process.env['BOT_TOKEN']);
 
+client.once('ready', c => {
+    console.log(`Ready! Logged in as ${c.user.tag}`);
+});
+client.on('ready', () => {
+  client.channels.fetch(process.env['STOCK_PRICES_CHANNEL_ID'])
+    .then(channel => channel.send('``` ```'));
+});
 
 // Utility functions
 function getPingString(user) {
