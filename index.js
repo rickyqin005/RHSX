@@ -17,20 +17,19 @@ function isValidTrader(user) {
 }
 
 class Trader {
-    static STARTING_AMOUNT = 10000;
+    static #DEFAULT_POSITION_LIMIT = 100000;
     #user;
-    #balance;
+    #positionLimit;
+    #
     #orders = [];
 
     constructor(user) {
         this.#user = user;
-        this.#balance = Trader.STARTING_AMOUNT;
+        this.#positionLimit = Trader.#DEFAULT_POSITION_LIMIT;
     }
 
     toString() {
         let str = '';
-        str += `Balance: ${this.#balance}` + '\n';
-        str += '\n';
         str += `Pending Orders:` + '\n';
         let pendingOrdersCount = 0;
         for(let i = 0; i < this.#orders.length; i++) {
@@ -58,9 +57,6 @@ class Trader {
 
     getUser() {
         return this.#user;
-    }
-    getBalance() {
-        return this.#balance;
     }
 
     addOrder(order) {
@@ -149,26 +145,14 @@ class Order {
     }
 }
 
-class LimitOrder extends Order {
+class NormalOrder extends Order {
     #quantity;
     #quantityFilled;
-    #price;
 
-    constructor(user, direction, ticker, quantity, price) {
-        super(user, direction, 'LIMIT', ticker);
+    constructor(user, direction, type, ticker, quantity) {
+        super(user, direction, type, ticker);
         this.#quantity = quantity;
         this.#quantityFilled = 0;
-        this.#price = price;
-    }
-
-    toString() {
-        return `${super.toString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}`;
-    }
-    toNonUserString() {
-        return `${super.toNonUserString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}`;
-    }
-    toShortString() {
-        return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
 
     getQuantity() {
@@ -179,9 +163,6 @@ class LimitOrder extends Order {
     }
     getQuantityUnfilled() {
         return this.#quantity - this.#quantityFilled;
-    }
-    getPrice() {
-        return this.#price;
     }
 
     getStatus() {
@@ -209,14 +190,33 @@ class LimitOrder extends Order {
     }
 }
 
-class MarketOrder extends Order {
-    #quantity;
-    #quantityFilled;
+class LimitOrder extends NormalOrder {
+    #price;
+
+    constructor(user, direction, ticker, quantity, price) {
+        super(user, direction, 'LIMIT', ticker, quantity);
+        this.#price = price;
+    }
+
+    toString() {
+        return `${super.toString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}`;
+    }
+    toNonUserString() {
+        return `${super.toNonUserString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}`;
+    }
+    toShortString() {
+        return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+    }
+
+    getPrice() {
+        return this.#price;
+    }
+}
+
+class MarketOrder extends NormalOrder {
 
     constructor(user, direction, ticker, quantity) {
         super(user, direction, 'MARKET', ticker);
-        this.#quantity = quantity;
-        this.#quantityFilled = 0;
     }
 
     toString() {
@@ -227,40 +227,6 @@ class MarketOrder extends Order {
     }
     toShortString() {
         return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
-    }
-
-    getQuantity() {
-        return this.#quantity;
-    }
-    getQuantityFilled() {
-        return this.#quantityFilled;
-    }
-    getQuantityUnfilled() {
-        return this.#quantity - this.#quantityFilled;
-    }
-
-    getStatus() {
-        if(this.#quantityFilled == 0) return Order.NOT_FILLED;
-        else if(this.#quantityFilled < this.#quantity) return Order.PARTIALLY_FILLED;
-        else if(this.#quantityFilled == this.#quantity) return Order.COMPLETELY_FILLED;
-    }
-
-    increaseQuantityFilled(amount, channel) {
-        this.#quantityFilled += amount;
-
-        switch(this.getStatus()) {
-            case Order.NOT_FILLED:
-                break;
-
-            case Order.PARTIALLY_FILLED:
-                break;
-
-            case Order.COMPLETELY_FILLED:
-                channel.send(this.orderFilledString());
-                break;
-
-        }
-        return this.getStatus();
     }
 }
 
