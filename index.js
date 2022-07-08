@@ -324,7 +324,7 @@ class PriorityQueue {
     // prints all the elements in order of the priority queue
     printAll() {
         if(this.#array.length == 0) {
-            return 'No items present.' + '\n';
+            return 'None.' + '\n';
         }
 
         let str = '';
@@ -337,7 +337,7 @@ class PriorityQueue {
     // prints all the elements in reverse order of the priority queue
     printAllReverse() {
         if(this.#array.length == 0) {
-            return 'No items present.' + '\n';
+            return 'None.' + '\n';
         }
 
         let str = '';
