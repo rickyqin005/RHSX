@@ -342,14 +342,14 @@ class Ticker {
         str += `Ticker: ${this.getSymbol()}` + '\n';
 
         str += '```' + '\n';
-        str += setW('Bids', 40) + setW('Asks', 40) + '\n';
+        str += setW('Bids', 36) + setW('Asks', 36) + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
-            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 40);
-            else str += setW('', 40);
+            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 36);
+            else str += setW('', 36);
 
-            if(i <= this.asks.size()-1) str += setW(this.asks.get(i).toString(), 40);
-            else str += setW('', 40);
+            if(i <= this.asks.size()-1) str += setW(this.asks.get(i).toString(), 36);
+            else str += setW('', 36);
 
             str += '\n';
         }
