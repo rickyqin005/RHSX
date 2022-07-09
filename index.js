@@ -342,14 +342,14 @@ class Ticker {
         str += `Ticker: ${this.getSymbol()}` + '\n';
 
         str += '```' + '\n';
-        str += setW('Bids', 35) + setW('Asks', 35) + '\n';
+        str += setW('Bids', 40) + setW('Asks', 40) + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
-            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 35);
-            else str += setW('', 35);
+            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 40);
+            else str += setW('', 40);
 
-            if(i <= this.asks.size()-1) str += setW(this.asks.get(i).toString(), 35);
-            else str += setW('', 35);
+            if(i <= this.asks.size()-1) str += setW(this.asks.get(i).toString(), 40);
+            else str += setW('', 40);
 
             str += '\n';
         }
@@ -625,7 +625,6 @@ client.on('messageCreate', (msg) => {
                 '!sell MARKET [ticker] [quantity]' + '\n' +
                 '!buy STOPLOSS [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
                 '!sell STOPLOSS [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
-                '!tickerlist';
 
             msg.channel.send('```' + infoString + '```');
             break;
@@ -717,13 +716,6 @@ client.on('messageCreate', (msg) => {
             }
             break;
         }
-
-        case '!tickerlist':
-            if(!isValidTrader(msg.author)) return;
-
-            msg.channel.send(OrderBook.getTickerListString());
-            break;
-
     }
 });
 
