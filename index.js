@@ -305,34 +305,12 @@ class PriorityQueue {
         this.#array.splice(0,1);
     }
 
+    get(index) {
+        return this.#array[index];
+    }
+
     forEach(funct) {
         this.#array.forEach(funct);
-    }
-
-    // prints all the elements in order of the priority queue
-    printAll() {
-        if(this.#array.length == 0) {
-            return 'None.' + '\n';
-        }
-
-        let str = '';
-        for(let i = 0; i < this.#array.length; i++) {
-            str += this.#array[i].toString() + '\n';
-        }
-        return str;
-    }
-
-    // prints all the elements in reverse order of the priority queue
-    printAllReverse() {
-        if(this.#array.length == 0) {
-            return 'None.' + '\n';
-        }
-
-        let str = '';
-        for(let i = this.#array.length-1; i >= 0; i--) {
-            str += this.#array[i].toString() + '\n';
-        }
-        return str;
     }
 }
 
@@ -363,14 +341,18 @@ class Ticker {
         let str = '';
         str += `Ticker: ${this.getSymbol()}` + '\n';
 
-        str += 'Bids:' + '\n';
-        str += '```';
-        str += this.bids.printAllReverse();
-        str += '```';
+        str += '```' + '\n';
+        str += setW('Bids:', 35) + setW('Asks:', 35) + '\n';
 
-        str += 'Asks:' + '\n';
-        str += '```';
-        str += this.asks.printAll();
+        for(int i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
+            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 35);
+            else str += setW('', 35);
+
+            if(i <= this.asks.size()-1) str += setW(this.asks.get(i).toString(), 35);
+            else str += setW('', 35);
+
+            str += '\n';
+        }
         str += '```';
         return str;
     }
@@ -463,7 +445,7 @@ class OrderBook {
     #toString() {
         let str = '```' + '\n';
 
-        str += setW('Ticker', 10) + setW('Price', 15) + setW('Bid', 15) + setW('Ask', 15) + '\n';
+        str += setW('Ticker', 15) + setW('Price', 15) + setW('Bid', 15) + setW('Ask', 15) + '\n';
 
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
             let ticker = this.#tickers.get(OrderBook.VALID_TICKERS[i]);
@@ -474,7 +456,7 @@ class OrderBook {
             if(topAsk == null) topAsk = '-';
             else topAsk = topAsk.getPrice();
 
-            str += setW(ticker.getSymbol(), 10) + setW(ticker.getLastTradedPrice(), 15) +
+            str += setW(ticker.getSymbol(), 15) + setW(ticker.getLastTradedPrice(), 15) +
             setW(topBid, 15) + setW(topAsk, 15) + '\n';
         }
         str += '```';
