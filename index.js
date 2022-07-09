@@ -344,7 +344,7 @@ class Ticker {
         str += '```' + '\n';
         str += setW('Bids:', 35) + setW('Asks:', 35) + '\n';
 
-        for(int i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
+        for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
             if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 35);
             else str += setW('', 35);
 
