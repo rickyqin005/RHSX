@@ -766,5 +766,6 @@ function getPingString(user) {
     return `<@${user.id}>`;
 }
 function setW(value, length) {
-    return String(value) + ' '.repeat(Math.max(length - string.length, 0));
+    value = String(value);
+    return value + ' '.repeat(Math.max(length - value.length, 0));
 }
