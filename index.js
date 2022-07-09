@@ -342,7 +342,7 @@ class Ticker {
         str += `Ticker: ${this.getSymbol()}` + '\n';
 
         str += '```' + '\n';
-        str += setW('Bids:', 35) + setW('Asks:', 35) + '\n';
+        str += setW('Bids', 35) + setW('Asks', 35) + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
             if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 35);
