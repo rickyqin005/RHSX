@@ -46,7 +46,7 @@ class Trader {
         let tradeCount = 0;
         for(let i = 0; i < this.#orders.length; i++) {
             if(this.#orders[i].getStatus() == Order.COMPLETELY_FILLED) {
-                str += `\`${this.#orders[i].toShortString()}\`` + '\n';
+                str += `\`${this.#orders[i].toFullString()}\`` + '\n';
                 tradeCount++;
             }
         }
@@ -107,30 +107,27 @@ class Order extends MarketObject {
     }
 
     toString() {
-        return `Id: ${this.getId()}, User: ${this.getUser().tag}`;
+        return `#${this.getId()}`;
     }
-    toNonUserString() {
-        return `Id: ${this.getId()}`;
-    }
-    toShortString() {
-        return `Id: ${this.getId()}`;
+    toFullString() {
+        return `#${this.getId()}`;
     }
     orderSubmittedString() {
-        return `${getPingString(this.getUser())} Your order: \`${this.toShortString()}\` is submitted.`;
+        return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is submitted.`;
     }
     orderFilledString() {
-        return `${getPingString(this.getUser())} Your order: \`${this.toShortString()}\` is filled.`;
+        return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is filled.`;
     }
     orderCancelledString(reason) {
         switch (reason) {
             case Order.UNFULFILLABLE:
-                return `${getPingString(this.getUser())} Your order: \`${this.toShortString()}\` is cancelled because it cannot be fulfilled.`;
+                return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is cancelled because it cannot be fulfilled.`;
 
             case Order.VIOLATES_POSITION_LIMITS:
-                return `${getPingString(this.getUser())} Your order: \`${this.toShortString()}\` is cancelled because it violates your position limits.`;
+                return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is cancelled because it violates your position limits.`;
 
             default:
-                return `${getPingString(this.getUser())} Your order: \`${this.toShortString()}\` is cancelled`;
+                return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is cancelled`;
         }
     }
 
@@ -200,13 +197,10 @@ class LimitOrder extends NormalOrder {
     }
 
     toString() {
-        return `${super.toString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}`;
+        return `${super.toString()}, x${this.getQuantity()} (x${this.getQuantityFilled()} filled) @${this.getPrice()}`;
     }
-    toNonUserString() {
-        return `${super.toNonUserString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}`;
-    }
-    toShortString() {
-        return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+    toFullString() {
+        return `${super.toFullString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
     toStopLossString() {
         return `${this.getDirection()} ${this.getType()} x${this.getQuantity()} @${this.getPrice()}`;
@@ -224,13 +218,10 @@ class MarketOrder extends NormalOrder {
     }
 
     toString() {
-        return `${super.toString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
+        return `${super.toString()}, x${this.getQuantity()}`;
     }
-    toNonUserString() {
-        return `${super.toNonUserString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
-    }
-    toShortString() {
-        return `${super.toShortString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
+    toFullString() {
+        return `${super.toFullString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
     }
     toStopLossString() {
         return `${this.getDirection()} ${this.getType()} x${this.getQuantity()}`;
@@ -252,14 +243,11 @@ class StopLossOrder extends Order {
     toString() {
         return `${super.toString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
     }
-    toNonUserString() {
-        return `${super.toNonUserString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
-    }
-    toShortString() {
-        return `${super.toShortString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
+    toFullString() {
+        return `${super.toFullString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
     }
     orderExecutedString() {
-        return `${getPingString(this.getUser())} Your stop order: \`${this.toShortString()}\` is triggered.`;
+        return `${getPingString(this.getUser())} Your stop order: \`${this.toFullString()}\` is triggered.`;
     }
 
     getTriggerPrice() {
