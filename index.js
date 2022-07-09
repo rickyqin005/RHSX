@@ -365,7 +365,7 @@ class Ticker {
     }
     async initialize(infoMessageChannel, infoMessageId) {
         this.#infoMessage = await infoMessageChannel.messages.fetch(infoMessageId);
-        this.#infoMessage.edit(this.toString());
+        this.refresh();
     }
 
     refresh() {
