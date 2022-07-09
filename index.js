@@ -484,7 +484,7 @@ class OrderBook {
             else topBid = topBid.getPrice();
             let topAsk = ticker.asks.peek();
             if(topAsk == null) topAsk = '-';
-            else topAsk = topBid.getPrice();
+            else topAsk = topAsk.getPrice();
 
             str += setW(ticker.getSymbol(), 10) + setW(ticker.getLastTradedPrice(), 15) +
             setW(topBid, 15) + setW(topAsk, 15) + '\n';
