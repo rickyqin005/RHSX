@@ -373,13 +373,12 @@ class Ticker {
     }
     #toString() {
         let str = '';
-        str += `Ticker: ${this.getSymbol()}` + '\n\n';
+        str += `Ticker: ${this.getSymbol()}` + '\n';
 
         str += 'Bids:' + '\n';
         str += '```';
         str += this.bids.printAllReverse();
         str += '```';
-        str += '\n';
 
         str += 'Asks:' + '\n';
         str += '```';
