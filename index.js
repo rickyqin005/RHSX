@@ -765,6 +765,6 @@ client.login(process.env['BOT_TOKEN']);
 function getPingString(user) {
     return `<@${user.id}>`;
 }
-function setW(string, length) {
-    return string + ' '.repeat(Math.max(length - string.length, 0));
+function setW(value, length) {
+    return String(value) + ' '.repeat(Math.max(length - string.length, 0));
 }
