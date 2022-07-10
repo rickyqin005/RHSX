@@ -46,7 +46,7 @@ class Trader {
         let tradeCount = 0;
         for(let i = 0; i < this.#orders.length; i++) {
             if(this.#orders[i].getStatus() == Order.COMPLETELY_FILLED) {
-                str += `\`${this.#orders[i].toFullString()}\`` + '\n';
+                str += `\`${this.#orders[i].toInfoString()}\`` + '\n';
                 tradeCount++;
             }
         }
@@ -110,25 +110,25 @@ class Order extends MarketObject {
     toString() {
         return `#${this.getId()}`;
     }
-    toFullString() {
+    toInfoString() {
         return `#${this.getId()}`;
     }
     orderSubmittedString() {
-        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is submitted.`;
+        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is submitted.`;
     }
     orderFilledString() {
-        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is filled.`;
+        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is filled.`;
     }
     orderCancelledString(reason) {
         switch (reason) {
             case Order.UNFULFILLABLE:
-                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is cancelled because it cannot be fulfilled.`;
+                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
 
             case Order.VIOLATES_POSITION_LIMITS:
-                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is cancelled because it violates your position limits.`;
+                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it violates your position limits.`;
 
             default:
-                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is cancelled`;
+                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled`;
         }
     }
 
@@ -203,8 +203,8 @@ class LimitOrder extends NormalOrder {
     toString() {
         return `${super.toString()}, x${this.getQuantity()} (x${this.getQuantityFilled()} filled) @${this.getPrice()}`;
     }
-    toFullString() {
-        return `${super.toFullString()}, ${this.getDirection()} ${this.getCode()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+    toInfoString() {
+        return `${super.toInfoString()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
     toStopString() {
         return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()} @${this.getPrice()}`;
@@ -232,8 +232,8 @@ class MarketOrder extends NormalOrder {
     toString() {
         return `${super.toString()}, x${this.getQuantity()}`;
     }
-    toFullString() {
-        return `${super.toFullString()}, ${this.getDirection()} ${this.getCode()} x${this.getQuantity()} ${this.getTicker()}`;
+    toInfoString() {
+        return `${super.toInfoString()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()}`;
     }
     toStopString() {
         return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()}`;
@@ -265,11 +265,11 @@ class StopOrder extends Order {
     toString() {
         return `${super.toString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
-    toFullString() {
-        return `${super.toFullString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
+    toInfoString() {
+        return `${super.toInfoString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
     orderFilledString() {
-        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is triggered.`;
+        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is triggered.`;
     }
 
     getType() {
