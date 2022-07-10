@@ -204,14 +204,17 @@ class LimitOrder extends NormalOrder {
         return `${super.toString()}, x${this.getQuantity()} (x${this.getQuantityFilled()} filled) @${this.getPrice()}`;
     }
     toFullString() {
-        return `${super.toFullString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+        return `${super.toFullString()}, ${this.getDirection()} ${this.getCode()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
     toStopString() {
-        return `${this.getDirection()} ${this.getType()} x${this.getQuantity()} @${this.getPrice()}`;
+        return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()} @${this.getPrice()}`;
     }
 
     getType() {
         return LimitOrder.TYPE;
+    }
+    getCode() {
+        return LimitOrder.CODE;
     }
     getPrice() {
         return this.#price;
@@ -230,14 +233,17 @@ class MarketOrder extends NormalOrder {
         return `${super.toString()}, x${this.getQuantity()}`;
     }
     toFullString() {
-        return `${super.toFullString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
+        return `${super.toFullString()}, ${this.getDirection()} ${this.getCode()} x${this.getQuantity()} ${this.getTicker()}`;
     }
     toStopString() {
-        return `${this.getDirection()} ${this.getType()} x${this.getQuantity()}`;
+        return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()}`;
     }
 
     getType() {
         return MarketOrder.TYPE;
+    }
+    getCode() {
+        return MarketOrder.CODE;
     }
 }
 
@@ -257,10 +263,10 @@ class StopOrder extends Order {
     }
 
     toString() {
-        return `${super.toString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
+        return `${super.toString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
     toFullString() {
-        return `${super.toFullString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
+        return `${super.toFullString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
     orderExecutedString() {
         return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is triggered.`;
@@ -268,6 +274,9 @@ class StopOrder extends Order {
 
     getType() {
         return StopOrder.TYPE;
+    }
+    getCode() {
+        return StopOrder.CODE;
     }
     getTriggerPrice() {
         return this.#triggerPrice;
