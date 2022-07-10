@@ -268,7 +268,7 @@ class StopOrder extends Order {
     toFullString() {
         return `${super.toFullString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
-    orderExecutedString() {
+    orderFilledString() {
         return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is triggered.`;
     }
 
@@ -283,7 +283,7 @@ class StopOrder extends Order {
     }
 
     execute(channel) {
-        channel.send(this.orderExecutedString());
+        channel.send(this.orderFilledString());
         orderBook.submitOrder(this.#executedOrder, channel);
         this.#isExecuted = true;
     }
