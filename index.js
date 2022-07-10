@@ -86,8 +86,8 @@ class MarketObject {
 
 class Order extends MarketObject {
     static TYPE = 'order';
-    static BUY = 0;
-    static SELL = 1;
+    static BUY = 'BUY';
+    static SELL = 'SELL';
     static NOT_FILLED = 0;
     static PARTIALLY_FILLED = 1;
     static COMPLETELY_FILLED = 2;
