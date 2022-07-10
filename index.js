@@ -191,7 +191,7 @@ class NormalOrder extends Order {
 
 class LimitOrder extends NormalOrder {
     static TYPE = 'limit order';
-    static TYPE_CODE = 'LIMIT';
+    static CODE = 'LIMIT';
 
     #price;
 
@@ -220,7 +220,7 @@ class LimitOrder extends NormalOrder {
 
 class MarketOrder extends NormalOrder {
     static TYPE = 'market order';
-    static TYPE_CODE = 'MARKET';
+    static CODE = 'MARKET';
 
     constructor(user, direction, ticker, quantity) {
         super(user, direction, ticker, quantity);
@@ -243,7 +243,7 @@ class MarketOrder extends NormalOrder {
 
 class StopOrder extends Order {
     static TYPE = 'stop order';
-    static TYPE_CODE = 'STOP';
+    static CODE = 'STOP';
 
     #triggerPrice;
     #executedOrder;
@@ -625,18 +625,20 @@ client.on('messageCreate', (msg) => {
     switch(args[0]) {
         case '!help': {
             let infoString =
-                '!help' + '\n' +
-                '!join' + '\n' +
-                // '!position' + '\n' +
-                '!tradehistory' + '\n' +
-                '!buy LIMIT [ticker] [quantity] [price]' + '\n' +
-                '!sell LIMIT [ticker] [quantity] [price]' + '\n' +
-                '!buy MARKET [ticker] [quantity]' + '\n' +
-                '!sell MARKET [ticker] [quantity]' + '\n' +
-                '!buy STOP [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
-                '!sell STOP [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
+                '```\n' +
+                `!help\n` +
+                `!join\n` +
+                // `!position\n` +
+                `!tradehistory\n` +
+                `!buy ${LimitOrder.CODE} [ticker] [quantity] [price]\n` +
+                `!sell ${LimitOrder.CODE} [ticker] [quantity] [price]\n` +
+                `!buy ${MarketOrder.CODE} [ticker] [quantity]\n` +
+                `!sell ${MarketOrder.CODE} [ticker] [quantity]\n` +
+                `!buy ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
+                `!sell ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
+                '```\n';
 
-            msg.channel.send('```' + infoString + '```');
+            msg.channel.send(infoString);
             break;
         }
 
@@ -663,25 +665,25 @@ client.on('messageCreate', (msg) => {
             if(!isValidTrader(msg.author)) return;
 
             switch(args[1]) {
-                case 'LIMIT': {
+                case LimitOrder.CODE: {
                     let order = new LimitOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), parseInt(args[4]));
                     orderBook.submitLimitOrder(order, msg.channel);
                     break;
                 }
-                case 'MARKET': {
+                case MarketOrder.CODE: {
                     let order = new MarketOrder(msg.author, Order.BUY, args[2], parseInt(args[3]));
                     orderBook.submitMarketOrder(order, msg.channel);
                     break;
                 }
-                case 'STOP': {
+                case StopOrder.CODE: {
                     switch (args[4]) {
-                        case 'LIMIT': {
+                        case LimitOrder.CODE: {
                             let executedOrder = new LimitOrder(msg.author, Order.BUY, args[2], args[5], args[6]);
                             let order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
                             orderBook.submitStopOrder(order, msg.channel);
                             break;
                         }
-                        case 'MARKET': {
+                        case MarketOrder.CODE: {
                             let executedOrder = new MarketOrder(msg.author, Order.BUY, args[2], args[5]);
                             let order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
                             orderBook.submitStopOrder(order, msg.channel);
@@ -697,25 +699,25 @@ client.on('messageCreate', (msg) => {
             if(!isValidTrader(msg.author)) return;
 
             switch(args[1]) {
-                case 'LIMIT': {
+                case LimitOrder.CODE: {
                     let order = new LimitOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), parseInt(args[4]));
                     orderBook.submitLimitOrder(order, msg.channel);
                     break;
                 }
-                case 'MARKET': {
+                case MarketOrder.CODE: {
                     let order = new MarketOrder(msg.author, Order.SELL, args[2], parseInt(args[3]));
                     orderBook.submitMarketOrder(order, msg.channel);
                     break;
                 }
-                case 'STOP': {
+                case StopOrder.CODE: {
                     switch (args[4]) {
-                        case 'LIMIT': {
+                        case LimitOrder.CODE: {
                             let executedOrder = new LimitOrder(msg.author, Order.SELL, args[2], args[5], args[6]);
                             let order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
                             orderBook.submitStopOrder(order, msg.channel);
                             break;
                         }
-                        case 'MARKET': {
+                        case MarketOrder.CODE: {
                             let executedOrder = new MarketOrder(msg.author, Order.SELL, args[2], args[5]);
                             let order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
                             orderBook.submitStopOrder(order, msg.channel);
