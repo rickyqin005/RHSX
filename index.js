@@ -85,6 +85,9 @@ class MarketObject {
 }
 
 class Order extends MarketObject {
+    static TYPE = 'order';
+    static BUY = 0;
+    static SELL = 1;
     static NOT_FILLED = 0;
     static PARTIALLY_FILLED = 1;
     static COMPLETELY_FILLED = 2;
@@ -93,14 +96,12 @@ class Order extends MarketObject {
 
     #user;
     #direction;
-    #type;
     #ticker;
 
-    constructor(user, direction, type, ticker) {
+    constructor(user, direction, ticker) {
         super();
         this.#user = user;
         this.#direction = direction;
-        this.#type = type;
         this.#ticker = ticker;
 
         traders.get(this.getUser()).addOrder(this);
@@ -113,32 +114,32 @@ class Order extends MarketObject {
         return `#${this.getId()}`;
     }
     orderSubmittedString() {
-        return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is submitted.`;
+        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is submitted.`;
     }
     orderFilledString() {
-        return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is filled.`;
+        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is filled.`;
     }
     orderCancelledString(reason) {
         switch (reason) {
             case Order.UNFULFILLABLE:
-                return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is cancelled because it cannot be fulfilled.`;
+                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is cancelled because it cannot be fulfilled.`;
 
             case Order.VIOLATES_POSITION_LIMITS:
-                return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is cancelled because it violates your position limits.`;
+                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is cancelled because it violates your position limits.`;
 
             default:
-                return `${getPingString(this.getUser())} Your order: \`${this.toFullString()}\` is cancelled`;
+                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is cancelled`;
         }
     }
 
+    getType() {
+        return Order.TYPE;
+    }
     getUser() {
         return this.#user;
     }
     getDirection() {
         return this.#direction;
-    }
-    getType() {
-        return this.#type;
     }
     getTicker() {
         return this.#ticker;
@@ -154,8 +155,8 @@ class NormalOrder extends Order {
     #quantity;
     #quantityFilled;
 
-    constructor(user, direction, type, ticker, quantity) {
-        super(user, direction, type, ticker);
+    constructor(user, direction, ticker, quantity) {
+        super(user, direction, ticker);
         this.#quantity = quantity;
         this.#quantityFilled = 0;
     }
@@ -189,10 +190,13 @@ class NormalOrder extends Order {
 }
 
 class LimitOrder extends NormalOrder {
+    static TYPE = 'limit order';
+    static TYPE_CODE = 'LIMIT';
+
     #price;
 
     constructor(user, direction, ticker, quantity, price) {
-        super(user, direction, 'LIMIT', ticker, quantity);
+        super(user, direction, ticker, quantity);
         this.#price = price;
     }
 
@@ -202,19 +206,24 @@ class LimitOrder extends NormalOrder {
     toFullString() {
         return `${super.toFullString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
-    toStopLossString() {
+    toStopString() {
         return `${this.getDirection()} ${this.getType()} x${this.getQuantity()} @${this.getPrice()}`;
     }
 
+    getType() {
+        return LimitOrder.TYPE;
+    }
     getPrice() {
         return this.#price;
     }
 }
 
 class MarketOrder extends NormalOrder {
+    static TYPE = 'market order';
+    static TYPE_CODE = 'MARKET';
 
     constructor(user, direction, ticker, quantity) {
-        super(user, direction, 'MARKET', ticker, quantity);
+        super(user, direction, ticker, quantity);
     }
 
     toString() {
@@ -223,18 +232,25 @@ class MarketOrder extends NormalOrder {
     toFullString() {
         return `${super.toFullString()}, ${this.getDirection()} ${this.getType()} x${this.getQuantity()} ${this.getTicker()}`;
     }
-    toStopLossString() {
+    toStopString() {
         return `${this.getDirection()} ${this.getType()} x${this.getQuantity()}`;
+    }
+
+    getType() {
+        return MarketOrder.TYPE;
     }
 }
 
-class StopLossOrder extends Order {
+class StopOrder extends Order {
+    static TYPE = 'stop order';
+    static TYPE_CODE = 'STOP';
+
     #triggerPrice;
     #executedOrder;
     #isExecuted;
 
     constructor(user, direction, ticker, triggerPrice, executedOrder) {
-        super(user, direction, 'STOPLOSS', ticker);
+        super(user, direction, ticker);
         this.#triggerPrice = triggerPrice;
         this.#executedOrder = executedOrder;
         this.#isExecuted = false;
@@ -247,9 +263,12 @@ class StopLossOrder extends Order {
         return `${super.toFullString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopLossString()}`;
     }
     orderExecutedString() {
-        return `${getPingString(this.getUser())} Your stop order: \`${this.toFullString()}\` is triggered.`;
+        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toFullString()}\` is triggered.`;
     }
 
+    getType() {
+        return StopOrder.TYPE;
+    }
     getTriggerPrice() {
         return this.#triggerPrice;
     }
@@ -369,17 +388,17 @@ class Ticker {
 
         let currPrice = this.#lastTradedPrice;
         let tickDirection = '';
-        if(currPrice < newPrice) tickDirection = 'BUY';
-        else tickDirection = 'SELL';
+        if(currPrice < newPrice) tickDirection = Order.BUY;
+        else tickDirection = Order.SELL;
 
         for(let i = 0; i < this.#stops.length; i++) {
-            if(this.#stops[i].getDirection() == 'BUY' && tickDirection == 'BUY') {
+            if(this.#stops[i].getDirection() == Order.BUY && tickDirection == Order.BUY) {
                 if(currPrice < this.#stops[i].getTriggerPrice() && this.#stops[i].getTriggerPrice() <= newPrice) {
                     let stop = this.#stops[i];
                     this.#stops.splice(i, 1); i--;
                     stop.execute(channel);
                 }
-            } else if(this.#stops[i].getDirection() == 'SELL' && tickDirection == 'SELL') {
+            } else if(this.#stops[i].getDirection() == Order.SELL && tickDirection == Order.SELL) {
                 if(newPrice <= this.#stops[i].getTriggerPrice() && this.#stops[i].getTriggerPrice() < currPrice) {
                     let stop = this.#stops[i];
                     this.#stops.splice(i, 1); i--;
@@ -408,15 +427,6 @@ class OrderBook {
         return a.getPrice() < b.getPrice();
     }
     static VALID_TICKERS = ['CRZY', 'TAME'];
-    static getTickerListString() {
-        let str = '```' + '\n';
-        for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
-            str += OrderBook.VALID_TICKERS[i] + '\n';
-        }
-        str += '```';
-
-        return str;
-    }
 
     #tickers = new Map();
     #infoMessage;
@@ -512,7 +522,7 @@ class OrderBook {
         let bids = ticker.bids;
         let newLastTradedPrice = ticker.getLastTradedPrice();
 
-        if(order.getDirection() == 'BUY') {
+        if(order.getDirection() == Order.BUY) {
             while(!asks.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestAsk = asks.peek();
                 if(order.getPrice() < bestAsk.getPrice()) break;
@@ -526,7 +536,7 @@ class OrderBook {
             if(order.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
             else bids.add(order);
 
-        } else if(order.getDirection() == 'SELL') {
+        } else if(order.getDirection() == Order.SELL) {
             while(!bids.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestBid = bids.peek();
                 if(bestBid.getPrice() < order.getPrice()) break;
@@ -555,7 +565,7 @@ class OrderBook {
         let bids = ticker.bids;
         let newLastTradedPrice = ticker.getLastTradedPrice();
 
-        if(order.getDirection() == 'BUY') {
+        if(order.getDirection() == Order.BUY) {
             if(order.getQuantity() > this.getAsksDepth(order.getTicker())) {
                 order.cancel(Order.UNFULFILLABLE, channel); return;
             }
@@ -570,7 +580,7 @@ class OrderBook {
                 }
             }
 
-        } else if(order.getDirection() == 'SELL') {
+        } else if(order.getDirection() == Order.SELL) {
             if(order.getQuantity() > this.getBidsDepth(order.getTicker())) {
                 order.cancel(Order.UNFULFILLABLE, channel); return;
             }
@@ -591,7 +601,7 @@ class OrderBook {
         this.#getTicker(order.getTicker()).refresh();
     }
 
-    submitStopLossOrder(order, channel) {
+    submitStopOrder(order, channel) {
         if(!this.#validateOrder(order, channel)) return;
         channel.send(order.orderSubmittedString());
 
@@ -623,8 +633,8 @@ client.on('messageCreate', (msg) => {
                 '!sell LIMIT [ticker] [quantity] [price]' + '\n' +
                 '!buy MARKET [ticker] [quantity]' + '\n' +
                 '!sell MARKET [ticker] [quantity]' + '\n' +
-                '!buy STOPLOSS [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
-                '!sell STOPLOSS [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
+                '!buy STOP [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
+                '!sell STOP [ticker] [trigger price] [order type] [quantity] [[price]]' + '\n' +
 
             msg.channel.send('```' + infoString + '```');
             break;
@@ -654,27 +664,27 @@ client.on('messageCreate', (msg) => {
 
             switch(args[1]) {
                 case 'LIMIT': {
-                    let order = new LimitOrder(msg.author, 'BUY', args[2], parseInt(args[3]), parseInt(args[4]));
+                    let order = new LimitOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), parseInt(args[4]));
                     orderBook.submitLimitOrder(order, msg.channel);
                     break;
                 }
                 case 'MARKET': {
-                    let order = new MarketOrder(msg.author, 'BUY', args[2], parseInt(args[3]));
+                    let order = new MarketOrder(msg.author, Order.BUY, args[2], parseInt(args[3]));
                     orderBook.submitMarketOrder(order, msg.channel);
                     break;
                 }
-                case 'STOPLOSS': {
+                case 'STOP': {
                     switch (args[4]) {
                         case 'LIMIT': {
-                            let executedOrder = new LimitOrder(msg.author, 'BUY', args[2], args[5], args[6]);
-                            let order = new StopLossOrder(msg.author, 'BUY', args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitStopLossOrder(order, msg.channel);
+                            let executedOrder = new LimitOrder(msg.author, Order.BUY, args[2], args[5], args[6]);
+                            let order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
+                            orderBook.submitStopOrder(order, msg.channel);
                             break;
                         }
                         case 'MARKET': {
-                            let executedOrder = new MarketOrder(msg.author, 'BUY', args[2], args[5]);
-                            let order = new StopLossOrder(msg.author, 'BUY', args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitStopLossOrder(order, msg.channel);
+                            let executedOrder = new MarketOrder(msg.author, Order.BUY, args[2], args[5]);
+                            let order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
+                            orderBook.submitStopOrder(order, msg.channel);
                             break;
                         }
                     }
@@ -688,27 +698,27 @@ client.on('messageCreate', (msg) => {
 
             switch(args[1]) {
                 case 'LIMIT': {
-                    let order = new LimitOrder(msg.author, 'SELL', args[2], parseInt(args[3]), parseInt(args[4]));
+                    let order = new LimitOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), parseInt(args[4]));
                     orderBook.submitLimitOrder(order, msg.channel);
                     break;
                 }
                 case 'MARKET': {
-                    let order = new MarketOrder(msg.author, 'SELL', args[2], parseInt(args[3]));
+                    let order = new MarketOrder(msg.author, Order.SELL, args[2], parseInt(args[3]));
                     orderBook.submitMarketOrder(order, msg.channel);
                     break;
                 }
-                case 'STOPLOSS': {
+                case 'STOP': {
                     switch (args[4]) {
                         case 'LIMIT': {
-                            let executedOrder = new LimitOrder(msg.author, 'SELL', args[2], args[5], args[6]);
-                            let order = new StopLossOrder(msg.author, 'SELL', args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitStopLossOrder(order, msg.channel);
+                            let executedOrder = new LimitOrder(msg.author, Order.SELL, args[2], args[5], args[6]);
+                            let order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
+                            orderBook.submitStopOrder(order, msg.channel);
                             break;
                         }
                         case 'MARKET': {
-                            let executedOrder = new MarketOrder(msg.author, 'SELL', args[2], args[5]);
-                            let order = new StopLossOrder(msg.author, 'SELL', args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitStopLossOrder(order, msg.channel);
+                            let executedOrder = new MarketOrder(msg.author, Order.SELL, args[2], args[5]);
+                            let order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
+                            orderBook.submitStopOrder(order, msg.channel);
                             break;
                         }
                     }
