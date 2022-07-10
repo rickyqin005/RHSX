@@ -536,10 +536,10 @@ class OrderBook {
                 let bestAsk = asks.peek();
                 if(order.getPrice() < bestAsk.getPrice()) break;
                 order.match(bestAsk);
+                newLastTradedPrice = bestAsk.getPrice();
                 if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) {
                     channel.send(bestAsk.orderFilledString());
                     asks.poll();
-                    newLastTradedPrice = bestAsk.getPrice();
                 }
             }
             if(order.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
@@ -550,10 +550,10 @@ class OrderBook {
                 let bestBid = bids.peek();
                 if(bestBid.getPrice() < order.getPrice()) break;
                 order.match(bestBid);
+                newLastTradedPrice = bestBid.getPrice();
                 if(bestBid.getStatus() == Order.COMPLETELY_FILLED) {
                     channel.send(bestBid.orderFilledString());
                     bids.poll();
-                    newLastTradedPrice = bestBid.getPrice();
                 }
             }
             if(order.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
@@ -582,10 +582,10 @@ class OrderBook {
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestAsk = asks.peek();
                 order.match(bestAsk);
+                newLastTradedPrice = bestAsk.getPrice();
                 if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) {
                     channel.send(bestAsk.orderFilledString());
                     asks.poll();
-                    newLastTradedPrice = bestAsk.getPrice();
                 }
             }
 
@@ -597,10 +597,10 @@ class OrderBook {
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestBid = bids.peek();
                 order.match(bestBid);
+                newLastTradedPrice = bestBid.getPrice();
                 if(bestBid.getStatus() == Order.COMPLETELY_FILLED) {
                     channel.send(bestBid.orderFilledString());
                     bids.poll();
-                    newLastTradedPrice = bestBid.getPrice();
                 }
             }
 
