@@ -605,6 +605,7 @@ class OrderBook {
             }
 
         }
+        channel.send(order.orderFilledString());
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
         this.refresh();
         this.#getTicker(order.getTicker()).refresh();
