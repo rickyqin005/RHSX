@@ -468,7 +468,7 @@ class OrderBook {
     updateDisplayBoard(ticker) {
         this.#infoMessage.edit(this.#toString());
         this.#getTicker(ticker).updateDisplayBoard();
-        this.#lastUpdateMessage.edit(`Last updated at ${new Date().toString()}`);
+        this.#lastUpdateMessage.edit(`Last updated at ${new Date().toLocaleString()}`);
     }
     #toString() {
         let str = '```' + '\n';
