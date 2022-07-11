@@ -27,17 +27,16 @@ class Trader {
     }
 
     toString() {
-        // let str = '';
-        // str += `Pending Orders:` + '\n';
-        // let pendingOrdersCount = 0;
-        // for(let i = 0; i < this.#orders.length; i++) {
-        //     if(this.#orders[i].getStatus() != Order.COMPLETELY_FILLED) {
-        //         str += `\`${this.#orders[i].toNonUserString()}\`` + '\n';
-        //         pendingOrdersCount++;
-        //     }
-        // }
-        // if(pendingOrdersCount == 0) str += '`None`';
-        // return str;
+        let str = '';
+        str += 'Pending Orders:\n';
+        let filtered = orderBook.bids.filter(bid => {
+            return (bid.getStatus() == Order.NOT_FILLED || bid.getStatus() == Order.PARTIALLY_FILLED);
+        });
+        if(filtered.length == 0) str += '`Empty`\n';
+        filtered.forEach(bid => {
+            str += `\`${bid.toInfoString()}\`\n`;
+        });
+        return str;
     }
 
     getTradeHistoryString() {
@@ -377,15 +376,16 @@ class Ticker {
         this.#infoMessage.edit(this.#toString());
     }
     #toString() {
-        let str = '```\n';
-        str += `Ticker: ${this.getSymbol()}` + '\n\n';
+        let str = '';
+        str += `Ticker: ${this.getSymbol()}\n`;
+        str += '```\n';
 
         str += setW('Bids', 36) + 'Asks' + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
             if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 36);
             else str += setW('', 36);
-            if(i <= this.asks.size()-1) str += setW(this.asks.get(i).toString(), 36);
+            if(i <= this.asks.size()-1) str += this.asks.get(i).toString();
             str += '\n';
         }
         str += '```';
@@ -655,7 +655,7 @@ client.on('messageCreate', (msg) => {
                 '```\n' +
                 `!help\n` +
                 `!join\n` +
-                // `!position\n` +
+                `!position\n` +
                 // `!tradehistory\n` +
                 `!buy ${LimitOrder.CODE} [ticker] [quantity] [price]\n` +
                 `!sell ${LimitOrder.CODE} [ticker] [quantity] [price]\n` +
