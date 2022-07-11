@@ -369,10 +369,9 @@ class Ticker {
     }
     async initialize(infoMessageChannel, infoMessageId) {
         this.#infoMessage = await infoMessageChannel.messages.fetch(infoMessageId);
-        this.refresh();
     }
 
-    refresh() {
+    updateDisplayBoard() {
         this.#infoMessage.edit(this.#toString());
     }
     #toString() {
@@ -445,6 +444,7 @@ class OrderBook {
     static VALID_TICKERS = ['CRZY', 'TAME'];
 
     #tickers = new Map();
+    #lastUpdateMessage;
     #infoMessage;
 
     constructor() {
@@ -454,9 +454,9 @@ class OrderBook {
     }
     async initialize() {
         let channel = await client.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
-        let orderBookMessageId = process.env['ORDERBOOK_MESSAGE_ID'];
-        this.#infoMessage = await channel.messages.fetch(orderBookMessageId);
-        this.refresh();
+        this.#lastUpdateMessage = await channel.messages.fetch(process.env['DISPLAY_BOARD_LAST_UPDATE_MESSAGE_ID']);
+        this.#infoMessage = await channel.messages.fetch(process.env['ORDERBOOK_MESSAGE_ID']);
+        this.updateDisplayBoard();
 
         let tickerMessageIds = JSON.parse(process.env['TICKER_MESSAGE_IDS']);
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
@@ -465,8 +465,10 @@ class OrderBook {
 
     }
 
-    refresh() {
+    updateDisplayBoard(ticker) {
         this.#infoMessage.edit(this.#toString());
+        this.#getTicker(ticker).updateDisplayBoard();
+        this.#lastUpdateMessage.edit(`Last updated at ${new Date().toString()}`);
     }
     #toString() {
         let str = '```' + '\n';
@@ -579,8 +581,7 @@ class OrderBook {
 
         }
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
-        this.refresh();
-        this.#getTicker(order.getTicker()).refresh();
+        this.updateDisplayBoard(order.getTicker());
     }
 
     #submitMarketOrder(order, channel) {
@@ -622,8 +623,7 @@ class OrderBook {
         }
         channel.send(order.orderFilledString());
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
-        this.refresh();
-        this.#getTicker(order.getTicker()).refresh();
+        this.updateDisplayBoard(order.getTicker());
     }
 
     #submitStopOrder(order, channel) {
