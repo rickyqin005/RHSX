@@ -468,8 +468,8 @@ class OrderBook {
     updateDisplayBoard(ticker) {
         this.#infoMessage.edit(this.#toString());
         if(ticker == undefined) {
-            this.#tickers.forEach(ticker => {
-                ticker.updateDisplayBoard();
+            this.#tickers.forEach(currTicker => {
+                currTicker.updateDisplayBoard();
             });
         } else this.#getTicker(ticker).updateDisplayBoard();
         this.#lastUpdateMessage.edit(`Last updated at ${new Date().toLocaleString()}`);
