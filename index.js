@@ -356,11 +356,11 @@ class Ticker {
         str += `Ticker: ${this.getSymbol()}\n`;
         str += '```\n';
 
-        str += setW('Bids', 30) + 'Asks' + '\n';
+        str += setW('Bids', 25) + 'Asks' + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
-            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 30);
-            else str += setW('', 30);
+            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 25);
+            else str += setW('', 25);
             if(i <= this.asks.size()-1) str += this.asks.get(i).toString();
             str += '\n';
         }
@@ -452,9 +452,9 @@ class OrderBook {
     updateDisplayBoard() {
         let str = '';
         str += `Last updated at ${new Date().toLocaleString('en-US', {timeZone: 'America/Toronto'})}\n`;
-        str += this.toString() + '\n\n';
+        str += this.toString() + '\n';
         this.#tickers.forEach(ticker => {
-            str += ticker.toString() + '\n\n';
+            str += ticker.toString() + '\n';
         });
         this.#displayBoardMessage.edit(str);
     }
