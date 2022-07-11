@@ -261,11 +261,6 @@ class StopOrder extends Order {
         this.#isExecuted = false;
     }
 
-    initialize() {
-        this.#id = Order.#getNextId();
-        this.#timestamp = Date.now();
-    }
-
     toString() {
         return `${super.toString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
