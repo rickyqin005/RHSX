@@ -661,7 +661,6 @@ client.on('messageCreate', (msg) => {
     if(msg.author == process.env['BOT_ID']) return;
 
     let args = msg.content.split(' ');
-
     switch(args[0]) {
         case '!help': {
             let infoString =
