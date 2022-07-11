@@ -632,7 +632,7 @@ class OrderBook {
 
     cancelOrder(order, reason, channel) {
         order.cancel();
-        channel.send(this.orderCancelledString(reason));
+        channel.send(order.orderCancelledString(reason));
     }
 
     filter(funct) {
