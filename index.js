@@ -138,9 +138,8 @@ class Order {
         return this.#ticker;
     }
 
-    cancel(reason, channel) {
+    cancel() {
         this.#isCancelled = true;
-        channel.send(this.orderCancelledString(reason));
     }
     isCancelled() {
         return this.#isCancelled;
@@ -521,8 +520,8 @@ class OrderBook {
 
     submitOrder(order, channel) {
         if(!this.#validateOrder(order, channel)) return;
-        channel.send(order.orderSubmittedString());
         order.initialize();
+        channel.send(order.orderSubmittedString());
 
         if(order instanceof LimitOrder) {
             this.#submitLimitOrder(order, channel);
@@ -619,6 +618,11 @@ class OrderBook {
     #submitStopOrder(order, channel) {
         this.#getTicker(order.getTicker()).addStop(order);
     }
+
+    cancelOrder(order, channel) {
+        order.cancel();
+        channel.send(this.orderCancelledString(reason));
+    }
 }
 let orderBook = new OrderBook();
 
@@ -641,7 +645,7 @@ client.on('messageCreate', (msg) => {
                 `!help\n` +
                 `!join\n` +
                 // `!position\n` +
-                `!tradehistory\n` +
+                // `!tradehistory\n` +
                 `!buy ${LimitOrder.CODE} [ticker] [quantity] [price]\n` +
                 `!sell ${LimitOrder.CODE} [ticker] [quantity] [price]\n` +
                 `!buy ${MarketOrder.CODE} [ticker] [quantity]\n` +
