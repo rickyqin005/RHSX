@@ -183,7 +183,6 @@ class NormalOrder extends Order {
 
     #increaseQuantityFilled(amount) {
         this.#quantityFilled += amount;
-        return this.getStatus();
     }
 }
 
@@ -580,7 +579,7 @@ class OrderBook {
 
         if(order.getDirection() == Order.BUY) {
             if(order.getQuantity() > this.getAsksDepth(order.getTicker())) {
-                order.cancel(Order.UNFULFILLABLE, channel); return;
+                this.cancelOrder(Order.UNFULFILLABLE, channel); return;
             }
 
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
@@ -680,68 +679,42 @@ client.on('messageCreate', (msg) => {
         case '!buy': {
             if(!isValidTrader(msg.author)) return;
 
-            switch(args[1]) {
-                case LimitOrder.CODE: {
-                    let order = new LimitOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), parseInt(args[4]));
-                    orderBook.submitOrder(order, msg.channel);
-                    break;
-                }
-                case MarketOrder.CODE: {
-                    let order = new MarketOrder(msg.author, Order.BUY, args[2], parseInt(args[3]));
-                    orderBook.submitOrder(order, msg.channel);
-                    break;
-                }
-                case StopOrder.CODE: {
-                    switch (args[4]) {
-                        case LimitOrder.CODE: {
-                            let executedOrder = new LimitOrder(msg.author, Order.BUY, args[2], args[5], args[6]);
-                            let order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitOrder(order, msg.channel);
-                            break;
-                        }
-                        case MarketOrder.CODE: {
-                            let executedOrder = new MarketOrder(msg.author, Order.BUY, args[2], args[5]);
-                            let order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitOrder(order, msg.channel);
-                            break;
-                        }
-                    }
+            let order;
+            if(args[1] == LimitOrder.CODE) {
+                order = new LimitOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), parseInt(args[4]));
+            } else if(args[1] == MarketOrder.CODE) {
+                order = new MarketOrder(msg.author, Order.BUY, args[2], parseInt(args[3]));
+            } else if(args[1] == StopOrder.CODE) {
+                if(args[1] == LimitOrder.CODE) {
+                    let executedOrder = new LimitOrder(msg.author, Order.BUY, args[2], args[5], args[6]);
+                    order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
+                } else if(args[1] == MarketOrder.CODE) {
+                    let executedOrder = new MarketOrder(msg.author, Order.BUY, args[2], args[5]);
+                    order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
                 }
             }
+            orderBook.submitOrder(order, msg.channel);
             break;
         }
 
         case '!sell': {
             if(!isValidTrader(msg.author)) return;
 
-            switch(args[1]) {
-                case LimitOrder.CODE: {
-                    let order = new LimitOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), parseInt(args[4]));
-                    orderBook.submitOrder(order, msg.channel);
-                    break;
-                }
-                case MarketOrder.CODE: {
-                    let order = new MarketOrder(msg.author, Order.SELL, args[2], parseInt(args[3]));
-                    orderBook.submitOrder(order, msg.channel);
-                    break;
-                }
-                case StopOrder.CODE: {
-                    switch (args[4]) {
-                        case LimitOrder.CODE: {
-                            let executedOrder = new LimitOrder(msg.author, Order.SELL, args[2], args[5], args[6]);
-                            let order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitOrder(order, msg.channel);
-                            break;
-                        }
-                        case MarketOrder.CODE: {
-                            let executedOrder = new MarketOrder(msg.author, Order.SELL, args[2], args[5]);
-                            let order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitOrder(order, msg.channel);
-                            break;
-                        }
-                    }
+            let order;
+            if(args[1] == LimitOrder.CODE) {
+                order = new LimitOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), parseInt(args[4]));
+            } else if(args[1] == MarketOrder.CODE) {
+                order = new MarketOrder(msg.author, Order.SELL, args[2], parseInt(args[3]));
+            } else if(args[1] == StopOrder.CODE) {
+                if(args[1] == LimitOrder.CODE) {
+                    let executedOrder = new LimitOrder(msg.author, Order.SELL, args[2], args[5], args[6]);
+                    order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
+                } else if(args[1] == MarketOrder.CODE) {
+                    let executedOrder = new MarketOrder(msg.author, Order.SELL, args[2], args[5]);
+                    order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
                 }
             }
+            orderBook.submitOrder(order, msg.channel);
             break;
         }
     }
