@@ -39,19 +39,6 @@ class Trader {
         return str;
     }
 
-    getTradeHistoryString() {
-        // let str = '';
-        // let tradeCount = 0;
-        // for(let i = 0; i < this.#orders.length; i++) {
-        //     if(this.#orders[i].getStatus() == Order.COMPLETELY_FILLED) {
-        //         str += `\`${this.#orders[i].toInfoString()}\`` + '\n';
-        //         tradeCount++;
-        //     }
-        // }
-        // if(tradeCount == 0) str += '`Empty`';
-        // return str;
-    }
-
     getUser() {
         return this.#user;
     }
@@ -63,7 +50,6 @@ class Order {
     static #getNextId() {
         return Order.#nextId++;
     }
-    static TYPE = 'order';
     static BUY = 'BUY';
     static SELL = 'SELL';
     static UNSUBMITTED = 0;
@@ -118,9 +104,8 @@ class Order {
         }
     }
 
-    getType() {
-        return Order.TYPE;
-    }
+    getType() {}
+    getCode() {}
     getId() {
         return this.#id;
     }
@@ -136,6 +121,7 @@ class Order {
     getTicker() {
         return this.#ticker;
     }
+    getStatus() {}
 
     cancel() {
         this.#isCancelled = true;
@@ -154,6 +140,8 @@ class NormalOrder extends Order {
         this.#quantity = quantity;
         this.#quantityFilled = 0;
     }
+
+    toStopString() {}
 
     getQuantity() {
         return this.#quantity;
@@ -322,7 +310,6 @@ class PriorityQueue {
             }
         }
         this.#array.splice(idx, 0, element);
-        return;
     }
 
     peek() {
@@ -683,7 +670,6 @@ client.on('messageCreate', (msg) => {
                 `!help\n` +
                 `!join\n` +
                 `!position\n` +
-                // `!tradehistory\n` +
                 `!buy ${LimitOrder.CODE} [ticker] [quantity] [price]\n` +
                 `!sell ${LimitOrder.CODE} [ticker] [quantity] [price]\n` +
                 `!buy ${MarketOrder.CODE} [ticker] [quantity]\n` +
@@ -707,12 +693,6 @@ client.on('messageCreate', (msg) => {
             if(!isValidTrader(msg.author)) return;
 
             msg.channel.send(traders.get(msg.author).toString());
-            break;
-
-        case '!tradehistory':
-            if(!isValidTrader(msg.author)) return;
-
-            msg.channel.send(traders.get(msg.author).getTradeHistoryString());
             break;
 
         case '!buy': {
