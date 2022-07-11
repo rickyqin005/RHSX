@@ -34,7 +34,7 @@ class Trader {
     toString() {
         let str = '';
         str += 'Position:\n';
-        str += '```\n';
+        str += '``` \n';
         this.#positions.forEach((position, ticker) => {
             if(position != 0) str += setW(ticker, 8) + position + '\n';
         });
