@@ -29,13 +29,13 @@ class Trader {
     toString() {
         let str = '';
         str += 'Pending Orders:\n';
-        let filtered = orderBook.filter(order => {
+        str += '```\n';
+        orderBook.filter(order => {
             return (order.getUser() == this.#user && (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED));
+        }).forEach(order => {
+            str += `${order.toInfoString()}\n`;
         });
-        if(filtered.length == 0) str += '`Empty`\n';
-        filtered.forEach(order => {
-            str += `\`${order.toInfoString()}\`\n`;
-        });
+        str += '```';
         return str;
     }
 
@@ -346,7 +346,7 @@ class PriorityQueue {
     filter(funct) {
         let result = [];
         this.#array.forEach(item => {
-            if(funct(item)) result.add(item);
+            if(funct(item)) result.push(item);
         });
         return result;
     }
