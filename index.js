@@ -463,7 +463,9 @@ class OrderBook {
         }
 
         this.updateDisplayBoard();
-        setInterval(this.updateDisplayBoard, 1000*60);
+        setInterval(() => {
+            this.updateDisplayBoard();
+        }, 1000*60);
     }
 
     updateDisplayBoard(ticker) {
