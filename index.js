@@ -34,14 +34,14 @@ class Trader {
     toString() {
         let str = '';
         str += 'Position:\n';
-        str += '``` \n';
+        str += '``` ';
         this.#positions.forEach((position, ticker) => {
             if(position != 0) str += setW(ticker, 8) + position + '\n';
         });
         str += '```\n';
 
         str += 'Pending Orders:\n';
-        str += '``` \n';
+        str += '``` ';
         orderBook.filter(order => {
             return (order.getUser() == this.#user && (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED));
         }).forEach(order => {
