@@ -516,10 +516,10 @@ class OrderBook {
         }
         if(order instanceof StopOrder) {
             let ticker = this.#getTicker(order.getTicker());
-            if(order.getDirection() == Order.BUY && !(ticker.getLastTradedPrice() < order.getPrice())) {
+            if(order.getDirection() == Order.BUY && !(ticker.getLastTradedPrice() < order.getTriggerPrice())) {
                 channel.send('Trigger price must be greater than current price.'); return false;
             }
-            if(order.getDirection() == Order.SELL && !(order.getPrice() < ticker.getLastTradedPrice())) {
+            if(order.getDirection() == Order.SELL && !(order.getTriggerPrice() < ticker.getLastTradedPrice())) {
                 channel.send('Trigger price must be less than current price.'); return false;
             }
         }
