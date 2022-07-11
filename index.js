@@ -377,10 +377,9 @@ class Ticker {
         this.#infoMessage.edit(this.#toString());
     }
     #toString() {
-        let str = '';
-        str += `Ticker: ${this.getSymbol()}` + '\n';
+        let str = '```\n';
+        str += `Ticker: ${this.getSymbol()}` + '\n\n';
 
-        str += '```' + '\n';
         str += setW('Bids', 36) + setW('Asks', 36) + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
@@ -388,7 +387,6 @@ class Ticker {
             else str += setW('', 36);
 
             if(i <= this.asks.size()-1) str += setW(this.asks.get(i).toString(), 36);
-            else str += setW('', 36);
 
             str += '\n';
         }
