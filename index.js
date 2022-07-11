@@ -594,7 +594,7 @@ class OrderBook {
 
         } else if(order.getDirection() == Order.SELL) {
             if(order.getQuantity() > this.getBidsDepth(order.getTicker())) {
-                order.cancel(Order.UNFULFILLABLE, channel); return;
+                this.cancelOrder(Order.UNFULFILLABLE, channel); return;
             }
 
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
