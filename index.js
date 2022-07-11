@@ -514,6 +514,15 @@ class OrderBook {
         if(!this.hasTicker(order.getTicker())) {
             channel.send('Invalid ticker.'); return false;
         }
+        if(order instanceof StopOrder) {
+            let ticker = this.#getTicker(order.getTicker());
+            if(order.getDirection() == Order.BUY && !(ticker.getLastTradedPrice() < order.getPrice())) {
+                channel.send('Trigger price must be greater than current price.'); return false;
+            }
+            if(order.getDirection() == Order.SELL && !(order.getPrice() < ticker.getLastTradedPrice())) {
+                channel.send('Trigger price must be less than current price.'); return false;
+            }
+        }
         return true;
     }
 
