@@ -20,14 +20,26 @@ class Trader {
     static #DEFAULT_POSITION_LIMIT = 100000;
     #user;
     #positionLimit;
+    #positions = new Map();
 
     constructor(user) {
         this.#user = user;
         this.#positionLimit = Trader.#DEFAULT_POSITION_LIMIT;
+
+        for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
+            this.#positions.set(OrderBook.VALID_TICKERS[i], 0);
+        }
     }
 
     toString() {
         let str = '';
+        str += 'Position:\n';
+        str += '```\n';
+        this.#positions.forEach((position, ticker) => {
+            if(position != 0) str += setW(ticker, 8) + position + '\n';
+        });
+        str += '```\n';
+
         str += 'Pending Orders:\n';
         str += '```\n';
         orderBook.filter(order => {
@@ -41,6 +53,10 @@ class Trader {
 
     getUser() {
         return this.#user;
+    }
+
+    increasePosition(ticker, change) {
+        this.#positions.set(ticker, this.#positions.get(ticker) + change);
     }
 }
 
@@ -152,6 +168,13 @@ class NormalOrder extends Order {
     getQuantityUnfilled() {
         return this.#quantity - this.#quantityFilled;
     }
+    getNetPositionChangeSign() {
+        if(this.getDirection() == Order.BUY) return 1;
+        } else return -1;
+    }
+    getNetPositionChange() {
+        return this.getQuantityUnfilled() * this.getNetPositionChangeSign();
+    }
 
     getStatus() {
         if(this.getId() == undefined) return Order.UNSUBMITTED;
@@ -170,6 +193,7 @@ class NormalOrder extends Order {
 
     #increaseQuantityFilled(amount) {
         this.#quantityFilled += amount;
+        traders.get(this.getUser()).increasePosition(amount * this.getNetPositionChangeSign());
     }
 }
 
