@@ -30,7 +30,7 @@ class Trader {
         let str = '';
         str += 'Pending Orders:\n';
         let filtered = orderBook.filter(order => {
-            return (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED);
+            return (order.getUser() == this.#user && (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED));
         });
         if(filtered.length == 0) str += '`Empty`\n';
         filtered.forEach(order => {
@@ -591,7 +591,7 @@ class OrderBook {
 
         if(order.getDirection() == Order.BUY) {
             if(order.getQuantity() > this.getAsksDepth(order.getTicker())) {
-                this.cancelOrder(Order.UNFULFILLABLE, channel); return;
+                this.cancelOrder(order, Order.UNFULFILLABLE, channel); return;
             }
 
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
@@ -606,7 +606,7 @@ class OrderBook {
 
         } else if(order.getDirection() == Order.SELL) {
             if(order.getQuantity() > this.getBidsDepth(order.getTicker())) {
-                this.cancelOrder(Order.UNFULFILLABLE, channel); return;
+                this.cancelOrder(order, Order.UNFULFILLABLE, channel); return;
             }
 
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
@@ -630,7 +630,7 @@ class OrderBook {
         this.#getTicker(order.getTicker()).addStop(order);
     }
 
-    cancelOrder(order, channel) {
+    cancelOrder(order, reason, channel) {
         order.cancel();
         channel.send(this.orderCancelledString(reason));
     }
