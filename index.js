@@ -34,20 +34,20 @@ class Trader {
     toString() {
         let str = '';
         str += 'Position:\n';
-        str += '``` ';
+        str += '```';
         this.#positions.forEach((position, ticker) => {
             if(position != 0) str += setW(ticker, 8) + position + '\n';
         });
-        str += '```\n';
+        str += ' ```\n';
 
         str += 'Pending Orders:\n';
-        str += '``` ';
+        str += '```';
         orderBook.filter(order => {
             return (order.getUser() == this.#user && (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED));
         }).forEach(order => {
             str += `${order.toInfoString()}\n`;
         });
-        str += '```';
+        str += ' ```';
         return str;
     }
 
@@ -193,7 +193,7 @@ class NormalOrder extends Order {
 
     #increaseQuantityFilled(amount) {
         this.#quantityFilled += amount;
-        traders.get(this.getUser()).increasePosition(amount * this.getNetPositionChangeSign());
+        traders.get(this.getUser()).increasePosition(this.getTicker(), amount * this.getNetPositionChangeSign());
     }
 }
 
