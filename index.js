@@ -472,7 +472,7 @@ class OrderBook {
                 currTicker.updateDisplayBoard();
             });
         } else this.#getTicker(ticker).updateDisplayBoard();
-        this.#lastUpdateMessage.edit(`Last updated at ${new Date().toLocaleString()}`);
+        this.#lastUpdateMessage.edit(`Last updated at ${new Date().toLocaleString('en-US', {timeZone: 'America/Toronto'})}`);
     }
     #toString() {
         let str = '```' + '\n';
