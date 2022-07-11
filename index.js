@@ -170,7 +170,7 @@ class NormalOrder extends Order {
     }
     getNetPositionChangeSign() {
         if(this.getDirection() == Order.BUY) return 1;
-        } else return -1;
+        else return -1;
     }
     getNetPositionChange() {
         return this.getQuantityUnfilled() * this.getNetPositionChangeSign();
