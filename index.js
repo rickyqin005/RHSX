@@ -470,7 +470,7 @@ class OrderBook {
     }
     #toString() {
         let str = '```' + '\n';
-        str += setW('Ticker', 15) + setW('Price', 15) + setW('Bid', 15) + setW('Ask', 15) + '\n';
+        str += setW('Ticker', 10) + setW('Price', 10) + setW('Bid', 10) + setW('Ask', 10) + '\n';
 
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
             let ticker = this.#tickers.get(OrderBook.VALID_TICKERS[i]);
@@ -481,8 +481,8 @@ class OrderBook {
             if(topAsk == null) topAsk = '-';
             else topAsk = topAsk.getPrice();
 
-            str += setW(ticker.getSymbol(), 15) + setW(ticker.getLastTradedPrice(), 15) +
-            setW(topBid, 15) + setW(topAsk, 15) + '\n';
+            str += setW(ticker.getSymbol(), 10) + setW(ticker.getLastTradedPrice(), 10) +
+            setW(topBid, 10) + setW(topAsk, 10) + '\n';
         }
         str += '```';
         return str;
