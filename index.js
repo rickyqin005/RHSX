@@ -344,11 +344,7 @@ class PriorityQueue {
     }
 
     filter(funct) {
-        let result = [];
-        this.#array.forEach(item => {
-            if(funct(item)) result.push(item);
-        });
-        return result;
+        return this.#array.filter(funct);
     }
 }
 
@@ -359,7 +355,8 @@ class Ticker {
     #lastTradedPrice;
     bids;
     asks;
-    stops = [];
+    buyStops = [];
+    sellStops = [];
 
     constructor(symbol) {
         this.#symbol = symbol;
@@ -407,25 +404,37 @@ class Ticker {
         if(currPrice < newPrice) tickDirection = Order.BUY;
         else tickDirection = Order.SELL;
 
-        let hitStops = [];
-        this.stops.forEach(stop => {
-            if(stop.getDirection() == Order.BUY && tickDirection == Order.BUY) {
-                if(currPrice < stop.getTriggerPrice() && stop.getTriggerPrice() <= newPrice) hitStops.push(stop);
-            } else if(stop.getDirection() == Order.SELL && tickDirection == Order.SELL) {
-                if(newPrice <= stop.getTriggerPrice() && stop.getTriggerPrice() < currPrice) hitStops.push(stop);
-            }
-        });
+        let hitStops;
+        if(tickDirection == Order.BUY) {
+            hitStops = this.buyStops.filter((stop) => {
+                return (stop.getDirection() == tickDirection && currPrice < stop.getTriggerPrice() && stop.getTriggerPrice() <= newPrice);
+            });
+        } else {
+            hitStops = this.sellStops.filter((stop) => {
+                return (stop.getDirection() == tickDirection && newPrice <= stop.getTriggerPrice() && stop.getTriggerPrice() < currPrice);
+            });
+        }
         hitStops.forEach(stop => {
             this.removeStop(stop);
+        });
+        hitStops.forEach(stop => {
             stop.execute(channel);
         });
     }
 
     addStop(stop) {
-        this.stops.push(stop);
+        if(stop.getDirection() == Order.BUY) {
+            this.buyStops.push(stop);
+        } else if(stop.getDirection() == Order.SELL) {
+            this.sellStops.push(stop);
+        }
     }
     removeStop(stop) {
-        this.stops.splice(this.stops.indexOf(stop), 1);
+        if(stop.getDirection() == Order.BUY) {
+            this.buyStops.splice(this.buyStops.indexOf(stop), 1);
+        } else if(stop.getDirection() == Order.SELL) {
+            this.sellStops.splice(this.sellStops.indexOf(stop), 1);
+        }
     }
 }
 
