@@ -453,7 +453,7 @@ class OrderBook {
         }
     }
     async initialize() {
-        let channel = await client.channels.fetch(process.env['STOCK_INFO_CHANNEL_ID']);
+        let channel = await client.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
         let orderBookMessageId = process.env['ORDERBOOK_MESSAGE_ID'];
         this.#infoMessage = await channel.messages.fetch(orderBookMessageId);
         this.refresh();
