@@ -20,7 +20,6 @@ class Trader {
     static #DEFAULT_POSITION_LIMIT = 100000;
     #user;
     #positionLimit;
-    #orders = [];
 
     constructor(user) {
         this.#user = user;
@@ -28,83 +27,70 @@ class Trader {
     }
 
     toString() {
-        let str = '';
-        str += `Pending Orders:` + '\n';
-        let pendingOrdersCount = 0;
-        for(let i = 0; i < this.#orders.length; i++) {
-            if(this.#orders[i].getStatus() != Order.COMPLETELY_FILLED) {
-                str += `\`${this.#orders[i].toNonUserString()}\`` + '\n';
-                pendingOrdersCount++;
-            }
-        }
-        if(pendingOrdersCount == 0) str += '`None`';
-        return str;
+        // let str = '';
+        // str += `Pending Orders:` + '\n';
+        // let pendingOrdersCount = 0;
+        // for(let i = 0; i < this.#orders.length; i++) {
+        //     if(this.#orders[i].getStatus() != Order.COMPLETELY_FILLED) {
+        //         str += `\`${this.#orders[i].toNonUserString()}\`` + '\n';
+        //         pendingOrdersCount++;
+        //     }
+        // }
+        // if(pendingOrdersCount == 0) str += '`None`';
+        // return str;
     }
 
     getTradeHistoryString() {
-        let str = '';
-        let tradeCount = 0;
-        for(let i = 0; i < this.#orders.length; i++) {
-            if(this.#orders[i].getStatus() == Order.COMPLETELY_FILLED) {
-                str += `\`${this.#orders[i].toInfoString()}\`` + '\n';
-                tradeCount++;
-            }
-        }
-        if(tradeCount == 0) str += '`Empty`';
-        return str;
+        // let str = '';
+        // let tradeCount = 0;
+        // for(let i = 0; i < this.#orders.length; i++) {
+        //     if(this.#orders[i].getStatus() == Order.COMPLETELY_FILLED) {
+        //         str += `\`${this.#orders[i].toInfoString()}\`` + '\n';
+        //         tradeCount++;
+        //     }
+        // }
+        // if(tradeCount == 0) str += '`Empty`';
+        // return str;
     }
 
     getUser() {
         return this.#user;
     }
-
-    addOrder(order) {
-        this.#orders.push(order);
-    }
-    removeOrder(order) {
-        this.#orders.splice(this.#orders.indexOf(order), 1);
-    }
 }
 
 // Orders
-class MarketObject {
+class Order {
     static #nextId = 1;
     static #getNextId() {
-        return this.#nextId++;
+        return Order.#nextId++;
     }
-
-    #id;
-
-    constructor() {
-        this.#id = MarketObject.#getNextId();
-    }
-
-    getId() {
-        return this.#id;
-    }
-}
-
-class Order extends MarketObject {
     static TYPE = 'order';
     static BUY = 'BUY';
     static SELL = 'SELL';
-    static NOT_FILLED = 0;
-    static PARTIALLY_FILLED = 1;
-    static COMPLETELY_FILLED = 2;
+    static UNSUBMITTED = 0;
+    static NOT_FILLED = 1;
+    static PARTIALLY_FILLED = 2;
+    static COMPLETELY_FILLED = 3;
+    static CANCELLED = 4;
     static UNFULFILLABLE = 0;
     static VIOLATES_POSITION_LIMITS = 1;
 
+    #id;
+    #timestamp;
     #user;
     #direction;
     #ticker;
+    #isCancelled = false;
 
     constructor(user, direction, ticker) {
-        super();
         this.#user = user;
         this.#direction = direction;
         this.#ticker = ticker;
+    }
 
-        traders.get(this.getUser()).addOrder(this);
+    initialize() {
+        this.#id = Order.#getNextId();
+        this.#timestamp = Date.now();
     }
 
     toString() {
@@ -113,6 +99,7 @@ class Order extends MarketObject {
     toInfoString() {
         return `#${this.getId()}`;
     }
+
     orderSubmittedString() {
         return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is submitted.`;
     }
@@ -135,6 +122,12 @@ class Order extends MarketObject {
     getType() {
         return Order.TYPE;
     }
+    getId() {
+        return this.#id;
+    }
+    getTimestamp() {
+        return this.#timestamp;
+    }
     getUser() {
         return this.#user;
     }
@@ -146,8 +139,11 @@ class Order extends MarketObject {
     }
 
     cancel(reason, channel) {
-        traders.get(this.getUser()).removeOrder(this);
+        this.#isCancelled = true;
         channel.send(this.orderCancelledString(reason));
+    }
+    isCancelled() {
+        return this.#isCancelled;
     }
 }
 
@@ -172,6 +168,9 @@ class NormalOrder extends Order {
     }
 
     getStatus() {
+        if(this.getId() == undefined) return Order.UNSUBMITTED;
+        if(this.isCancelled()) return Order.CANCELLED;
+
         if(this.#quantityFilled == 0) return Order.NOT_FILLED;
         else if(this.#quantityFilled < this.#quantity) return Order.PARTIALLY_FILLED;
         else if(this.#quantityFilled == this.#quantity) return Order.COMPLETELY_FILLED;
@@ -262,6 +261,11 @@ class StopOrder extends Order {
         this.#isExecuted = false;
     }
 
+    initialize() {
+        this.#id = Order.#getNextId();
+        this.#timestamp = Date.now();
+    }
+
     toString() {
         return `${super.toString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
@@ -281,13 +285,19 @@ class StopOrder extends Order {
     getTriggerPrice() {
         return this.#triggerPrice;
     }
+    getStatus() {
+        if(this.getId() == undefined) return Order.UNSUBMITTED;
+        if(this.isCancelled()) return Order.CANCELLED;
+
+        if(this.isExecuted()) return Order.COMPLETELY_FILLED;
+        else return Order.NOT_FILLED;
+    }
 
     execute(channel) {
         channel.send(this.orderFilledString());
         orderBook.submitOrder(this.#executedOrder, channel);
         this.#isExecuted = true;
     }
-
     isExecuted() {
         return this.#isExecuted;
     }
@@ -428,11 +438,11 @@ class Ticker {
 // Orderbook
 class OrderBook {
     static BIDS_COMPARATOR = function(a, b) {
-        if(a.getPrice() == b.getPrice()) return a.getId() < b.getId();
+        if(a.getPrice() == b.getPrice()) return a.getTimestamp() < b.getTimestamp();
         return a.getPrice() > b.getPrice();
     }
     static ASKS_COMPARATOR = function(a, b) {
-        if(a.getPrice() == b.getPrice()) return a.getId() < b.getId();
+        if(a.getPrice() == b.getPrice()) return a.getTimestamp() < b.getTimestamp();
         return a.getPrice() < b.getPrice();
     }
     static VALID_TICKERS = ['CRZY', 'TAME'];
@@ -515,17 +525,20 @@ class OrderBook {
     }
 
     submitOrder(order, channel) {
+        if(!this.#validateOrder(order, channel)) return;
+        channel.send(order.orderSubmittedString());
+        order.initialize();
+
         if(order instanceof LimitOrder) {
-            this.submitLimitOrder(order, channel);
+            this.#submitLimitOrder(order, channel);
         } else if(order instanceof MarketOrder) {
-            this.submitMarketOrder(order, channel);
+            this.#submitMarketOrder(order, channel);
+        } else if(order instanceof StopOrder) {
+            this.#submitStopOrder(order, channel);
         }
     }
 
-    submitLimitOrder(order, channel) {
-        if(!this.#validateOrder(order, channel)) return;
-        channel.send(order.orderSubmittedString());
-
+    #submitLimitOrder(order, channel) {
         let ticker = this.#getTicker(order.getTicker());
         let asks = ticker.asks;
         let bids = ticker.bids;
@@ -565,10 +578,7 @@ class OrderBook {
         this.#getTicker(order.getTicker()).refresh();
     }
 
-    submitMarketOrder(order, channel) {
-        if(!this.#validateOrder(order, channel)) return;
-        channel.send(order.orderSubmittedString());
-
+    #submitMarketOrder(order, channel) {
         let ticker = this.#getTicker(order.getTicker());
         let asks = ticker.asks;
         let bids = ticker.bids;
@@ -611,10 +621,7 @@ class OrderBook {
         this.#getTicker(order.getTicker()).refresh();
     }
 
-    submitStopOrder(order, channel) {
-        if(!this.#validateOrder(order, channel)) return;
-        channel.send(order.orderSubmittedString());
-
+    #submitStopOrder(order, channel) {
         this.#getTicker(order.getTicker()).addStop(order);
     }
 }
@@ -677,12 +684,12 @@ client.on('messageCreate', (msg) => {
             switch(args[1]) {
                 case LimitOrder.CODE: {
                     let order = new LimitOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), parseInt(args[4]));
-                    orderBook.submitLimitOrder(order, msg.channel);
+                    orderBook.submitOrder(order, msg.channel);
                     break;
                 }
                 case MarketOrder.CODE: {
                     let order = new MarketOrder(msg.author, Order.BUY, args[2], parseInt(args[3]));
-                    orderBook.submitMarketOrder(order, msg.channel);
+                    orderBook.submitOrder(order, msg.channel);
                     break;
                 }
                 case StopOrder.CODE: {
@@ -690,13 +697,13 @@ client.on('messageCreate', (msg) => {
                         case LimitOrder.CODE: {
                             let executedOrder = new LimitOrder(msg.author, Order.BUY, args[2], args[5], args[6]);
                             let order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitStopOrder(order, msg.channel);
+                            orderBook.submitOrder(order, msg.channel);
                             break;
                         }
                         case MarketOrder.CODE: {
                             let executedOrder = new MarketOrder(msg.author, Order.BUY, args[2], args[5]);
                             let order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitStopOrder(order, msg.channel);
+                            orderBook.submitOrder(order, msg.channel);
                             break;
                         }
                     }
@@ -711,12 +718,12 @@ client.on('messageCreate', (msg) => {
             switch(args[1]) {
                 case LimitOrder.CODE: {
                     let order = new LimitOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), parseInt(args[4]));
-                    orderBook.submitLimitOrder(order, msg.channel);
+                    orderBook.submitOrder(order, msg.channel);
                     break;
                 }
                 case MarketOrder.CODE: {
                     let order = new MarketOrder(msg.author, Order.SELL, args[2], parseInt(args[3]));
-                    orderBook.submitMarketOrder(order, msg.channel);
+                    orderBook.submitOrder(order, msg.channel);
                     break;
                 }
                 case StopOrder.CODE: {
@@ -724,13 +731,13 @@ client.on('messageCreate', (msg) => {
                         case LimitOrder.CODE: {
                             let executedOrder = new LimitOrder(msg.author, Order.SELL, args[2], args[5], args[6]);
                             let order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitStopOrder(order, msg.channel);
+                            orderBook.submitOrder(order, msg.channel);
                             break;
                         }
                         case MarketOrder.CODE: {
                             let executedOrder = new MarketOrder(msg.author, Order.SELL, args[2], args[5]);
                             let order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
-                            orderBook.submitStopOrder(order, msg.channel);
+                            orderBook.submitOrder(order, msg.channel);
                             break;
                         }
                     }
