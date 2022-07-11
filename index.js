@@ -115,7 +115,7 @@ class Order {
                 return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it violates your position limits.`;
 
             default:
-                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled`;
+                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled.`;
         }
     }
 
@@ -342,6 +342,14 @@ class PriorityQueue {
 
     forEach(funct) {
         this.#array.forEach(funct);
+    }
+
+    filter(funct) {
+        let result = [];
+        this.#array.forEach(item => {
+            if(funct(item)) result.add(item);
+        });
+        return result;
     }
 }
 
