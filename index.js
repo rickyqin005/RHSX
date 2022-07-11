@@ -41,7 +41,7 @@ class Trader {
         str += '```\n';
 
         str += 'Pending Orders:\n';
-        str += '```\n';
+        str += '``` \n';
         orderBook.filter(order => {
             return (order.getUser() == this.#user && (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED));
         }).forEach(order => {
