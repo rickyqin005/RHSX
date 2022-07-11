@@ -456,13 +456,13 @@ class OrderBook {
         let channel = await client.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
         this.#lastUpdateMessage = await channel.messages.fetch(process.env['DISPLAY_BOARD_LAST_UPDATE_MESSAGE_ID']);
         this.#infoMessage = await channel.messages.fetch(process.env['ORDERBOOK_MESSAGE_ID']);
-        this.updateDisplayBoard();
 
         let tickerMessageIds = JSON.parse(process.env['TICKER_MESSAGE_IDS']);
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
             this.#tickers.get(OrderBook.VALID_TICKERS[i]).initialize(channel, tickerMessageIds[i]);
         }
 
+        this.updateDisplayBoard();
     }
 
     updateDisplayBoard(ticker) {
