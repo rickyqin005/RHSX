@@ -459,7 +459,7 @@ class OrderBook {
 
         let tickerMessageIds = JSON.parse(process.env['TICKER_MESSAGE_IDS']);
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
-            this.#tickers.get(OrderBook.VALID_TICKERS[i]).initialize(channel, tickerMessageIds[i]);
+            await this.#tickers.get(OrderBook.VALID_TICKERS[i]).initialize(channel, tickerMessageIds[i]);
         }
 
         this.updateDisplayBoard();
