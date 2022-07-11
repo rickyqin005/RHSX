@@ -338,7 +338,6 @@ class PriorityQueue {
 class Ticker {
     static #DEFAULT_STARTING_PRICE = 50;
     #symbol;
-    #infoMessage;
     #lastTradedPrice;
     bids;
     asks;
@@ -351,23 +350,17 @@ class Ticker {
         this.bids = new PriorityQueue(OrderBook.BIDS_COMPARATOR);
         this.asks = new PriorityQueue(OrderBook.ASKS_COMPARATOR);
     }
-    async initialize(infoMessageChannel, infoMessageId) {
-        this.#infoMessage = await infoMessageChannel.messages.fetch(infoMessageId);
-    }
 
-    updateDisplayBoard() {
-        this.#infoMessage.edit(this.#toString());
-    }
-    #toString() {
+    toString() {
         let str = '';
         str += `Ticker: ${this.getSymbol()}\n`;
         str += '```\n';
 
-        str += setW('Bids', 36) + 'Asks' + '\n';
+        str += setW('Bids', 30) + 'Asks' + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
-            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 36);
-            else str += setW('', 36);
+            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 30);
+            else str += setW('', 30);
             if(i <= this.asks.size()-1) str += this.asks.get(i).toString();
             str += '\n';
         }
@@ -439,8 +432,7 @@ class OrderBook {
     static VALID_TICKERS = ['CRZY', 'TAME'];
 
     #tickers = new Map();
-    #lastUpdateMessage;
-    #infoMessage;
+    #displayBoardMessage;
 
     constructor() {
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
@@ -449,13 +441,7 @@ class OrderBook {
     }
     async initialize() {
         let channel = await client.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
-        this.#lastUpdateMessage = await channel.messages.fetch(process.env['DISPLAY_BOARD_LAST_UPDATE_MESSAGE_ID']);
-        this.#infoMessage = await channel.messages.fetch(process.env['ORDERBOOK_MESSAGE_ID']);
-
-        let tickerMessageIds = JSON.parse(process.env['TICKER_MESSAGE_IDS']);
-        for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
-            await this.#tickers.get(OrderBook.VALID_TICKERS[i]).initialize(channel, tickerMessageIds[i]);
-        }
+        this.#displayBoardMessage = await channel.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
 
         this.updateDisplayBoard();
         setInterval(() => {
@@ -463,16 +449,16 @@ class OrderBook {
         }, 1000*60);
     }
 
-    updateDisplayBoard(ticker) {
-        this.#infoMessage.edit(this.#toString());
-        if(ticker == undefined) {
-            this.#tickers.forEach(currTicker => {
-                currTicker.updateDisplayBoard();
-            });
-        } else this.#getTicker(ticker).updateDisplayBoard();
-        this.#lastUpdateMessage.edit(`Last updated at ${new Date().toLocaleString('en-US', {timeZone: 'America/Toronto'})}`);
+    updateDisplayBoard() {
+        let str = '';
+        str += `Last updated at ${new Date().toLocaleString('en-US', {timeZone: 'America/Toronto'})}\n`;
+        str += this.toString() + '\n\n';
+        this.#tickers.forEach(ticker => {
+            str += ticker.toString() + '\n\n';
+        });
+        this.#displayBoardMessage.edit(str);
     }
-    #toString() {
+    toString() {
         let str = '```' + '\n';
         str += setW('Ticker', 10) + setW('Price', 10) + setW('Bid', 10) + setW('Ask', 10) + '\n';
 
