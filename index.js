@@ -29,12 +29,12 @@ class Trader {
     toString() {
         let str = '';
         str += 'Pending Orders:\n';
-        let filtered = orderBook.bids.filter(bid => {
-            return (bid.getStatus() == Order.NOT_FILLED || bid.getStatus() == Order.PARTIALLY_FILLED);
+        let filtered = orderBook.filter(order => {
+            return (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED);
         });
         if(filtered.length == 0) str += '`Empty`\n';
-        filtered.forEach(bid => {
-            str += `\`${bid.toInfoString()}\`\n`;
+        filtered.forEach(order => {
+            str += `\`${order.toInfoString()}\`\n`;
         });
         return str;
     }
@@ -633,6 +633,19 @@ class OrderBook {
     cancelOrder(order, channel) {
         order.cancel();
         channel.send(this.orderCancelledString(reason));
+    }
+
+    filter(funct) {
+        let result = [];
+        this.#tickers.forEach(ticker => {
+            ticker.bids.filter(funct).forEach(bid => {
+                result.push(bid);
+            });
+            ticker.asks.filter(funct).forEach(ask => {
+                result.push(ask);
+            });
+        });
+        return result;
     }
 }
 let orderBook = new OrderBook();
