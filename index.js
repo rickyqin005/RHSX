@@ -694,10 +694,10 @@ client.on('messageCreate', (msg) => {
             } else if(args[1] == MarketOrder.CODE) {
                 order = new MarketOrder(msg.author, Order.BUY, args[2], parseInt(args[3]));
             } else if(args[1] == StopOrder.CODE) {
-                if(args[1] == LimitOrder.CODE) {
+                if(args[4] == LimitOrder.CODE) {
                     let executedOrder = new LimitOrder(msg.author, Order.BUY, args[2], args[5], args[6]);
                     order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
-                } else if(args[1] == MarketOrder.CODE) {
+                } else if(args[4] == MarketOrder.CODE) {
                     let executedOrder = new MarketOrder(msg.author, Order.BUY, args[2], args[5]);
                     order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
                 }
@@ -715,10 +715,10 @@ client.on('messageCreate', (msg) => {
             } else if(args[1] == MarketOrder.CODE) {
                 order = new MarketOrder(msg.author, Order.SELL, args[2], parseInt(args[3]));
             } else if(args[1] == StopOrder.CODE) {
-                if(args[1] == LimitOrder.CODE) {
+                if(args[4] == LimitOrder.CODE) {
                     let executedOrder = new LimitOrder(msg.author, Order.SELL, args[2], args[5], args[6]);
                     order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
-                } else if(args[1] == MarketOrder.CODE) {
+                } else if(args[4] == MarketOrder.CODE) {
                     let executedOrder = new MarketOrder(msg.author, Order.SELL, args[2], args[5]);
                     order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
                 }
