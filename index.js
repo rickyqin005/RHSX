@@ -197,7 +197,7 @@ class LimitOrder extends NormalOrder {
     }
 
     toString() {
-        return `${super.toString()}, x${this.getQuantity()} (x${this.getQuantityFilled()} filled) @${this.getPrice()}`;
+        return `${super.toString()}, x${this.getQuantityUnfilled()} @${this.getPrice()}`;
     }
     toInfoString() {
         return `${super.toInfoString()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
@@ -259,7 +259,7 @@ class StopOrder extends Order {
     }
 
     toString() {
-        return `${super.toString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
+        return `${super.toString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
     toInfoString() {
         return `${super.toInfoString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
@@ -359,7 +359,7 @@ class Ticker {
     #lastTradedPrice;
     bids;
     asks;
-    #stops = [];
+    stops = [];
 
     constructor(symbol) {
         this.#symbol = symbol;
@@ -400,33 +400,32 @@ class Ticker {
 
     setLastTradedPrice(newPrice, channel) {
         if(this.#lastTradedPrice == newPrice) return;
-
         let currPrice = this.#lastTradedPrice;
+        this.#lastTradedPrice = newPrice;
+
         let tickDirection = '';
         if(currPrice < newPrice) tickDirection = Order.BUY;
         else tickDirection = Order.SELL;
 
-        for(let i = 0; i < this.#stops.length; i++) {
-            if(this.#stops[i].getDirection() == Order.BUY && tickDirection == Order.BUY) {
-                if(currPrice < this.#stops[i].getTriggerPrice() && this.#stops[i].getTriggerPrice() <= newPrice) {
-                    let stop = this.#stops[i];
-                    this.#stops.splice(i, 1); i--;
-                    stop.execute(channel);
-                }
-            } else if(this.#stops[i].getDirection() == Order.SELL && tickDirection == Order.SELL) {
-                if(newPrice <= this.#stops[i].getTriggerPrice() && this.#stops[i].getTriggerPrice() < currPrice) {
-                    let stop = this.#stops[i];
-                    this.#stops.splice(i, 1); i--;
-                    stop.execute(channel);
-                }
+        let hitStops = [];
+        this.stops.forEach(stop => {
+            if(stop.getDirection() == Order.BUY && tickDirection == Order.BUY) {
+                if(currPrice < stop.getTriggerPrice() && stop.getTriggerPrice() <= newPrice) hitStops.push(stop);
+            } else if(stop.getDirection() == Order.SELL && tickDirection == Order.SELL) {
+                if(newPrice <= stop.getTriggerPrice() && stop.getTriggerPrice() < currPrice) hitStops.push(stop);
             }
-        }
-
-        this.#lastTradedPrice = newPrice;
+        });
+        hitStops.forEach(stop => {
+            this.removeStop(stop);
+            stop.execute(channel);
+        });
     }
 
     addStop(stop) {
-        this.#stops.push(stop);
+        this.stops.push(stop);
+    }
+    removeStop(stop) {
+        this.stops.splice(this.stops.indexOf(stop), 1);
     }
 }
 
