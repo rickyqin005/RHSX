@@ -380,14 +380,12 @@ class Ticker {
         let str = '```\n';
         str += `Ticker: ${this.getSymbol()}` + '\n\n';
 
-        str += setW('Bids', 36) + setW('Asks', 36) + '\n';
+        str += setW('Bids', 36) + 'Asks' + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
             if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 36);
             else str += setW('', 36);
-
             if(i <= this.asks.size()-1) str += setW(this.asks.get(i).toString(), 36);
-
             str += '\n';
         }
         str += '```';
@@ -472,7 +470,6 @@ class OrderBook {
     }
     #toString() {
         let str = '```' + '\n';
-
         str += setW('Ticker', 15) + setW('Price', 15) + setW('Bid', 15) + setW('Ask', 15) + '\n';
 
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
