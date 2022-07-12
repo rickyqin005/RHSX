@@ -264,7 +264,7 @@ class LimitOrder extends NormalOrder {
 
     validate() {
         super.validate();
-        if(Number.isNaN(this.#quantity)) throw new Error('Invalid limit price.');
+        if(Number.isNaN(this.#price)) throw new Error('Invalid limit price.');
     }
 }
 
