@@ -18,6 +18,7 @@ function isValidTrader(user) {
 
 class Trader {
     static #DEFAULT_POSITION_LIMIT = 100000;
+
     #user;
     #positionLimit;
     #positions = new Map();
@@ -53,6 +54,10 @@ class Trader {
 
     getUser() {
         return this.#user;
+    }
+
+    getPositionLimit() {
+        return this.#positionLimit;
     }
 
     increasePosition(ticker, change) {
@@ -97,6 +102,7 @@ class Order {
     toString() {
         return `#${this.getId()}`;
     }
+
     toInfoString() {
         return `#${this.getId()}`;
     }
@@ -104,46 +110,60 @@ class Order {
     orderSubmittedString() {
         return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is submitted.`;
     }
+
     orderFilledString() {
         return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is filled.`;
     }
+
     orderCancelledString(reason) {
         switch (reason) {
             case Order.UNFULFILLABLE:
                 return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
-
             case Order.VIOLATES_POSITION_LIMITS:
                 return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it violates your position limits.`;
-
             default:
                 return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled.`;
         }
     }
 
-    getType() {}
-    getCode() {}
     getId() {
         return this.#id;
     }
+
     getTimestamp() {
         return this.#timestamp;
     }
+
     getUser() {
         return this.#user;
     }
+
     getDirection() {
         return this.#direction;
     }
+
     getTicker() {
         return this.#ticker;
     }
+
+    isCancelled() {
+        return this.#isCancelled;
+    }
+
+    getType() {}
+
+    getCode() {}
+
     getStatus() {}
+
+    validate() {
+        if(!isValidTrader(this.#user)) throw 'Invalid trader.';
+        if(!(this.#direction == Order.BUY || this.#direction == Order.SELL)) throw `'direction' must be one of \`${Order.BUY}\` or \`${Order.SELL}\``;
+        if(!orderBook.hasTicker(this.#ticker)) throw `Invalid ticker\`${this.#ticker}\``;
+    }
 
     cancel() {
         this.#isCancelled = true;
-    }
-    isCancelled() {
-        return this.#isCancelled;
     }
 }
 
@@ -162,16 +182,20 @@ class NormalOrder extends Order {
     getQuantity() {
         return this.#quantity;
     }
+
     getQuantityFilled() {
         return this.#quantityFilled;
     }
+
     getQuantityUnfilled() {
         return this.#quantity - this.#quantityFilled;
     }
+
     getNetPositionChangeSign() {
         if(this.getDirection() == Order.BUY) return 1;
         else return -1;
     }
+
     getNetPositionChange() {
         return this.getQuantityUnfilled() * this.getNetPositionChangeSign();
     }
@@ -183,6 +207,11 @@ class NormalOrder extends Order {
         if(this.#quantityFilled == 0) return Order.NOT_FILLED;
         else if(this.#quantityFilled < this.#quantity) return Order.PARTIALLY_FILLED;
         else if(this.#quantityFilled == this.#quantity) return Order.COMPLETELY_FILLED;
+    }
+
+    validate() {
+        super.validate();
+        if(!(1 <= this.#quantity)) throw 'Quantity must be greater than 0.';
     }
 
     match(existingOrder) {
@@ -211,9 +240,11 @@ class LimitOrder extends NormalOrder {
     toString() {
         return `${super.toString()}, x${this.getQuantityUnfilled()} @${this.getPrice()}`;
     }
+
     toInfoString() {
         return `${super.toInfoString()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
+
     toStopString() {
         return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()} @${this.getPrice()}`;
     }
@@ -221,9 +252,11 @@ class LimitOrder extends NormalOrder {
     getType() {
         return LimitOrder.TYPE;
     }
+
     getCode() {
         return LimitOrder.CODE;
     }
+
     getPrice() {
         return this.#price;
     }
@@ -240,9 +273,11 @@ class MarketOrder extends NormalOrder {
     toString() {
         return `${super.toString()}, x${this.getQuantity()}`;
     }
+
     toInfoString() {
         return `${super.toInfoString()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()}`;
     }
+
     toStopString() {
         return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()}`;
     }
@@ -250,6 +285,7 @@ class MarketOrder extends NormalOrder {
     getType() {
         return MarketOrder.TYPE;
     }
+
     getCode() {
         return MarketOrder.CODE;
     }
@@ -273,9 +309,11 @@ class StopOrder extends Order {
     toString() {
         return `${super.toString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
+
     toInfoString() {
         return `${super.toInfoString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
+
     orderFilledString() {
         return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is triggered.`;
     }
@@ -283,12 +321,11 @@ class StopOrder extends Order {
     getType() {
         return StopOrder.TYPE;
     }
+
     getCode() {
         return StopOrder.CODE;
     }
-    getTriggerPrice() {
-        return this.#triggerPrice;
-    }
+
     getStatus() {
         if(this.getId() == undefined) return Order.UNSUBMITTED;
         if(this.isCancelled()) return Order.CANCELLED;
@@ -297,13 +334,29 @@ class StopOrder extends Order {
         else return Order.NOT_FILLED;
     }
 
+    getTriggerPrice() {
+        return this.#triggerPrice;
+    }
+
+    isExecuted() {
+        return this.#isExecuted;
+    }
+
+    validate() {
+        super.validate();
+        let ticker = orderBook.getTicker(this.getTicker());
+        if(this.getDirection() == Order.BUY && !(ticker.getLastTradedPrice() < this.getTriggerPrice())) {
+            throw 'Trigger price must be greater than current price.';
+        }
+        if(this.getDirection() == Order.SELL && !(this.getTriggerPrice() < ticker.getLastTradedPrice())) {
+            throw 'Trigger price must be less than current price.';
+        }
+    }
+
     execute(channel) {
         channel.send(this.orderFilledString());
         orderBook.submitOrder(this.#executedOrder, channel);
         this.#isExecuted = true;
-    }
-    isExecuted() {
-        return this.#isExecuted;
     }
 }
 
@@ -361,6 +414,7 @@ class PriorityQueue {
 
 class Ticker {
     static #DEFAULT_STARTING_PRICE = 50;
+
     #symbol;
     #lastTradedPrice;
     bids;
@@ -395,6 +449,7 @@ class Ticker {
     getSymbol() {
         return this.#symbol;
     }
+
     getLastTradedPrice() {
         return this.#lastTradedPrice;
     }
@@ -433,6 +488,7 @@ class Ticker {
             this.sellStops.push(stop);
         }
     }
+
     removeStop(stop) {
         if(stop.getDirection() == Order.BUY) {
             this.buyStops.splice(this.buyStops.indexOf(stop), 1);
@@ -463,6 +519,7 @@ class OrderBook {
             this.#tickers.set(OrderBook.VALID_TICKERS[i], new Ticker(OrderBook.VALID_TICKERS[i]));
         }
     }
+
     async initialize() {
         let channel = await client.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
         this.#displayBoardMessage = await channel.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
@@ -482,6 +539,7 @@ class OrderBook {
         });
         this.#displayBoardMessage.edit(str);
     }
+
     toString() {
         let str = '```' + '\n';
         str += setW('Ticker', 10) + setW('Price', 10) + setW('Bid', 10) + setW('Ask', 10) + '\n';
@@ -505,7 +563,7 @@ class OrderBook {
     getBidsDepth(ticker) {
         if(!this.hasTicker(ticker)) return 0;
         let sum = 0;
-        this.#getTicker(ticker).bids.forEach(bid => {
+        this.getTicker(ticker).bids.forEach(bid => {
             sum += bid.getQuantityUnfilled();
         });
         return sum;
@@ -514,37 +572,26 @@ class OrderBook {
     getAsksDepth(ticker) {
         if(!this.hasTicker(ticker)) return 0;
         let sum = 0;
-        this.#getTicker(ticker).asks.forEach(ask => {
+        this.getTicker(ticker).asks.forEach(ask => {
             sum += ask.getQuantityUnfilled();
         });
         return sum;
     }
 
-    #getTicker(ticker) {
+    getTicker(ticker) {
         return this.#tickers.get(ticker);
     }
+
     hasTicker(ticker) {
         return OrderBook.VALID_TICKERS.includes(ticker);
     }
 
-    #validateOrder(order, channel) {
-        if(!this.hasTicker(order.getTicker())) {
-            channel.send('Invalid ticker.'); return false;
-        }
-        if(order instanceof StopOrder) {
-            let ticker = this.#getTicker(order.getTicker());
-            if(order.getDirection() == Order.BUY && !(ticker.getLastTradedPrice() < order.getTriggerPrice())) {
-                channel.send('Trigger price must be greater than current price.'); return false;
-            }
-            if(order.getDirection() == Order.SELL && !(order.getTriggerPrice() < ticker.getLastTradedPrice())) {
-                channel.send('Trigger price must be less than current price.'); return false;
-            }
-        }
-        return true;
-    }
-
     submitOrder(order, channel) {
-        if(!this.#validateOrder(order, channel)) return;
+        try {
+            order.validate();
+        } catch {
+            return;
+        }
         order.initialize();
         channel.send(order.orderSubmittedString());
 
@@ -558,7 +605,7 @@ class OrderBook {
     }
 
     #submitLimitOrder(order, channel) {
-        let ticker = this.#getTicker(order.getTicker());
+        let ticker = this.getTicker(order.getTicker());
         let asks = ticker.asks;
         let bids = ticker.bids;
         let newLastTradedPrice = ticker.getLastTradedPrice();
@@ -597,7 +644,7 @@ class OrderBook {
     }
 
     #submitMarketOrder(order, channel) {
-        let ticker = this.#getTicker(order.getTicker());
+        let ticker = this.getTicker(order.getTicker());
         let asks = ticker.asks;
         let bids = ticker.bids;
         let newLastTradedPrice = ticker.getLastTradedPrice();
@@ -639,7 +686,7 @@ class OrderBook {
     }
 
     #submitStopOrder(order, channel) {
-        this.#getTicker(order.getTicker()).addStop(order);
+        this.getTicker(order.getTicker()).addStop(order);
     }
 
     cancelOrder(order, reason, channel) {
