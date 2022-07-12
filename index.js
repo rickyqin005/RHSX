@@ -418,6 +418,10 @@ class PriorityQueue {
         return this.#array[index];
     }
 
+    indexOf(object) {
+        return this.#array.indexOf(object);
+    }
+
     forEach(funct) {
         this.#array.forEach(funct);
     }
