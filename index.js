@@ -7,7 +7,8 @@ app.listen(port, () => console.log(`listening at port ${port}`));
 
 // Bot
 const {Client, Intents} = require('discord.js');
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES]});
+const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES]});
+
 
 // Traders
 const traders = new Map();
@@ -26,7 +27,6 @@ class Trader {
     constructor(user) {
         this.#user = user;
         this.#positionLimit = Trader.#DEFAULT_POSITION_LIMIT;
-
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
             this.#positions.set(OrderBook.VALID_TICKERS[i], 0);
         }
@@ -36,19 +36,25 @@ class Trader {
         let str = '';
         str += 'Position:\n';
         str += '```';
+        let items = 0;
         this.#positions.forEach((position, ticker) => {
-            if(position != 0) str += setW(ticker, 8) + position + '\n';
+            if(position != 0) {
+                str += setW(ticker, 8) + position + '\n'; items++;
+            }
         });
-        str += ' ```\n';
+        if(items == 0) str += ' ';
+        str += '```\n';
 
         str += 'Pending Orders:\n';
         str += '```';
+        items = 0;
         orderBook.filter(order => {
             return (order.getUser() == this.#user && (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED));
         }).forEach(order => {
-            str += `${order.toInfoString()}\n`;
+            str += `${order.toInfoString()}\n`; items++;
         });
-        str += ' ```';
+        if(items == 0) str += ' ';
+        str += '```';
         return str;
     }
 
@@ -64,6 +70,7 @@ class Trader {
         this.#positions.set(ticker, this.#positions.get(ticker) + change);
     }
 }
+
 
 // Orders
 class Order {
@@ -160,7 +167,7 @@ class Order {
         if(!isValidTrader(this.#user)) throw new Error('Invalid trader.');
         if(!(this.#direction == Order.BUY || this.#direction == Order.SELL))
             throw new Error(`'Direction' must be one of \`${Order.BUY}\` or \`${Order.SELL}\`.`);
-        if(!orderBook.hasTicker(this.#ticker)) throw new Error(`Invalid ticker\`${this.#ticker}\`.`);
+        if(!orderBook.hasTicker(this.#ticker)) throw new Error(`Invalid ticker \`${this.#ticker}\`.`);
     }
 
     cancel() {
@@ -742,7 +749,6 @@ client.on('messageCreate', (msg) => {
                 `!buy ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
                 `!sell ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
                 '```\n';
-
             msg.channel.send(infoString);
             break;
         }
@@ -775,8 +781,8 @@ client.on('messageCreate', (msg) => {
                 } else if(args[4] == MarketOrder.CODE) {
                     let executedOrder = new MarketOrder(msg.author, Order.BUY, args[2], args[5]);
                     order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
-                }
-            }
+                } else return;
+            } else return;
             orderBook.submitOrder(order, msg.channel);
             break;
         }
@@ -796,8 +802,8 @@ client.on('messageCreate', (msg) => {
                 } else if(args[4] == MarketOrder.CODE) {
                     let executedOrder = new MarketOrder(msg.author, Order.SELL, args[2], args[5]);
                     order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
-                }
-            }
+                } else return;
+            } else return;
             orderBook.submitOrder(order, msg.channel);
             break;
         }
@@ -812,6 +818,7 @@ client.login(process.env['BOT_TOKEN']);
 function getPingString(user) {
     return `<@${user.id}>`;
 }
+
 function setW(value, length) {
     value = String(value);
     return value + ' '.repeat(Math.max(length - value.length, 0));
