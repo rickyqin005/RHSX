@@ -157,9 +157,10 @@ class Order {
     getStatus() {}
 
     validate() {
-        if(!isValidTrader(this.#user)) throw 'Invalid trader.';
-        if(!(this.#direction == Order.BUY || this.#direction == Order.SELL)) throw `'direction' must be one of \`${Order.BUY}\` or \`${Order.SELL}\``;
-        if(!orderBook.hasTicker(this.#ticker)) throw `Invalid ticker\`${this.#ticker}\``;
+        if(!isValidTrader(this.#user)) throw new Error('Invalid trader.');
+        if(!(this.#direction == Order.BUY || this.#direction == Order.SELL))
+            throw new Error(`'Direction' must be one of \`${Order.BUY}\` or \`${Order.SELL}\`.`);
+        if(!orderBook.hasTicker(this.#ticker)) throw new Error(`Invalid ticker\`${this.#ticker}\`.`);
     }
 
     cancel() {
@@ -211,7 +212,7 @@ class NormalOrder extends Order {
 
     validate() {
         super.validate();
-        if(!(1 <= this.#quantity)) throw 'Quantity must be greater than 0.';
+        if(Number.isNaN(this.#quantity) || !(1 <= this.#quantity)) throw new Error('Quantity must be greater than 0.');
     }
 
     match(existingOrder) {
@@ -259,6 +260,11 @@ class LimitOrder extends NormalOrder {
 
     getPrice() {
         return this.#price;
+    }
+
+    validate() {
+        super.validate();
+        if(Number.isNaN(this.#quantity)) throw new Error('Invalid limit price.');
     }
 }
 
@@ -344,12 +350,14 @@ class StopOrder extends Order {
 
     validate() {
         super.validate();
+        if(Number.isNaN(this.#triggerPrice)) throw new Error('Invalid trigger price.');
+        this.#executedOrder.validate();
         let ticker = orderBook.getTicker(this.getTicker());
         if(this.getDirection() == Order.BUY && !(ticker.getLastTradedPrice() < this.getTriggerPrice())) {
-            throw 'Trigger price must be greater than current price.';
+            throw new Error('Trigger price must be greater than current price.');
         }
         if(this.getDirection() == Order.SELL && !(this.getTriggerPrice() < ticker.getLastTradedPrice())) {
-            throw 'Trigger price must be less than current price.';
+            throw new Error('Trigger price must be less than current price.');
         }
     }
 
@@ -589,8 +597,8 @@ class OrderBook {
     submitOrder(order, channel) {
         try {
             order.validate();
-        } catch {
-            return;
+        } catch(error) {
+            channel.send(error.message); return;
         }
         order.initialize();
         channel.send(order.orderSubmittedString());
