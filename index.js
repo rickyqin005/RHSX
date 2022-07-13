@@ -314,8 +314,7 @@ class StopOrder extends Order {
 
     validate() {
         super.validate();
-        if(Number.isNaN(this.#triggerPrice)) throw new Error('Invalid trigger price.');
-        this.#executedOrder.validate();
+        if(Number.isNaN(this.getTriggerPrice())) throw new Error('Invalid trigger price.');
         let ticker = orderBook.getTicker(this.getTicker());
         if(this.getDirection() == Order.BUY && !(ticker.getLastTradedPrice() < this.getTriggerPrice())) {
             throw new Error('Trigger price must be greater than current price.');
@@ -323,6 +322,7 @@ class StopOrder extends Order {
         if(this.getDirection() == Order.SELL && !(this.getTriggerPrice() < ticker.getLastTradedPrice())) {
             throw new Error('Trigger price must be less than current price.');
         }
+        this.#executedOrder.validate();
     }
 
     execute(channel) {
@@ -754,10 +754,10 @@ client.on('messageCreate', (msg) => {
                 order = new MarketOrder(msg.author, Order.BUY, args[2], parseInt(args[3]));
             } else if(args[1] == StopOrder.CODE) {
                 if(args[4] == LimitOrder.CODE) {
-                    let executedOrder = new LimitOrder(msg.author, Order.BUY, args[2], args[5], args[6]);
+                    let executedOrder = new LimitOrder(msg.author, Order.BUY, args[2], parseInt(args[5]), parseInt(args[6]));
                     order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
                 } else if(args[4] == MarketOrder.CODE) {
-                    let executedOrder = new MarketOrder(msg.author, Order.BUY, args[2], args[5]);
+                    let executedOrder = new MarketOrder(msg.author, Order.BUY, args[2], parseInt(args[5]));
                     order = new StopOrder(msg.author, Order.BUY, args[2], parseInt(args[3]), executedOrder);
                 } else return;
             } else return;
@@ -775,10 +775,10 @@ client.on('messageCreate', (msg) => {
                 order = new MarketOrder(msg.author, Order.SELL, args[2], parseInt(args[3]));
             } else if(args[1] == StopOrder.CODE) {
                 if(args[4] == LimitOrder.CODE) {
-                    let executedOrder = new LimitOrder(msg.author, Order.SELL, args[2], args[5], args[6]);
+                    let executedOrder = new LimitOrder(msg.author, Order.SELL, args[2], parseInt(args[5]), parseInt(args[6]));
                     order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
                 } else if(args[4] == MarketOrder.CODE) {
-                    let executedOrder = new MarketOrder(msg.author, Order.SELL, args[2], args[5]);
+                    let executedOrder = new MarketOrder(msg.author, Order.SELL, args[2], parseInt(args[5]));
                     order = new StopOrder(msg.author, Order.SELL, args[2], parseInt(args[3]), executedOrder);
                 } else return;
             } else return;
