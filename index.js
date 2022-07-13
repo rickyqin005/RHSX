@@ -574,7 +574,8 @@ class OrderBook {
     }
 
     getOrderById(id) {
-
+        if(!(1 <= id && id <= this.#allOrders.size())) throw new Error('Invalid id.');
+        return this.#allOrders.get(id-1);
     }
 
     submitOrder(order, channel) {
