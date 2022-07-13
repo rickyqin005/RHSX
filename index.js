@@ -221,7 +221,7 @@ class LimitOrder extends NormalOrder {
     }
 
     toInfoString() {
-        return `${super.toInfoString()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+        return `${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
 
     toStopString() {
@@ -259,7 +259,7 @@ class MarketOrder extends NormalOrder {
     }
 
     toInfoString() {
-        return `${super.toInfoString()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()}`;
+        return `${this.getDirection()} x${this.getQuantity()} ${this.getTicker()}`;
     }
 
     toStopString() {
@@ -293,7 +293,7 @@ class StopOrder extends Order {
     }
 
     toInfoString() {
-        return `${super.toInfoString()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
+        return `${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
 
     orderFilledString() {
@@ -416,11 +416,11 @@ class Ticker {
         str += `Ticker: ${this.getSymbol()}\n`;
         str += '```\n';
 
-        str += setW('Bids', 25) + 'Asks' + '\n';
+        str += setW('Bids', 20) + 'Asks' + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
-            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).content.toDisplayBoardString(), 25);
-            else str += setW('', 25);
+            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).content.toDisplayBoardString(), 20);
+            else str += setW('', 20);
             if(i <= this.asks.size()-1) str += this.asks.get(i).content.toDisplayBoardString();
             str += '\n';
         }
