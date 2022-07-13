@@ -27,9 +27,9 @@ class Trader {
     constructor(user) {
         this.#user = user;
         this.#positionLimit = Trader.#DEFAULT_POSITION_LIMIT;
-        for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
-            this.#positions.set(OrderBook.VALID_TICKERS[i], 0);
-        }
+        OrderBook.VALID_TICKERS.forEach(ticker => {
+            this.#positions.set(ticker, 0);
+        });
     }
 
     toString() {
@@ -101,21 +101,21 @@ class Order {
     toInfoString() {}
 
     orderSubmittedString() {
-        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is submitted.`;
+        return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is submitted.`;
     }
 
     orderFilledString() {
-        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is filled.`;
+        return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is filled.`;
     }
 
     orderCancelledString(reason) {
         switch (reason) {
             case Order.UNFULFILLABLE:
-                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
+                return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
             case Order.VIOLATES_POSITION_LIMITS:
-                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it violates your position limits.`;
+                return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it violates your position limits.`;
             default:
-                return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled.`;
+                return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled.`;
         }
     }
 
@@ -297,7 +297,7 @@ class StopOrder extends Order {
     }
 
     orderFilledString() {
-        return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is triggered.`;
+        return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is triggered.`;
     }
 
     getType() {
@@ -354,8 +354,7 @@ class PriorityQueue {
         let idx = 0;
         for(; idx < this.#array.length; idx++) {
             if(this.#comparator(element, this.#array[idx])) {
-                this.#array.splice(idx, 0, element);
-                return;
+                this.#array.splice(idx, 0, element); return;
             }
         }
         this.#array.splice(idx, 0, element);
@@ -733,7 +732,7 @@ client.on('messageCreate', (msg) => {
         case '!join':
             if(isValidTrader(msg.author)) return;
 
-            msg.channel.send(`${getPingString(msg.author)} You've been added to the trader list.`);
+            msg.channel.send(`${pingString(msg.author)} You've been added to the trader list.`);
             traders.set(msg.author, new Trader(msg.author));
             break;
 
@@ -792,7 +791,7 @@ client.on('debug', console.log);
 client.login(process.env['BOT_TOKEN']);
 
 // Utility functions
-function getPingString(user) {
+function pingString(user) {
     return `<@${user.id}>`;
 }
 
