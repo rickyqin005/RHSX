@@ -77,17 +77,18 @@ class Order {
     static BUY = 'BUY';
     static SELL = 'SELL';
     static UNSUBMITTED = 0;
-    static NOT_FILLED = 1;
-    static PARTIALLY_FILLED = 2;
-    static COMPLETELY_FILLED = 3;
-    static CANCELLED = 4;
+    static IN_QUEUE = 1;
+    static NOT_FILLED = 2;
+    static PARTIALLY_FILLED = 3;
+    static COMPLETELY_FILLED = 4;
+    static CANCELLED = 5;
     static UNFULFILLABLE = 0;
     static VIOLATES_POSITION_LIMITS = 1;
 
     #user;
     #direction;
     #ticker;
-    #isCancelled = false;
+    #status = Order.UNSUBMITTED;
 
     constructor(user, direction, ticker) {
         this.#user = user;
@@ -130,25 +131,24 @@ class Order {
         return this.#ticker;
     }
 
-    isCancelled() {
-        return this.#isCancelled;
-    }
-
     getType() {}
 
     getCode() {}
 
-    getStatus() {}
+    getStatus() {
+        return this.#status;
+    }
+
+    setStatus(newStatus) {
+        if(!(0 <= newStatus && newStatus <= 5)) throw new Error('Invalid status.');
+        this.#status = newStatus;
+    }
 
     validate() {
         if(!isValidTrader(this.#user)) throw new Error('Invalid trader.');
         if(!(this.#direction == Order.BUY || this.#direction == Order.SELL))
             throw new Error(`'Direction' must be one of \`${Order.BUY}\` or \`${Order.SELL}\`.`);
         if(!orderBook.hasTicker(this.#ticker)) throw new Error(`Invalid ticker \`${this.#ticker}\`.`);
-    }
-
-    cancel() {
-        this.#isCancelled = true;
     }
 }
 
@@ -185,15 +185,6 @@ class NormalOrder extends Order {
         return this.getQuantityUnfilled() * this.getNetPositionChangeSign();
     }
 
-    getStatus() {
-        if(this.getId() == undefined) return Order.UNSUBMITTED;
-        if(this.isCancelled()) return Order.CANCELLED;
-
-        if(this.#quantityFilled == 0) return Order.NOT_FILLED;
-        else if(this.#quantityFilled < this.#quantity) return Order.PARTIALLY_FILLED;
-        else if(this.#quantityFilled == this.#quantity) return Order.COMPLETELY_FILLED;
-    }
-
     validate() {
         super.validate();
         if(Number.isNaN(this.#quantity) || !(1 <= this.#quantity)) throw new Error('Quantity must be greater than 0.');
@@ -207,6 +198,9 @@ class NormalOrder extends Order {
 
     #increaseQuantityFilled(amount) {
         this.#quantityFilled += amount;
+        if(this.#quantityFilled == 0) this.setStatus(Order.NOT_FILLED);
+        else if(this.#quantityFilled < this.#quantity) this.setStatus(Order.PARTIALLY_FILLED);
+        else if(this.#quantityFilled == this.#quantity) this.setStatus(Order.COMPLETELY_FILLED);
         traders.get(this.getUser()).increasePosition(this.getTicker(), amount * this.getNetPositionChangeSign());
     }
 }
@@ -287,13 +281,11 @@ class StopOrder extends Order {
 
     #triggerPrice;
     #executedOrder;
-    #isExecuted;
 
     constructor(user, direction, ticker, triggerPrice, executedOrder) {
         super(user, direction, ticker);
         this.#triggerPrice = triggerPrice;
         this.#executedOrder = executedOrder;
-        this.#isExecuted = false;
     }
 
     toDisplayBoardString() {
@@ -316,20 +308,8 @@ class StopOrder extends Order {
         return StopOrder.CODE;
     }
 
-    getStatus() {
-        if(this.getId() == undefined) return Order.UNSUBMITTED;
-        if(this.isCancelled()) return Order.CANCELLED;
-
-        if(this.isExecuted()) return Order.COMPLETELY_FILLED;
-        else return Order.NOT_FILLED;
-    }
-
     getTriggerPrice() {
         return this.#triggerPrice;
-    }
-
-    isExecuted() {
-        return this.#isExecuted;
     }
 
     validate() {
@@ -346,9 +326,9 @@ class StopOrder extends Order {
     }
 
     execute(channel) {
+        this.setStatus(Order.COMPLETELY_FILLED);
         channel.send(this.orderFilledString());
         orderBook.submitOrder(this.#executedOrder, channel);
-        this.#isExecuted = true;
     }
 }
 
@@ -598,6 +578,7 @@ class OrderBook {
         } catch(error) {
             channel.send(error.message); return;
         }
+        order.setStatus(Order.NOT_FILLED);
         channel.send(order.orderSubmittedString());
         order = {
             id: OrderBook.#getNextId(),
@@ -701,11 +682,11 @@ class OrderBook {
     }
 
     cancelOrder(order, reason, channel) {
-        order.content.cancel();
+        order.content.setStatus(Order.CANCELLED);
         channel.send(order.content.orderCancelledString(reason));
     }
 
-    filter(funct) {// REWRITE REFERENCES!!
+    filter(funct) {
         let result = [];
         this.#tickers.forEach(ticker => {
             ticker.bids.filter(funct).forEach(bid => {
