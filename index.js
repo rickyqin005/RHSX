@@ -578,14 +578,14 @@ class OrderBook {
         } catch(error) {
             channel.send(error.message); return;
         }
-        order.setStatus(Order.NOT_FILLED);
-        channel.send(order.orderSubmittedString());
         order = {
             id: OrderBook.#getNextId(),
             timestamp: Date.now(),
             type: order.getType(),
             content: order
         };
+        order.content.setStatus(Order.NOT_FILLED);
+        channel.send(order.content.orderSubmittedString());
 
         if(order.content instanceof LimitOrder) {
             this.#submitLimitOrder(order, channel);
