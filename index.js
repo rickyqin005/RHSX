@@ -398,17 +398,14 @@ class Ticker {
     static #DEFAULT_STARTING_PRICE = 50;
 
     #symbol;
-    #lastTradedPrice;
-    bids;
-    asks;
-    buyStops = [];
-    sellStops = [];
+    #lastTradedPrice = Ticker.#DEFAULT_STARTING_PRICE;
+    bids = new PriorityQueue(OrderBook.BIDS_COMPARATOR);
+    asks = new PriorityQueue(OrderBook.ASKS_COMPARATOR);
+    buyStops = new PriorityQueue(OrderBook.TIMESTAMP_COMPARATOR);
+    sellStops = new PriorityQueue(OrderBook.TIMESTAMP_COMPARATOR);;
 
     constructor(symbol) {
         this.#symbol = symbol;
-        this.#lastTradedPrice = Ticker.#DEFAULT_STARTING_PRICE;
-        this.bids = new PriorityQueue(OrderBook.BIDS_COMPARATOR);
-        this.asks = new PriorityQueue(OrderBook.ASKS_COMPARATOR);
     }
 
     toString() {
@@ -465,9 +462,9 @@ class Ticker {
 
     addStop(stop) {
         if(stop.content.getDirection() == Order.BUY) {
-            this.buyStops.push(stop);
+            this.buyStops.add(stop);
         } else if(stop.content.getDirection() == Order.SELL) {
-            this.sellStops.push(stop);
+            this.sellStops.add(stop);
         }
     }
 
@@ -495,8 +492,12 @@ class OrderBook {
         if(a.content.getPrice() == b.content.getPrice()) return a.timestamp < b.timestamp;
         return a.content.getPrice() < b.content.getPrice();
     }
+    static TIMESTAMP_COMPARATOR = function(a, b) {
+        return a.timestamp < b.timestamp;
+    }
     static VALID_TICKERS = ['CRZY', 'TAME'];
 
+    #allOrders = new PriorityQueue(OrderBook.TIMESTAMP_COMPARATOR);
     #tickers = new Map();
     #displayBoardMessage;
 
@@ -510,13 +511,13 @@ class OrderBook {
         let channel = await client.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
         this.#displayBoardMessage = await channel.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
 
-        this.updateDisplayBoard();
+        this.#updateDisplayBoard();
         setInterval(() => {
-            this.updateDisplayBoard();
+            this.#updateDisplayBoard();
         }, 1000*60);
     }
 
-    updateDisplayBoard() {
+    #updateDisplayBoard() {
         let str = '';
         str += `Last updated at ${new Date().toLocaleString('en-US', {timeZone: 'America/Toronto'})}\n`;
         str += this.toString() + '\n';
@@ -572,6 +573,10 @@ class OrderBook {
         return OrderBook.VALID_TICKERS.includes(ticker);
     }
 
+    getOrderById(id) {
+
+    }
+
     submitOrder(order, channel) {
         try {
             order.validate();
@@ -614,7 +619,10 @@ class OrderBook {
                 }
             }
             if(order.content.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.content.orderFilledString());
-            else bids.add(order);
+            else {
+                bids.add(order);
+                this.#allOrders.add(order);
+            }
 
         } else if(order.content.getDirection() == Order.SELL) {
             while(!bids.empty() && order.content.getStatus() != Order.COMPLETELY_FILLED) {
@@ -628,11 +636,13 @@ class OrderBook {
                 }
             }
             if(order.content.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.content.orderFilledString());
-            else asks.add(order);
-
+            else {
+                asks.add(order);
+                this.#allOrders.add(order);
+            }
         }
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
-        this.updateDisplayBoard(order.content.getTicker());
+        this.#updateDisplayBoard(order.content.getTicker());
     }
 
     #submitMarketOrder(order, channel) {
@@ -670,15 +680,15 @@ class OrderBook {
                     bids.poll();
                 }
             }
-
         }
         channel.send(order.content.orderFilledString());
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
-        this.updateDisplayBoard(order.content.getTicker());
+        this.#updateDisplayBoard(order.content.getTicker());
     }
 
     #submitStopOrder(order, channel) {
         this.getTicker(order.content.getTicker()).addStop(order);
+        this.#allOrders.add(order);
     }
 
     cancelOrder(order, reason, channel) {
@@ -687,22 +697,7 @@ class OrderBook {
     }
 
     filter(funct) {
-        let result = [];
-        this.#tickers.forEach(ticker => {
-            ticker.bids.filter(funct).forEach(bid => {
-                result.push(bid);
-            });
-            ticker.asks.filter(funct).forEach(ask => {
-                result.push(ask);
-            });
-            ticker.buyStops.filter(funct).forEach(stop => {
-                result.push(stop);
-            });
-            ticker.sellStops.filter(funct).forEach(stop => {
-                result.push(stop);
-            });
-        });
-        return result;
+        return this.#allOrders.filter(funct);
     }
 }
 let orderBook = new OrderBook();
