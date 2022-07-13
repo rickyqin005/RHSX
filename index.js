@@ -48,10 +48,10 @@ class Trader {
         str += 'Pending Orders:\n';
         str += '```';
         items = 0;
-        orderBook.filter(order => {
-            return (order.getUser() == this.#user && (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED));
-        }).forEach(order => {
-            str += `${order.toInfoString()}\n`; items++;
+        orderBook.filter(orderBookItem => {
+            return (orderBookItem.content.getUser() == this.#user && (orderBookItem.content.getStatus() == Order.NOT_FILLED || orderBookItem.content.getStatus() == Order.PARTIALLY_FILLED));
+        }).forEach(orderBookItem => {
+            str += `${orderBookItem.content.toInfoString()}\n`; items++;
         });
         if(items == 0) str += ' ';
         str += '```';
@@ -74,10 +74,6 @@ class Trader {
 
 // Orders
 class Order {
-    static #nextId = 1;
-    static #getNextId() {
-        return Order.#nextId++;
-    }
     static BUY = 'BUY';
     static SELL = 'SELL';
     static UNSUBMITTED = 0;
@@ -88,8 +84,6 @@ class Order {
     static UNFULFILLABLE = 0;
     static VIOLATES_POSITION_LIMITS = 1;
 
-    #id;
-    #timestamp;
     #user;
     #direction;
     #ticker;
@@ -101,18 +95,9 @@ class Order {
         this.#ticker = ticker;
     }
 
-    initialize() {
-        this.#id = Order.#getNextId();
-        this.#timestamp = Date.now();
-    }
+    toDisplayBoardString() {}
 
-    toString() {
-        return `#${this.getId()}`;
-    }
-
-    toInfoString() {
-        return `#${this.getId()}`;
-    }
+    toInfoString() {}
 
     orderSubmittedString() {
         return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is submitted.`;
@@ -131,14 +116,6 @@ class Order {
             default:
                 return `${getPingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled.`;
         }
-    }
-
-    getId() {
-        return this.#id;
-    }
-
-    getTimestamp() {
-        return this.#timestamp;
     }
 
     getUser() {
@@ -245,8 +222,8 @@ class LimitOrder extends NormalOrder {
         this.#price = price;
     }
 
-    toString() {
-        return `${super.toString()}, x${this.getQuantityUnfilled()} @${this.getPrice()}`;
+    toDisplayBoardString() {
+        return `x${this.getQuantityUnfilled()} @${this.getPrice()}`;
     }
 
     toInfoString() {
@@ -283,8 +260,8 @@ class MarketOrder extends NormalOrder {
         super(user, direction, ticker, quantity);
     }
 
-    toString() {
-        return `${super.toString()}, x${this.getQuantity()}`;
+    toDisplayBoardString() {
+        return `x${this.getQuantity()}`;
     }
 
     toInfoString() {
@@ -319,8 +296,8 @@ class StopOrder extends Order {
         this.#isExecuted = false;
     }
 
-    toString() {
-        return `${super.toString()}, @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
+    toDisplayBoardString() {
+        return `@${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
 
     toInfoString() {
@@ -462,9 +439,9 @@ class Ticker {
         str += setW('Bids', 25) + 'Asks' + '\n';
 
         for(let i = 0; i < Math.max(this.bids.size(), this.asks.size()); i++) {
-            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).toString(), 25);
+            if(i <= this.bids.size()-1) str += setW(this.bids.get(i).content.toDisplayBoardString(), 25);
             else str += setW('', 25);
-            if(i <= this.asks.size()-1) str += this.asks.get(i).toString();
+            if(i <= this.asks.size()-1) str += this.asks.get(i).content.toDisplayBoardString();
             str += '\n';
         }
         str += '```';
@@ -491,33 +468,33 @@ class Ticker {
         let hitStops;
         if(tickDirection == Order.BUY) {
             hitStops = this.buyStops.filter((stop) => {
-                return (stop.getDirection() == tickDirection && currPrice < stop.getTriggerPrice() && stop.getTriggerPrice() <= newPrice);
+                return (stop.content.getDirection() == tickDirection && currPrice < stop.content.getTriggerPrice() && stop.content.getTriggerPrice() <= newPrice);
             });
         } else {
             hitStops = this.sellStops.filter((stop) => {
-                return (stop.getDirection() == tickDirection && newPrice <= stop.getTriggerPrice() && stop.getTriggerPrice() < currPrice);
+                return (stop.content.getDirection() == tickDirection && newPrice <= stop.content.getTriggerPrice() && stop.content.getTriggerPrice() < currPrice);
             });
         }
         hitStops.forEach(stop => {
             this.removeStop(stop);
         });
         hitStops.forEach(stop => {
-            stop.execute(channel);
+            stop.content.execute(channel);
         });
     }
 
     addStop(stop) {
-        if(stop.getDirection() == Order.BUY) {
+        if(stop.content.getDirection() == Order.BUY) {
             this.buyStops.push(stop);
-        } else if(stop.getDirection() == Order.SELL) {
+        } else if(stop.content.getDirection() == Order.SELL) {
             this.sellStops.push(stop);
         }
     }
 
     removeStop(stop) {
-        if(stop.getDirection() == Order.BUY) {
+        if(stop.content.getDirection() == Order.BUY) {
             this.buyStops.splice(this.buyStops.indexOf(stop), 1);
-        } else if(stop.getDirection() == Order.SELL) {
+        } else if(stop.content.getDirection() == Order.SELL) {
             this.sellStops.splice(this.sellStops.indexOf(stop), 1);
         }
     }
@@ -526,13 +503,17 @@ class Ticker {
 
 // Orderbook
 class OrderBook {
+    static #nextId = 1;
+    static #getNextId() {
+        return OrderBook.#nextId++;
+    }
     static BIDS_COMPARATOR = function(a, b) {
-        if(a.getPrice() == b.getPrice()) return a.getTimestamp() < b.getTimestamp();
-        return a.getPrice() > b.getPrice();
+        if(a.content.getPrice() == b.content.getPrice()) return a.timestamp < b.timestamp;
+        return a.content.getPrice() > b.content.getPrice();
     }
     static ASKS_COMPARATOR = function(a, b) {
-        if(a.getPrice() == b.getPrice()) return a.getTimestamp() < b.getTimestamp();
-        return a.getPrice() < b.getPrice();
+        if(a.content.getPrice() == b.content.getPrice()) return a.timestamp < b.timestamp;
+        return a.content.getPrice() < b.content.getPrice();
     }
     static VALID_TICKERS = ['CRZY', 'TAME'];
 
@@ -573,10 +554,10 @@ class OrderBook {
             let ticker = this.#tickers.get(OrderBook.VALID_TICKERS[i]);
             let topBid = ticker.bids.peek();
             if(topBid == null) topBid = '-';
-            else topBid = topBid.getPrice();
+            else topBid = topBid.content.getPrice();
             let topAsk = ticker.asks.peek();
             if(topAsk == null) topAsk = '-';
-            else topAsk = topAsk.getPrice();
+            else topAsk = topAsk.content.getPrice();
 
             str += setW(ticker.getSymbol(), 10) + setW(ticker.getLastTradedPrice(), 10) +
             setW(topBid, 10) + setW(topAsk, 10) + '\n';
@@ -589,7 +570,7 @@ class OrderBook {
         if(!this.hasTicker(ticker)) return 0;
         let sum = 0;
         this.getTicker(ticker).bids.forEach(bid => {
-            sum += bid.getQuantityUnfilled();
+            sum += bid.content.getQuantityUnfilled();
         });
         return sum;
     }
@@ -598,7 +579,7 @@ class OrderBook {
         if(!this.hasTicker(ticker)) return 0;
         let sum = 0;
         this.getTicker(ticker).asks.forEach(ask => {
-            sum += ask.getQuantityUnfilled();
+            sum += ask.content.getQuantityUnfilled();
         });
         return sum;
     }
@@ -617,109 +598,114 @@ class OrderBook {
         } catch(error) {
             channel.send(error.message); return;
         }
-        order.initialize();
         channel.send(order.orderSubmittedString());
+        order = {
+            id: OrderBook.#getNextId(),
+            timestamp: Date.now(),
+            type: order.getType(),
+            content: order
+        };
 
-        if(order instanceof LimitOrder) {
+        if(order.content instanceof LimitOrder) {
             this.#submitLimitOrder(order, channel);
-        } else if(order instanceof MarketOrder) {
+        } else if(order.content instanceof MarketOrder) {
             this.#submitMarketOrder(order, channel);
-        } else if(order instanceof StopOrder) {
+        } else if(order.content instanceof StopOrder) {
             this.#submitStopOrder(order, channel);
         }
     }
 
     #submitLimitOrder(order, channel) {
-        let ticker = this.getTicker(order.getTicker());
+        let ticker = this.getTicker(order.content.getTicker());
         let asks = ticker.asks;
         let bids = ticker.bids;
         let newLastTradedPrice = ticker.getLastTradedPrice();
 
-        if(order.getDirection() == Order.BUY) {
-            while(!asks.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
+        if(order.content.getDirection() == Order.BUY) {
+            while(!asks.empty() && order.content.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestAsk = asks.peek();
-                if(order.getPrice() < bestAsk.getPrice()) break;
-                order.match(bestAsk);
-                newLastTradedPrice = bestAsk.getPrice();
-                if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestAsk.orderFilledString());
+                if(order.content.getPrice() < bestAsk.content.getPrice()) break;
+                order.content.match(bestAsk.content);
+                newLastTradedPrice = bestAsk.content.getPrice();
+                if(bestAsk.content.getStatus() == Order.COMPLETELY_FILLED) {
+                    channel.send(bestAsk.content.orderFilledString());
                     asks.poll();
                 }
             }
-            if(order.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
+            if(order.content.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.content.orderFilledString());
             else bids.add(order);
 
-        } else if(order.getDirection() == Order.SELL) {
-            while(!bids.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
+        } else if(order.content.getDirection() == Order.SELL) {
+            while(!bids.empty() && order.content.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestBid = bids.peek();
-                if(bestBid.getPrice() < order.getPrice()) break;
-                order.match(bestBid);
-                newLastTradedPrice = bestBid.getPrice();
-                if(bestBid.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestBid.orderFilledString());
+                if(bestBid.content.getPrice() < order.content.getPrice()) break;
+                order.content.match(bestBid.content);
+                newLastTradedPrice = bestBid.content.getPrice();
+                if(bestBid.content.getStatus() == Order.COMPLETELY_FILLED) {
+                    channel.send(bestBid.content.orderFilledString());
                     bids.poll();
                 }
             }
-            if(order.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
+            if(order.content.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.content.orderFilledString());
             else asks.add(order);
 
         }
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
-        this.updateDisplayBoard(order.getTicker());
+        this.updateDisplayBoard(order.content.getTicker());
     }
 
     #submitMarketOrder(order, channel) {
-        let ticker = this.getTicker(order.getTicker());
+        let ticker = this.getTicker(order.content.getTicker());
         let asks = ticker.asks;
         let bids = ticker.bids;
         let newLastTradedPrice = ticker.getLastTradedPrice();
 
-        if(order.getDirection() == Order.BUY) {
-            if(order.getQuantity() > this.getAsksDepth(order.getTicker())) {
+        if(order.content.getDirection() == Order.BUY) {
+            if(order.content.getQuantity() > this.getAsksDepth(order.content.getTicker())) {
                 this.cancelOrder(order, Order.UNFULFILLABLE, channel); return;
             }
 
-            while(order.getStatus() != Order.COMPLETELY_FILLED) {
+            while(order.content.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestAsk = asks.peek();
-                order.match(bestAsk);
-                newLastTradedPrice = bestAsk.getPrice();
-                if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestAsk.orderFilledString());
+                order.content.match(bestAsk.content);
+                newLastTradedPrice = bestAsk.content.getPrice();
+                if(bestAsk.content.getStatus() == Order.COMPLETELY_FILLED) {
+                    channel.send(bestAsk.content.orderFilledString());
                     asks.poll();
                 }
             }
 
-        } else if(order.getDirection() == Order.SELL) {
-            if(order.getQuantity() > this.getBidsDepth(order.getTicker())) {
+        } else if(order.content.getDirection() == Order.SELL) {
+            if(order.content.getQuantity() > this.getBidsDepth(order.content.getTicker())) {
                 this.cancelOrder(order, Order.UNFULFILLABLE, channel); return;
             }
 
-            while(order.getStatus() != Order.COMPLETELY_FILLED) {
+            while(order.content.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestBid = bids.peek();
-                order.match(bestBid);
-                newLastTradedPrice = bestBid.getPrice();
-                if(bestBid.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestBid.orderFilledString());
+                order.content.match(bestBid.content);
+                newLastTradedPrice = bestBid.content.getPrice();
+                if(bestBid.content.getStatus() == Order.COMPLETELY_FILLED) {
+                    channel.send(bestBid.content.orderFilledString());
                     bids.poll();
                 }
             }
 
         }
-        channel.send(order.orderFilledString());
+        channel.send(order.content.orderFilledString());
         ticker.setLastTradedPrice(newLastTradedPrice, channel);
-        this.updateDisplayBoard(order.getTicker());
+        this.updateDisplayBoard(order.content.getTicker());
     }
 
     #submitStopOrder(order, channel) {
-        this.getTicker(order.getTicker()).addStop(order);
+        this.getTicker(order.content.getTicker()).addStop(order);
     }
 
     cancelOrder(order, reason, channel) {
-        order.cancel();
-        channel.send(order.orderCancelledString(reason));
+        order.content.cancel();
+        channel.send(order.content.orderCancelledString(reason));
     }
 
-    filter(funct) {
+    filter(funct) {// REWRITE REFERENCES!!
         let result = [];
         this.#tickers.forEach(ticker => {
             ticker.bids.filter(funct).forEach(bid => {
