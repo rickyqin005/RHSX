@@ -433,6 +433,22 @@ class Ticker {
         return this.#lastTradedPrice;
     }
 
+    getBidsDepth() {
+        let sum = 0;
+        this.bids.forEach(bid => {
+            sum += bid.content.getQuantityUnfilled();
+        });
+        return sum;
+    }
+
+    getAsksDepth() {
+        let sum = 0;
+        this.asks.forEach(ask => {
+            sum += ask.content.getQuantityUnfilled();
+        });
+        return sum;
+    }
+
     setLastTradedPrice(newPrice, channel) {
         if(this.#lastTradedPrice == newPrice) return;
         let currPrice = this.#lastTradedPrice;
@@ -547,24 +563,6 @@ class OrderBook {
         return str;
     }
 
-    getBidsDepth(ticker) {
-        if(!this.hasTicker(ticker)) return 0;
-        let sum = 0;
-        this.getTicker(ticker).bids.forEach(bid => {
-            sum += bid.content.getQuantityUnfilled();
-        });
-        return sum;
-    }
-
-    getAsksDepth(ticker) {
-        if(!this.hasTicker(ticker)) return 0;
-        let sum = 0;
-        this.getTicker(ticker).asks.forEach(ask => {
-            sum += ask.content.getQuantityUnfilled();
-        });
-        return sum;
-    }
-
     getTicker(ticker) {
         return this.#tickers.get(ticker);
     }
@@ -653,7 +651,7 @@ class OrderBook {
         let newLastTradedPrice = ticker.getLastTradedPrice();
 
         if(order.content.getDirection() == Order.BUY) {
-            if(order.content.getQuantity() > this.getAsksDepth(order.content.getTicker())) {
+            if(order.content.getQuantity() > ticker.getAsksDepth(order.content.getTicker())) {
                 this.cancelOrder(order, Order.UNFULFILLABLE, channel); return;
             }
 
@@ -668,7 +666,7 @@ class OrderBook {
             }
 
         } else if(order.content.getDirection() == Order.SELL) {
-            if(order.content.getQuantity() > this.getBidsDepth(order.content.getTicker())) {
+            if(order.content.getQuantity() > ticker.getBidsDepth(order.content.getTicker())) {
                 this.cancelOrder(order, Order.UNFULFILLABLE, channel); return;
             }
 
