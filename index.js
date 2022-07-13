@@ -221,7 +221,7 @@ class LimitOrder extends NormalOrder {
     }
 
     toInfoString() {
-        return `${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+        return `${this.getDirection()} x${this.getQuantityUnfilled()} ${this.getTicker()} @${this.getPrice()}`;
     }
 
     toStopString() {
@@ -259,7 +259,7 @@ class MarketOrder extends NormalOrder {
     }
 
     toInfoString() {
-        return `${this.getDirection()} x${this.getQuantity()} ${this.getTicker()}`;
+        return `${this.getDirection()} x${this.getQuantityUnfilled()} ${this.getTicker()}`;
     }
 
     toStopString() {
