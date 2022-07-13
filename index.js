@@ -410,8 +410,14 @@ class PriorityQueue {
     }
 
     poll() {
-        if(this.#array.length == 0) return;
-        this.#array.splice(0,1);
+        if(this.#array.length == 0) return null;
+        return this.remove(0);
+    }
+
+    remove(index) {
+        let obj = this.#array[index];
+        this.#array.splice(index, 1);
+        return obj;
     }
 
     get(index) {
