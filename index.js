@@ -728,6 +728,12 @@ class OrderBook {
             ticker.asks.filter(funct).forEach(ask => {
                 result.push(ask);
             });
+            ticker.buyStops.filter(funct).forEach(stop => {
+                result.push(stop);
+            });
+            ticker.sellStops.filter(funct).forEach(stop => {
+                result.push(stop);
+            });
         });
         return result;
     }
