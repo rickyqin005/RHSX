@@ -674,7 +674,7 @@ class OrderBook {
         return this.#allOrders.get(id-1);
     }
 
-    submitOrder(args, direction, channel) {
+    submitOrder(msg, args, direction, channel) {
         let order;
         try {
             if(args[1] == LimitOrder.CODE) {
@@ -770,7 +770,7 @@ client.on('messageCreate', (msg) => {
         case '!sell': {
             if(!isValidTrader(msg.author)) return;
 
-            orderBook.submitOrder(args, Order.SELL, msg.channel);
+            orderBook.submitOrder(msg, args, Order.SELL, msg.channel);
             break;
         }
 
