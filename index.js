@@ -109,7 +109,7 @@ class Order {
     }
 
     orderCancelledString(reason) {
-        switch (reason) {
+        switch(reason) {
             case Order.UNFULFILLABLE:
                 return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
             case Order.VIOLATES_POSITION_LIMITS:
@@ -515,6 +515,7 @@ class OrderBook {
     #allOrders = new PriorityQueue(OrderBook.TIMESTAMP_COMPARATOR);
     #tickers = new Map();
     #displayBoardMessage;
+    #startUpTime;
 
     constructor() {
         for(let i = 0; i < OrderBook.VALID_TICKERS.length; i++) {
@@ -525,11 +526,11 @@ class OrderBook {
     async initialize() {
         let channel = await client.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
         this.#displayBoardMessage = await channel.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
-
         this.#updateDisplayBoard();
         setInterval(() => {
             this.#updateDisplayBoard();
         }, 1000*60);
+        this.#startUpTime = new Date();
     }
 
     #updateDisplayBoard() {
@@ -570,6 +571,10 @@ class OrderBook {
         return OrderBook.VALID_TICKERS.includes(ticker);
     }
 
+    getStartUpTime() {
+        return this.#startUpTime;
+    }
+
     getOrderById(id) {
         if(!(1 <= id && id <= this.#allOrders.size())) throw new Error('Invalid id.');
         return this.#allOrders.get(id-1);
@@ -583,7 +588,7 @@ class OrderBook {
         }
         order = {
             id: OrderBook.#getNextId(),
-            timestamp: Date.now(),
+            timestamp: new Date(),
             type: order.getType(),
             content: order
         };
@@ -716,6 +721,7 @@ client.on('messageCreate', (msg) => {
             let infoString =
                 '```\n' +
                 `!help\n` +
+                `!bot\n` +
                 `!join\n` +
                 `!position\n` +
                 `!buy ${LimitOrder.CODE} [ticker] [quantity] [price]\n` +
@@ -728,6 +734,10 @@ client.on('messageCreate', (msg) => {
             msg.channel.send(infoString);
             break;
         }
+
+        case '!bot':
+            msg.channel.send(`Active since ${orderBook.getStartUpTime().toLocaleString('en-US', {timeZone: 'America/Toronto'})}.`);
+            break;
 
         case '!join':
             if(isValidTrader(msg.author)) return;
@@ -781,6 +791,17 @@ client.on('messageCreate', (msg) => {
                 } else return;
             } else return;
             orderBook.submitOrder(order, msg.channel);
+            break;
+        }
+
+        case '!cancel': {
+            if(!isValidTrader(msg.author)) return;
+
+            try {
+                orderBook.cancelOrder(orderBook.getOrderById(parseInt(args[1])), undefined, msg.channel);
+            } catch(error) {
+                msg.channel.send(error.message);
+            }
             break;
         }
     }
