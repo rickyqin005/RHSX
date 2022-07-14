@@ -763,7 +763,7 @@ client.on('messageCreate', (msg) => {
         case '!buy': {
             if(!isValidTrader(msg.author)) return;
 
-            orderBook.submitOrder(args, Order.BUY, msg.channel);
+            orderBook.submitOrder(msg, args, Order.BUY, msg.channel);
             break;
         }
 
