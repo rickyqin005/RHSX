@@ -100,25 +100,6 @@ class Order {
 
     toInfoString() {}
 
-    orderSubmittedString() {
-        return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is submitted.`;
-    }
-
-    orderFilledString() {
-        return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is filled.`;
-    }
-
-    orderCancelledString(reason) {
-        switch(reason) {
-            case Order.UNFULFILLABLE:
-                return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
-            case Order.VIOLATES_POSITION_LIMITS:
-                return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled because it violates your position limits.`;
-            default:
-                return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is cancelled.`;
-        }
-    }
-
     getUser() {
         return this.#user;
     }
@@ -221,7 +202,7 @@ class LimitOrder extends NormalOrder {
     }
 
     toInfoString() {
-        return `${this.getDirection()} x${this.getQuantityUnfilled()} ${this.getTicker()} @${this.getPrice()}`;
+        return `${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
 
     toStopString() {
@@ -259,7 +240,7 @@ class MarketOrder extends NormalOrder {
     }
 
     toInfoString() {
-        return `${this.getDirection()} x${this.getQuantityUnfilled()} ${this.getTicker()}`;
+        return `${this.getDirection()} x${this.getQuantity()} ${this.getTicker()}`;
     }
 
     toStopString() {
@@ -296,10 +277,6 @@ class StopOrder extends Order {
         return `${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
     }
 
-    orderFilledString() {
-        return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is triggered.`;
-    }
-
     getType() {
         return StopOrder.TYPE;
     }
@@ -310,6 +287,10 @@ class StopOrder extends Order {
 
     getTriggerPrice() {
         return this.#triggerPrice;
+    }
+
+    getExecutedOrder() {
+        return this.#executedOrder;
     }
 
     validate() {
@@ -323,12 +304,6 @@ class StopOrder extends Order {
             throw new Error('Trigger price must be less than current price.');
         }
         this.#executedOrder.validate();
-    }
-
-    execute(channel) {
-        this.setStatus(Order.COMPLETELY_FILLED);
-        channel.send(this.orderFilledString());
-        orderBook.submitOrder(this.#executedOrder, channel);
     }
 }
 
@@ -390,6 +365,48 @@ class PriorityQueue {
 
     filter(funct) {
         return this.#array.filter(funct);
+    }
+}
+
+class OrderBookItem {
+    static #nextId = 1;
+    static #getNextId() {
+        return OrderBookItem.#nextId++;
+    }
+
+    id;
+    timestamp;
+    type;
+    content;
+
+    constructor(order) {
+        this.id = OrderBookItem.#getNextId();
+        this.timestamp = new Date();
+        this.type = order.getType();
+        this.content = order;
+    }
+
+    orderSubmittedString() {
+        return `${pingString(this.content.getUser())} Your ${this.type}: \`#${this.id}, ${this.content.toInfoString()}\` is submitted.`;
+    }
+
+    orderFilledString() {
+        return `${pingString(this.content.getUser())} Your ${this.type}: \`#${this.id}, ${this.content.toInfoString()}\` is filled.`;
+    }
+
+    orderTriggeredString() {
+        return `${pingString(this.content.getUser())} Your ${this.type}: \`#${this.id}, ${this.content.toInfoString()}\` is triggered.`;
+    }
+
+    orderCancelledString(reason) {
+        switch(reason) {
+            case Order.UNFULFILLABLE:
+                return `${pingString(this.content.getUser())} Your ${this.type}: \`${this.content.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
+            case Order.VIOLATES_POSITION_LIMITS:
+                return `${pingString(this.content.getUser())} Your ${this.type}: \`${this.content.toInfoString()}\` is cancelled because it violates your position limits.`;
+            default:
+                return `${pingString(this.content.getUser())} Your ${this.type}: \`${this.content.toInfoString()}\` is cancelled.`;
+        }
     }
 }
 
@@ -471,7 +488,9 @@ class Ticker {
             this.removeStop(stop);
         });
         hitStops.forEach(stop => {
-            stop.content.execute(channel);
+            stop.setStatus(Order.COMPLETELY_FILLED);
+            channel.send(stop.orderTriggeredString());
+            orderBook.submitOrder(stop.getExecutedOrder(), channel);
         });
     }
 
@@ -494,11 +513,11 @@ class Ticker {
                 order.content.match(bestAsk.content);
                 newLastTradedPrice = bestAsk.content.getPrice();
                 if(bestAsk.content.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestAsk.content.orderFilledString());
+                    channel.send(bestAsk.orderFilledString());
                     this.asks.poll();
                 }
             }
-            if(order.content.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.content.orderFilledString());
+            if(order.content.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
             else this.bids.add(order);
 
         } else if(order.content.getDirection() == Order.SELL) {
@@ -508,11 +527,11 @@ class Ticker {
                 order.content.match(bestBid.content);
                 newLastTradedPrice = bestBid.content.getPrice();
                 if(bestBid.content.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestBid.content.orderFilledString());
+                    channel.send(bestBid.orderFilledString());
                     this.bids.poll();
                 }
             }
-            if(order.content.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.content.orderFilledString());
+            if(order.content.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
             else this.asks.add(order);
         }
         this.setLastTradedPrice(newLastTradedPrice, channel);
@@ -530,7 +549,7 @@ class Ticker {
                 order.content.match(bestAsk.content);
                 newLastTradedPrice = bestAsk.content.getPrice();
                 if(bestAsk.content.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestAsk.content.orderFilledString());
+                    channel.send(bestAsk.orderFilledString());
                     this.asks.poll();
                 }
             }
@@ -545,12 +564,12 @@ class Ticker {
                 order.content.match(bestBid.content);
                 newLastTradedPrice = bestBid.content.getPrice();
                 if(bestBid.content.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestBid.content.orderFilledString());
+                    channel.send(bestBid.orderFilledString());
                     this.bids.poll();
                 }
             }
         }
-        channel.send(order.content.orderFilledString());
+        channel.send(order.orderFilledString());
         this.setLastTradedPrice(newLastTradedPrice, channel);
     }
 
@@ -564,7 +583,7 @@ class Ticker {
 
     cancelOrder(order, reason, channel) {
         order.content.setStatus(Order.CANCELLED);
-        channel.send(order.content.orderCancelledString(reason));
+        channel.send(order.orderCancelledString(reason));
     }
 
     removeStop(stop) {
@@ -579,10 +598,6 @@ class Ticker {
 
 // Orderbook
 class OrderBook {
-    static #nextId = 1;
-    static #getNextId() {
-        return OrderBook.#nextId++;
-    }
     static BIDS_COMPARATOR = function(a, b) {
         if(a.content.getPrice() == b.content.getPrice()) return a.timestamp < b.timestamp;
         return a.content.getPrice() > b.content.getPrice();
@@ -669,15 +684,10 @@ class OrderBook {
         } catch(error) {
             channel.send(error.message); return;
         }
-        order = {
-            id: OrderBook.#getNextId(),
-            timestamp: new Date(),
-            type: order.getType(),
-            content: order
-        };
+        order = new OrderBookItem(order);
         this.#allOrders.add(order);
         order.content.setStatus(Order.NOT_FILLED);
-        channel.send(order.content.orderSubmittedString());
+        channel.send(order.orderSubmittedString());
         this.getTicker(order.content.getTicker()).submitOrder(order, channel);
         this.#updateDisplayBoard(order.content.getTicker());
     }
