@@ -401,11 +401,11 @@ class OrderBookItem {
     orderCancelledString(reason) {
         switch(reason) {
             case Order.UNFULFILLABLE:
-                return `${pingString(this.content.getUser())} Your ${this.type}: \`${this.content.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
+                return `${pingString(this.content.getUser())} Your ${this.type}: \`#${this.id}, ${this.content.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
             case Order.VIOLATES_POSITION_LIMITS:
-                return `${pingString(this.content.getUser())} Your ${this.type}: \`${this.content.toInfoString()}\` is cancelled because it violates your position limits.`;
+                return `${pingString(this.content.getUser())} Your ${this.type}: \`#${this.id}, ${this.content.toInfoString()}\` is cancelled because it violates your position limits.`;
             default:
-                return `${pingString(this.content.getUser())} Your ${this.type}: \`${this.content.toInfoString()}\` is cancelled.`;
+                return `${pingString(this.content.getUser())} Your ${this.type}: \`#${this.id}, ${this.content.toInfoString()}\` is cancelled.`;
         }
     }
 }
@@ -588,9 +588,9 @@ class Ticker {
 
     removeStop(stop) {
         if(stop.content.getDirection() == Order.BUY) {
-            this.buyStops.splice(this.buyStops.indexOf(stop), 1);
+            this.buyStops.remove(this.buyStops.indexOf(stop));
         } else if(stop.content.getDirection() == Order.SELL) {
-            this.sellStops.splice(this.sellStops.indexOf(stop), 1);
+            this.sellStops.remove(this.sellStops.indexOf(stop));
         }
     }
 }
