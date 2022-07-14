@@ -247,7 +247,7 @@ class LimitOrder extends NormalOrder {
     }
 
     toDetailedInfoString() {
-        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}, submitted at ${dateString(this.getTimestamp())}`;
+        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}, submitted ${dateString(this.getTimestamp())}`;
     }
 
     toStopString() {
@@ -289,7 +289,7 @@ class MarketOrder extends NormalOrder {
     }
 
     toDetailedInfoString() {
-        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()}, submitted at ${dateString(this.getTimestamp())}`;
+        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()}, submitted ${dateString(this.getTimestamp())}`;
     }
 
     toStopString() {
@@ -327,7 +327,7 @@ class StopOrder extends Order {
     }
 
     toDetailedInfoString() {
-        return `#${this.getId()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}, submitted at ${dateString(this.getTimestamp())}`;
+        return `#${this.getId()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}, submitted ${dateString(this.getTimestamp())}`;
     }
 
     orderFilledString() {
