@@ -78,8 +78,8 @@ class Order {
         let id;
         do {
             id = Math.floor(Math.random()*900000)+100000;
-        } while(usedIds.has(id));
-        usedIds.add(id);
+        } while(Order.#usedIds.has(id));
+        Order.#usedIds.add(id);
         return id;
     }
     static BUY = 'BUY';
