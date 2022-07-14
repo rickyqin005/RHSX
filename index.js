@@ -612,7 +612,7 @@ class OrderBook {
     }
     static VALID_TICKERS = ['CRZY', 'TAME'];
 
-    #allOrders = new PriorityQueue(OrderBook.TIMESTAMP_COMPARATOR);
+    #allOrders = new Map();
     #tickers = new Map();
     #displayBoardMessage;
     #startUpTime;
@@ -675,8 +675,7 @@ class OrderBook {
     }
 
     getOrderById(id) {
-        if(!(1 <= id && id <= this.#allOrders.size())) throw new Error('Invalid id.');
-        return this.#allOrders.get(id-1);
+        return this.#allOrders.get(id);
     }
 
     submitOrder(msg, args, direction, channel) {
@@ -704,7 +703,7 @@ class OrderBook {
     }
 
     processOrder(order, channel) {
-        this.#allOrders.add(order);
+        this.#allOrders.set(order.getId(), order);
         order.setStatus(Order.NOT_FILLED);
         channel.send(order.orderSubmittedString());
         this.getTicker(order.getTicker()).submitOrder(order, channel);
@@ -716,7 +715,11 @@ class OrderBook {
     }
 
     filter(funct) {
-        return this.#allOrders.filter(funct);
+        let result = [];
+        this.#allOrders.forEach(order => {
+            if(funct(order)) result.push(order);
+        });
+        return result;
     }
 }
 let orderBook = new OrderBook();
