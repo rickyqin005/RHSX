@@ -485,7 +485,7 @@ class Ticker {
         });
         hitStops.forEach(stop => {
             stop.setStatus(Order.COMPLETELY_FILLED);
-            channel.send(stop.orderTriggeredString());
+            channel.send(stop.orderFilledString());
             orderBook.submitOrder(stop.getExecutedOrder(), channel);
         });
     }
