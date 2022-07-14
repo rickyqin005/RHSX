@@ -674,7 +674,7 @@ class OrderBook {
         return this.#allOrders.get(id-1);
     }
 
-    submitOrder(order, direction, channel) {
+    submitOrder(args, direction, channel) {
         let order;
         try {
             if(args[1] == LimitOrder.CODE) {
