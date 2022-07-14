@@ -73,9 +73,14 @@ class Trader {
 
 
 class Order {
-    static #nextId = 1;
+    static #usedIds = new Set();
     static #getNextId() {
-        return Order.#nextId++;
+        let id;
+        do {
+            id = Math.floor(Math.random()*900000)+100000;
+        } while(usedIds.has(id));
+        usedIds.add(id);
+        return id;
     }
     static BUY = 'BUY';
     static SELL = 'SELL';
