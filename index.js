@@ -486,7 +486,7 @@ class Ticker {
         hitStops.forEach(stop => {
             stop.setStatus(Order.COMPLETELY_FILLED);
             channel.send(stop.orderFilledString());
-            orderBook.submitOrder(stop.getExecutedOrder(), channel);
+            orderBook.processOrder(stop.getExecutedOrder(), channel);
         });
     }
 
@@ -688,14 +688,17 @@ class OrderBook {
                 } else if(args[4] == MarketOrder.CODE) {
                     let executedOrder = new MarketOrder(msg.author, direction, args[2], parseInt(args[5]));
                     order = new StopOrder(msg.author, direction, args[2], parseInt(args[3]), executedOrder);
-                } else throw new Error('Invalid format.');
-            } else throw new Error('Invalid format.');
+                } else throw new Error(`Triggered order type must be one of \`${LimitOrder.CODE}\` or \`${MarketOrder.CODE}\`.`);
+            } else throw new Error(`Order type must be one of \`${LimitOrder.CODE}\`, \`${MarketOrder.CODE}\` or \`${StopOrder.CODE}\`.`);
 
             order.validate();
         } catch(error) {
             channel.send(error.message); return;
         }
+        this.processOrder(order, channel);
+    }
 
+    processOrder(order, channel) {
         this.#allOrders.add(order);
         order.setStatus(Order.NOT_FILLED);
         channel.send(order.orderSubmittedString());
