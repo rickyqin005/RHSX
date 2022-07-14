@@ -51,7 +51,7 @@ class Trader {
         orderBook.filter(order => {
             return (order.getUser() == this.#user && (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED));
         }).forEach(order => {
-            str += `${order.toInfoString()}\n`; items++;
+            str += `${order.toDetailedInfoString()}\n`; items++;
         });
         if(items == 0) str += ' ';
         str += '```';
@@ -111,6 +111,8 @@ class Order {
     toDisplayBoardString() {}
 
     toInfoString() {}
+
+    toDetailedInfoString() {}
 
     orderSubmittedString() {
         return `${pingString(this.getUser())} Your ${this.getType()}: \`${this.toInfoString()}\` is submitted.`;
@@ -244,6 +246,10 @@ class LimitOrder extends NormalOrder {
         return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
     }
 
+    toDetailedInfoString() {
+        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}, submitted at ${dateString(this.getTimestamp())}`;
+    }
+
     toStopString() {
         return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()} @${this.getPrice()}`;
     }
@@ -282,6 +288,10 @@ class MarketOrder extends NormalOrder {
         return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()}`;
     }
 
+    toDetailedInfoString() {
+        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()}, submitted at ${dateString(this.getTimestamp())}`;
+    }
+
     toStopString() {
         return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()}`;
     }
@@ -314,6 +324,10 @@ class StopOrder extends Order {
 
     toInfoString() {
         return `#${this.getId()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
+    }
+
+    toDetailedInfoString() {
+        return `#${this.getId()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}, submitted at ${dateString(this.getTimestamp())}`;
     }
 
     orderFilledString() {
@@ -635,7 +649,7 @@ class OrderBook {
 
     #updateDisplayBoard() {
         let str = '';
-        str += `Last updated at ${new Date().toLocaleString('en-US', {timeZone: 'America/Toronto'})}\n`;
+        str += `Last updated at ${dateString(new Date())}\n`;
         str += this.toString() + '\n';
         this.#tickers.forEach(ticker => {
             str += ticker.toString() + '\n';
@@ -755,7 +769,7 @@ client.on('messageCreate', (msg) => {
         }
 
         case '!bot':
-            msg.channel.send(`Active since ${orderBook.getStartUpTime().toLocaleString('en-US', {timeZone: 'America/Toronto'})}.`);
+            msg.channel.send(`Active since ${dateString(orderBook.getStartUpTime())}.`);
             break;
 
         case '!join':
@@ -810,4 +824,8 @@ function pingString(user) {
 function setW(value, length) {
     value = String(value);
     return value + ' '.repeat(Math.max(length - value.length, 0));
+}
+
+function dateString(date) {
+    return date.toLocaleString('en-US', {timeZone: 'America/Toronto'});
 }
