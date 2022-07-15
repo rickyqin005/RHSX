@@ -165,9 +165,9 @@ class Order {
         if(!(0 <= newStatus && newStatus <= 5)) throw new Error('Invalid status.');
         if(newStatus == this.#status) return;
         this.#status = newStatus;
-        if(newStatus == Order.NOT_FILLED) messageQueue.addMessage(this.orderSubmittedString());
-        else if(newStatus == Order.COMPLETELY_FILLED) messageQueue.addMessage(this.orderFilledString());
-        else if(newStatus == Order.CANCELLED) messageQueue.addMessage(this.orderCancelledString(reason));
+        if(newStatus == Order.NOT_FILLED) messageQueue.add(this.orderSubmittedString());
+        else if(newStatus == Order.COMPLETELY_FILLED) messageQueue.add(this.orderFilledString());
+        else if(newStatus == Order.CANCELLED) messageQueue.add(this.orderCancelledString(reason));
     }
 
     validate() {
@@ -579,6 +579,7 @@ class Ticker {
     }
 
     cancelOrder(order, reason) {
+
         order.setStatus(Order.CANCELLED, reason);
     }
 
@@ -692,7 +693,7 @@ class OrderBook {
 
             order.validate();
         } catch(error) {
-            messageQueue.addMessage(error.message); return;
+            messageQueue.add(error.message); return;
         }
         this.processOrder(order);
     }
@@ -725,14 +726,17 @@ class MessageQueue {
 
     async initialize() {
         this.#channel = await client.channels.fetch(process.env['BOT_SPAM_CHANNEL_ID']);
+        setInterval(() => {
+            this.#sendNextMessage();
+        }, 333);
     }
 
-    addMessage(string) {
+    add(string) {
         this.#messages.push(string);
     }
 
-    sendAll() {
-        while(this.#messages.length > 0) {
+    #sendNextMessage() {
+        if(this.#messages.length > 0) {
             this.#channel.send(this.#messages[0]);
             this.#messages.splice(0, 1);
         }
@@ -750,7 +754,6 @@ client.on('ready', async() => {
 
 client.on('messageCreate', (msg) => {
     if(msg.author == process.env['BOT_ID']) return;
-
     let args = msg.content.split(' ');
     switch(args[0]) {
         case '!help': {
@@ -767,50 +770,43 @@ client.on('messageCreate', (msg) => {
                 `!buy ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
                 `!sell ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
                 '```';
-            msg.channel.send(infoString);
+            messageQueue.add(infoString);
             break;
         }
 
         case '!bot':
-            msg.channel.send(`Active since ${dateString(orderBook.getStartUpTime())}.`);
+            messageQueue.add(`Active since ${dateString(orderBook.getStartUpTime())}.`);
             break;
 
         case '!join':
             if(isValidTrader(msg.author)) return;
-
-            msg.channel.send(`${pingString(msg.author)} You've been added to the trader list.`);
             traders.set(msg.author, new Trader(msg.author));
+            messageQueue.add(`${pingString(msg.author)} You've been added to the trader list.`);
             break;
 
         case '!position':
             if(!isValidTrader(msg.author)) return;
-
-            msg.channel.send(traders.get(msg.author).toString());
+            messageQueue.add(traders.get(msg.author).toString());
             break;
 
         case '!buy': {
             if(!isValidTrader(msg.author)) return;
-
             orderBook.submitOrder(msg.author, Order.BUY, args);
-            messageQueue.sendAll();
             break;
         }
 
         case '!sell': {
             if(!isValidTrader(msg.author)) return;
-
             orderBook.submitOrder(msg.author, Order.SELL, args);
-            messageQueue.sendAll();
             break;
         }
 
         case '!cancel': {
             if(!isValidTrader(msg.author)) return;
-
             try {
                 orderBook.cancelOrder(orderBook.getOrderById(parseInt(args[1])), undefined);
             } catch(error) {
-                msg.channel.send(error.message);
+                messageQueue.add(error.message);
             }
             break;
         }
