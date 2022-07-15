@@ -712,6 +712,7 @@ class OrderBook {
         if(order.getStatus() == Order.CANCELLED) throw new Error('Order is already cancelled.');
         if(order.getStatus() == Order.COMPLETELY_FILLED) throw new Error('Order is already filled.');
         this.getTicker(order.getTicker()).cancelOrder(order, reason);
+        this.#updateDisplayBoard();
     }
 
     filter(funct) {
