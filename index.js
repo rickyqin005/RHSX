@@ -161,9 +161,13 @@ class Order {
         return this.#status;
     }
 
-    setStatus(newStatus) {
+    setStatus(newStatus, reason = undefined) {
         if(!(0 <= newStatus && newStatus <= 5)) throw new Error('Invalid status.');
+        if(newStatus == this.#status) return;
         this.#status = newStatus;
+        if(newStatus == Order.NOT_FILLED) messageQueue.addMessage(this.orderSubmittedString());
+        else if(newStatus == Order.COMPLETELY_FILLED) messageQueue.addMessage(this.orderFilledString());
+        else if(newStatus == Order.CANCELLED) messageQueue.addMessage(this.orderCancelledString(reason));
     }
 
     validate() {
@@ -214,8 +218,8 @@ class NormalOrder extends Order {
 
     match(existingOrder) {
         let quantityTradable = Math.min(this.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
-        this.#increaseQuantityFilled(quantityTradable);
         existingOrder.#increaseQuantityFilled(quantityTradable);
+        this.#increaseQuantityFilled(quantityTradable);
     }
 
     #increaseQuantityFilled(amount) {
@@ -480,7 +484,7 @@ class Ticker {
         return sum;
     }
 
-    setLastTradedPrice(newPrice, channel) {
+    setLastTradedPrice(newPrice) {
         if(this.#lastTradedPrice == newPrice) return;
         let currPrice = this.#lastTradedPrice;
         this.#lastTradedPrice = newPrice;
@@ -504,22 +508,21 @@ class Ticker {
         });
         hitStops.forEach(stop => {
             stop.setStatus(Order.COMPLETELY_FILLED);
-            channel.send(stop.orderFilledString());
-            orderBook.processOrder(stop.getExecutedOrder(), channel);
+            orderBook.processOrder(stop.getExecutedOrder());
         });
     }
 
-    submitOrder(order, channel) {
+    submitOrder(order) {
         if(order instanceof LimitOrder) {
-            this.#submitLimitOrder(order, channel);
+            this.#submitLimitOrder(order);
         } else if(order instanceof MarketOrder) {
-            this.#submitMarketOrder(order, channel);
+            this.#submitMarketOrder(order);
         } else if(order instanceof StopOrder) {
-            this.#submitStopOrder(order, channel);
+            this.#submitStopOrder(order);
         }
     }
 
-    #submitLimitOrder(order, channel) {
+    #submitLimitOrder(order) {
         let newLastTradedPrice = this.getLastTradedPrice();
         if(order.getDirection() == Order.BUY) {
             while(!this.asks.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
@@ -527,13 +530,9 @@ class Ticker {
                 if(order.getPrice() < bestAsk.getPrice()) break;
                 order.match(bestAsk);
                 newLastTradedPrice = bestAsk.getPrice();
-                if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestAsk.orderFilledString());
-                    this.asks.poll();
-                }
+                if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) this.asks.poll();
             }
-            if(order.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
-            else this.bids.add(order);
+            if(order.getStatus() != Order.COMPLETELY_FILLED) this.bids.add(order);
 
         } else if(order.getDirection() == Order.SELL) {
             while(!this.bids.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
@@ -541,54 +540,43 @@ class Ticker {
                 if(bestBid.getPrice() < order.getPrice()) break;
                 order.match(bestBid);
                 newLastTradedPrice = bestBid.getPrice();
-                if(bestBid.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestBid.orderFilledString());
-                    this.bids.poll();
-                }
+                if(bestBid.getStatus() == Order.COMPLETELY_FILLED) this.bids.poll();
             }
-            if(order.getStatus() == Order.COMPLETELY_FILLED) channel.send(order.orderFilledString());
-            else this.asks.add(order);
+            if(order.getStatus() != Order.COMPLETELY_FILLED) this.asks.add(order);
         }
-        this.setLastTradedPrice(newLastTradedPrice, channel);
+        this.setLastTradedPrice(newLastTradedPrice);
     }
 
-    #submitMarketOrder(order, channel) {
+    #submitMarketOrder(order) {
         let newLastTradedPrice = this.getLastTradedPrice();
         if(order.getDirection() == Order.BUY) {
             if(order.getQuantity() > this.getAsksDepth()) {
-                this.cancelOrder(order, Order.UNFULFILLABLE, channel); return;
+                this.cancelOrder(order, Order.UNFULFILLABLE); return;
             }
 
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestAsk = this.asks.peek();
                 order.match(bestAsk);
                 newLastTradedPrice = bestAsk.getPrice();
-                if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestAsk.orderFilledString());
-                    this.asks.poll();
-                }
+                if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) this.asks.poll();
             }
 
         } else if(order.getDirection() == Order.SELL) {
             if(order.getQuantity() > this.getBidsDepth()) {
-                this.cancelOrder(order, Order.UNFULFILLABLE, channel); return;
+                this.cancelOrder(order, Order.UNFULFILLABLE); return;
             }
 
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestBid = this.bids.peek();
                 order.match(bestBid);
                 newLastTradedPrice = bestBid.getPrice();
-                if(bestBid.getStatus() == Order.COMPLETELY_FILLED) {
-                    channel.send(bestBid.orderFilledString());
-                    this.bids.poll();
-                }
+                if(bestBid.getStatus() == Order.COMPLETELY_FILLED) this.bids.poll();
             }
         }
-        channel.send(order.orderFilledString());
-        this.setLastTradedPrice(newLastTradedPrice, channel);
+        this.setLastTradedPrice(newLastTradedPrice);
     }
 
-    #submitStopOrder(order, channel) {
+    #submitStopOrder(order) {
         if(order.getDirection() == Order.BUY) {
             this.buyStops.add(order);
         } else if(order.getDirection() == Order.SELL) {
@@ -596,9 +584,8 @@ class Ticker {
         }
     }
 
-    cancelOrder(order, reason, channel) {
-        order.setStatus(Order.CANCELLED);
-        channel.send(order.orderCancelledString(reason));
+    cancelOrder(order, reason) {
+        order.setStatus(Order.CANCELLED, reason);
     }
 
     #removeStopOrder(stop) {
@@ -692,7 +679,7 @@ class OrderBook {
         return this.#allOrders.get(id);
     }
 
-    submitOrder(user, direction, args, channel) {
+    submitOrder(user, direction, args) {
         let order;
         try {
             if(args[1] == LimitOrder.CODE) {
@@ -711,21 +698,20 @@ class OrderBook {
 
             order.validate();
         } catch(error) {
-            channel.send(error.message); return;
+            messageQueue.addMessage(error.message); return;
         }
-        this.processOrder(order, channel);
+        this.processOrder(order);
     }
 
-    processOrder(order, channel) {
+    processOrder(order) {
         this.#allOrders.set(order.getId(), order);
         order.setStatus(Order.NOT_FILLED);
-        channel.send(order.orderSubmittedString());
-        this.getTicker(order.getTicker()).submitOrder(order, channel);
+        this.getTicker(order.getTicker()).submitOrder(order);
         this.#updateDisplayBoard(order.getTicker());
     }
 
-    cancelOrder(order, reason, channel) {
-        this.getTicker(order.getTicker()).cancelOrder(order, reason, channel);
+    cancelOrder(order, reason) {
+        this.getTicker(order.getTicker()).cancelOrder(order, reason);
     }
 
     filter(funct) {
@@ -738,11 +724,34 @@ class OrderBook {
 }
 let orderBook = new OrderBook();
 
+class MessageQueue {
+    #messages = [];
+    #channel;
+    constructor() {}
+
+    async initialize() {
+        this.#channel = await client.channels.fetch(process.env['BOT_SPAM_CHANNEL_ID']);
+    }
+
+    addMessage(string) {
+        this.#messages.push(string);
+    }
+
+    sendAll() {
+        while(this.#messages.length > 0) {
+            this.#channel.send(this.#messages[0]);
+            this.#messages.splice(0, 1);
+        }
+    }
+}
+let messageQueue = new MessageQueue();
+
 client.once('ready', c => {
     console.log(`Ready! Logged in as ${c.user.tag}`);
 });
 client.on('ready', async() => {
     await orderBook.initialize();
+    await messageQueue.initialize();
 });
 
 client.on('messageCreate', (msg) => {
@@ -788,14 +797,16 @@ client.on('messageCreate', (msg) => {
         case '!buy': {
             if(!isValidTrader(msg.author)) return;
 
-            orderBook.submitOrder(msg.author, Order.BUY, args, msg.channel);
+            orderBook.submitOrder(msg.author, Order.BUY, args);
+            messageQueue.sendAll();
             break;
         }
 
         case '!sell': {
             if(!isValidTrader(msg.author)) return;
 
-            orderBook.submitOrder(msg.author, Order.SELL, args, msg.channel);
+            orderBook.submitOrder(msg.author, Order.SELL, args);
+            messageQueue.sendAll();
             break;
         }
 
@@ -803,7 +814,7 @@ client.on('messageCreate', (msg) => {
             if(!isValidTrader(msg.author)) return;
 
             try {
-                orderBook.cancelOrder(orderBook.getOrderById(parseInt(args[1])), undefined, msg.channel);
+                orderBook.cancelOrder(orderBook.getOrderById(parseInt(args[1])), undefined);
             } catch(error) {
                 msg.channel.send(error.message);
             }
