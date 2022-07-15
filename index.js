@@ -584,11 +584,8 @@ class Ticker {
     }
 
     #removeStopOrder(stop) {
-        if(stop.getDirection() == Order.BUY) {
-            this.buyStops.remove(this.buyStops.indexOf(stop));
-        } else if(stop.getDirection() == Order.SELL) {
-            this.sellStops.remove(this.sellStops.indexOf(stop));
-        }
+        if(stop.getDirection() == Order.BUY) this.buyStops.remove(this.buyStops.indexOf(stop));
+        else if(stop.getDirection() == Order.SELL) this.sellStops.remove(this.sellStops.indexOf(stop));
     }
 }
 
@@ -630,7 +627,7 @@ class OrderBook {
     }
 
     #updateDisplayBoard() {
-        messageQueue.add(this.toDisplayBoardString(), MessageQueue.EDIT, #displayBoardMessage);
+        messageQueue.add(this.toDisplayBoardString(), MessageQueue.EDIT, this.#displayBoardMessage);
     }
 
     toDisplayBoardString() {
