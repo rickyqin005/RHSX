@@ -710,6 +710,7 @@ class OrderBook {
         let order = orderBook.getOrderById(orderId);
         if(order == undefined) throw new Error('Invalid id.');
         if(order.getStatus() == Order.CANCELLED) throw new Error('Order is already cancelled.');
+        if(order.getStatus() == Order.COMPLETELY_FILLED) throw new Error('Order is already filled.');
         this.getTicker(order.getTicker()).cancelOrder(order, reason);
     }
 
