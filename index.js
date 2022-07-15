@@ -579,8 +579,14 @@ class Ticker {
     }
 
     cancelOrder(order, reason) {
-
+        if(order instanceof LimitOrder) this.#removeLimitOrder(order);
+        else if(order instanceof StopOrder) this.#removeStopOrder(order);
         order.setStatus(Order.CANCELLED, reason);
+    }
+
+    #removeLimitOrder(order) {
+        if(stop.getDirection() == Order.BUY) this.bids.remove(this.bids.indexOf(order));
+        else if(stop.getDirection() == Order.SELL) this.asks.remove(this.asks.indexOf(order));
     }
 
     #removeStopOrder(stop) {
@@ -700,7 +706,10 @@ class OrderBook {
         this.#updateDisplayBoard();
     }
 
-    cancelOrder(order, reason) {
+    cancelOrder(orderId, reason) {
+        let order = orderBook.getOrderById(orderId);
+        if(order == undefined) throw new Error('Invalid id.');
+        if(order.getStatus() == Order.CANCELLED) throw new Error('Order is already cancelled.');
         this.getTicker(order.getTicker()).cancelOrder(order, reason);
     }
 
@@ -769,6 +778,7 @@ client.on('messageCreate', (msg) => {
                 `!sell ${MarketOrder.CODE} [ticker] [quantity]\n` +
                 `!buy ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
                 `!sell ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
+                `!cancel [order id]\n` +
                 '```';
             messageQueue.add(infoString, MessageQueue.SEND);
             break;
@@ -804,7 +814,7 @@ client.on('messageCreate', (msg) => {
         case '!cancel': {
             if(!isValidTrader(msg.author)) return;
             try {
-                orderBook.cancelOrder(orderBook.getOrderById(parseInt(args[1])), undefined);
+                orderBook.cancelOrder(parseInt(args[1]), undefined);
             } catch(error) {
                 messageQueue.add(error.message, MessageQueue.SEND);
             }
