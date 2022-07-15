@@ -585,8 +585,8 @@ class Ticker {
     }
 
     #removeLimitOrder(order) {
-        if(stop.getDirection() == Order.BUY) this.bids.remove(this.bids.indexOf(order));
-        else if(stop.getDirection() == Order.SELL) this.asks.remove(this.asks.indexOf(order));
+        if(order.getDirection() == Order.BUY) this.bids.remove(this.bids.indexOf(order));
+        else if(order.getDirection() == Order.SELL) this.asks.remove(this.asks.indexOf(order));
     }
 
     #removeStopOrder(stop) {
