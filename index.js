@@ -220,6 +220,7 @@ class NormalOrder extends Order {
         let quantityTradable = Math.min(this.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
         existingOrder.#increaseQuantityFilled(quantityTradable);
         this.#increaseQuantityFilled(quantityTradable);
+        return existingOrder.getPrice();
     }
 
     #increaseQuantityFilled(amount) {
@@ -528,8 +529,7 @@ class Ticker {
             while(!this.asks.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestAsk = this.asks.peek();
                 if(order.getPrice() < bestAsk.getPrice()) break;
-                order.match(bestAsk);
-                newLastTradedPrice = bestAsk.getPrice();
+                newLastTradedPrice = order.match(bestAsk);
                 if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) this.asks.poll();
             }
             if(order.getStatus() != Order.COMPLETELY_FILLED) this.bids.add(order);
@@ -538,8 +538,7 @@ class Ticker {
             while(!this.bids.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestBid = this.bids.peek();
                 if(bestBid.getPrice() < order.getPrice()) break;
-                order.match(bestBid);
-                newLastTradedPrice = bestBid.getPrice();
+                newLastTradedPrice = order.match(bestBid);
                 if(bestBid.getStatus() == Order.COMPLETELY_FILLED) this.bids.poll();
             }
             if(order.getStatus() != Order.COMPLETELY_FILLED) this.asks.add(order);
@@ -553,23 +552,18 @@ class Ticker {
             if(order.getQuantity() > this.getAsksDepth()) {
                 this.cancelOrder(order, Order.UNFULFILLABLE); return;
             }
-
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestAsk = this.asks.peek();
-                order.match(bestAsk);
-                newLastTradedPrice = bestAsk.getPrice();
+                newLastTradedPrice = order.match(bestAsk);
                 if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) this.asks.poll();
             }
-
         } else if(order.getDirection() == Order.SELL) {
             if(order.getQuantity() > this.getBidsDepth()) {
                 this.cancelOrder(order, Order.UNFULFILLABLE); return;
             }
-
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestBid = this.bids.peek();
-                order.match(bestBid);
-                newLastTradedPrice = bestBid.getPrice();
+                newLastTradedPrice = order.match(bestBid);
                 if(bestBid.getStatus() == Order.COMPLETELY_FILLED) this.bids.poll();
             }
         }
@@ -772,7 +766,7 @@ client.on('messageCreate', (msg) => {
                 `!sell ${MarketOrder.CODE} [ticker] [quantity]\n` +
                 `!buy ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
                 `!sell ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
-                '```\n';
+                '```';
             msg.channel.send(infoString);
             break;
         }
