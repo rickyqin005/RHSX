@@ -165,9 +165,9 @@ class Order {
         if(!(0 <= newStatus && newStatus <= 5)) throw new Error('Invalid status.');
         if(newStatus == this.#status) return;
         this.#status = newStatus;
-        if(newStatus == Order.NOT_FILLED) messageQueue.add(this.orderSubmittedString());
-        else if(newStatus == Order.COMPLETELY_FILLED) messageQueue.add(this.orderFilledString());
-        else if(newStatus == Order.CANCELLED) messageQueue.add(this.orderCancelledString(reason));
+        if(newStatus == Order.NOT_FILLED) messageQueue.add(this.orderSubmittedString(), MessageQueue.SEND);
+        else if(newStatus == Order.COMPLETELY_FILLED) messageQueue.add(this.orderFilledString(), MessageQueue.SEND);
+        else if(newStatus == Order.CANCELLED) messageQueue.add(this.orderCancelledString(reason), MessageQueue.SEND);
     }
 
     validate() {
@@ -630,19 +630,14 @@ class OrderBook {
     }
 
     #updateDisplayBoard() {
-        let str = '';
-        str += `Last updated at ${dateString(new Date())}\n`;
-        str += this.toString() + '\n';
-        this.#tickers.forEach(ticker => {
-            str += ticker.toString() + '\n';
-        });
-        this.#displayBoardMessage.edit(str);
+        messageQueue.add(this.toDisplayBoardString(), MessageQueue.EDIT, #displayBoardMessage);
     }
 
-    toString() {
-        let str = '```' + '\n';
+    toDisplayBoardString() {
+        let str = '';
+        str += `Last updated at ${dateString(new Date())}\n`;
+        str += '```\n';
         str += setW('Ticker', 10) + setW('Price', 10) + setW('Bid', 10) + setW('Ask', 10) + '\n';
-
         this.#tickers.forEach(ticker => {
             let topBid = ticker.bids.peek();
             if(topBid == null) topBid = '-';
@@ -654,7 +649,10 @@ class OrderBook {
             str += setW(ticker.getSymbol(), 10) + setW(ticker.getLastTradedPrice(), 10) +
             setW(topBid, 10) + setW(topAsk, 10) + '\n';
         });
-        str += '```';
+        str += '```\n';
+        this.#tickers.forEach(ticker => {
+            str += ticker.toString() + '\n';
+        });
         return str;
     }
 
@@ -693,7 +691,7 @@ class OrderBook {
 
             order.validate();
         } catch(error) {
-            messageQueue.add(error.message); return;
+            messageQueue.add(error.message, MessageQueue.SEND); return;
         }
         this.processOrder(order);
     }
@@ -702,7 +700,7 @@ class OrderBook {
         this.#allOrders.set(order.getId(), order);
         order.setStatus(Order.NOT_FILLED);
         this.getTicker(order.getTicker()).submitOrder(order);
-        this.#updateDisplayBoard(order.getTicker());
+        this.#updateDisplayBoard();
     }
 
     cancelOrder(order, reason) {
@@ -720,6 +718,8 @@ class OrderBook {
 let orderBook = new OrderBook();
 
 class MessageQueue {
+    static SEND = 'send';
+    static EDIT = 'edit';
     #messages = [];
     #channel;
     constructor() {}
@@ -727,17 +727,20 @@ class MessageQueue {
     async initialize() {
         this.#channel = await client.channels.fetch(process.env['BOT_SPAM_CHANNEL_ID']);
         setInterval(() => {
-            this.#sendNextMessage();
-        }, 333);
+            this.#processNextMessage();
+        }, 1000);
     }
 
-    add(string) {
-        this.#messages.push(string);
+    add(string, type, messageObj) {
+        if(type == MessageQueue.SEND) this.#messages.push({type: type, content: string});
+        else this.#messages.push({type: type, content: string, messageObj: messageObj});
     }
 
-    #sendNextMessage() {
+    #processNextMessage() {
         if(this.#messages.length > 0) {
-            this.#channel.send(this.#messages[0]);
+            let item = this.#messages[0];
+            if(item.type == MessageQueue.SEND) this.#channel.send(item.content);
+            else if(item.type == MessageQueue.EDIT) item.messageObj.edit(item.content);
             this.#messages.splice(0, 1);
         }
     }
@@ -770,23 +773,23 @@ client.on('messageCreate', (msg) => {
                 `!buy ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
                 `!sell ${StopOrder.CODE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
                 '```';
-            messageQueue.add(infoString);
+            messageQueue.add(infoString, MessageQueue.SEND);
             break;
         }
 
         case '!bot':
-            messageQueue.add(`Active since ${dateString(orderBook.getStartUpTime())}.`);
+            messageQueue.add(`Active since ${dateString(orderBook.getStartUpTime())}.`, MessageQueue.SEND);
             break;
 
         case '!join':
             if(isValidTrader(msg.author)) return;
             traders.set(msg.author, new Trader(msg.author));
-            messageQueue.add(`${pingString(msg.author)} You've been added to the trader list.`);
+            messageQueue.add(`${pingString(msg.author)} You've been added to the trader list.`, MessageQueue.SEND);
             break;
 
         case '!position':
             if(!isValidTrader(msg.author)) return;
-            messageQueue.add(traders.get(msg.author).toString());
+            messageQueue.add(traders.get(msg.author).toString(), MessageQueue.SEND);
             break;
 
         case '!buy': {
@@ -806,7 +809,7 @@ client.on('messageCreate', (msg) => {
             try {
                 orderBook.cancelOrder(orderBook.getOrderById(parseInt(args[1])), undefined);
             } catch(error) {
-                messageQueue.add(error.message);
+                messageQueue.add(error.message, MessageQueue.SEND);
             }
             break;
         }
