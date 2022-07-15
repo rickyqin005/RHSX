@@ -500,7 +500,7 @@ class Ticker {
             });
         }
         hitStops.forEach(stop => {
-            this.removeStop(stop);
+            this.#removeStopOrder(stop);
         });
         hitStops.forEach(stop => {
             stop.setStatus(Order.COMPLETELY_FILLED);
@@ -601,7 +601,7 @@ class Ticker {
         channel.send(order.orderCancelledString(reason));
     }
 
-    removeStop(stop) {
+    #removeStopOrder(stop) {
         if(stop.getDirection() == Order.BUY) {
             this.buyStops.remove(this.buyStops.indexOf(stop));
         } else if(stop.getDirection() == Order.SELL) {
@@ -692,20 +692,20 @@ class OrderBook {
         return this.#allOrders.get(id);
     }
 
-    submitOrder(msg, args, direction, channel) {
+    submitOrder(user, direction, args, channel) {
         let order;
         try {
             if(args[1] == LimitOrder.CODE) {
-                order = new LimitOrder(msg.author, direction, args[2], parseInt(args[3]), parseInt(args[4]));
+                order = new LimitOrder(user, direction, args[2], parseInt(args[3]), parseInt(args[4]));
             } else if(args[1] == MarketOrder.CODE) {
-                order = new MarketOrder(msg.author, direction, args[2], parseInt(args[3]));
+                order = new MarketOrder(user, direction, args[2], parseInt(args[3]));
             } else if(args[1] == StopOrder.CODE) {
                 if(args[4] == LimitOrder.CODE) {
-                    let executedOrder = new LimitOrder(msg.author, direction, args[2], parseInt(args[5]), parseInt(args[6]));
-                    order = new StopOrder(msg.author, direction, args[2], parseInt(args[3]), executedOrder);
+                    let executedOrder = new LimitOrder(user, direction, args[2], parseInt(args[5]), parseInt(args[6]));
+                    order = new StopOrder(user, direction, args[2], parseInt(args[3]), executedOrder);
                 } else if(args[4] == MarketOrder.CODE) {
-                    let executedOrder = new MarketOrder(msg.author, direction, args[2], parseInt(args[5]));
-                    order = new StopOrder(msg.author, direction, args[2], parseInt(args[3]), executedOrder);
+                    let executedOrder = new MarketOrder(user, direction, args[2], parseInt(args[5]));
+                    order = new StopOrder(user, direction, args[2], parseInt(args[3]), executedOrder);
                 } else throw new Error(`Triggered order type must be one of \`${LimitOrder.CODE}\` or \`${MarketOrder.CODE}\`.`);
             } else throw new Error(`Order type must be one of \`${LimitOrder.CODE}\`, \`${MarketOrder.CODE}\` or \`${StopOrder.CODE}\`.`);
 
@@ -788,14 +788,14 @@ client.on('messageCreate', (msg) => {
         case '!buy': {
             if(!isValidTrader(msg.author)) return;
 
-            orderBook.submitOrder(msg, args, Order.BUY, msg.channel);
+            orderBook.submitOrder(msg.author, Order.BUY, args, msg.channel);
             break;
         }
 
         case '!sell': {
             if(!isValidTrader(msg.author)) return;
 
-            orderBook.submitOrder(msg, args, Order.SELL, msg.channel);
+            orderBook.submitOrder(msg.author, Order.SELL, args, msg.channel);
             break;
         }
 
