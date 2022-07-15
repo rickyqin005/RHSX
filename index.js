@@ -98,7 +98,7 @@ class Order {
     #user;
     #direction;
     #ticker;
-    #status = Order.NOT_FILLED;
+    #status = Order.UNSUBMITTED;
 
     constructor(user, direction, ticker) {
         this.#id = Order.#getNextId();
