@@ -38,7 +38,7 @@ class Trader {
         str += setW('Ticker', 10) + setW('Quantity', 10) + setW('Open PnL', 10) + '\n';
         this.#positions.forEach(position => {
             if(position.getQuantity() != 0) {
-                str += setW(position.getTicker(), 10) + setW(position.getQuantity(), 10) + setW(position.calculateOpenPnL(), 10) + '\n';
+                str += setW(position.getTicker(), 10) + setW(position.getQuantity(), 10) + setW(pricef(position.calculateOpenPnL()), 10) + '\n';
             }
         });
         str += '```\n';
@@ -277,19 +277,19 @@ class LimitOrder extends NormalOrder {
     }
 
     toDisplayBoardString() {
-        return `x${this.getQuantityUnfilled()} @${this.getPrice()}`;
+        return `x${this.getQuantityUnfilled()} @${pricef(this.getPrice())}`;
     }
 
     toInfoString() {
-        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${this.getPrice()}`;
+        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} ${this.getTicker()} @${pricef(this.getPrice())}`;
     }
 
     toDetailedInfoString() {
-        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${this.getPrice()}, submitted ${dateString(this.getTimestamp())}`;
+        return `#${this.getId()}, ${this.getDirection()} x${this.getQuantity()} (x${this.getQuantityFilled()} filled) ${this.getTicker()} @${pricef(this.getPrice())}, submitted ${dateString(this.getTimestamp())}`;
     }
 
     toStopString() {
-        return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()} @${this.getPrice()}`;
+        return `${this.getDirection()} ${this.getCode()} x${this.getQuantity()} @${pricef(this.getPrice())}`;
     }
 
     getType() {
@@ -357,15 +357,15 @@ class StopOrder extends Order {
     }
 
     toDisplayBoardString() {
-        return `@${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
+        return `@${pricef(this.getTriggerPrice())}, ${this.#executedOrder.toStopString()}`;
     }
 
     toInfoString() {
-        return `#${this.getId()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}`;
+        return `#${this.getId()}, ${this.#executedOrder.getTicker()} @${pricef(this.getTriggerPrice())}, ${this.#executedOrder.toStopString()}`;
     }
 
     toDetailedInfoString() {
-        return `#${this.getId()}, ${this.#executedOrder.getTicker()} @${this.getTriggerPrice()}, ${this.#executedOrder.toStopString()}, submitted ${dateString(this.getTimestamp())}`;
+        return `#${this.getId()}, ${this.#executedOrder.getTicker()} @${pricef(this.getTriggerPrice())}, ${this.#executedOrder.toStopString()}, submitted ${dateString(this.getTimestamp())}`;
     }
 
     orderFilledString() {
@@ -674,14 +674,12 @@ class OrderBook {
         str += setW('Ticker', 10) + setW('Price', 10) + setW('Bid', 10) + setW('Ask', 10) + '\n';
         this.#tickers.forEach(ticker => {
             let topBid = ticker.bids.peek();
-            if(topBid == null) topBid = '-';
-            else topBid = topBid.getPrice();
+            if(topBid != null) topBid = topBid.getPrice();
             let topAsk = ticker.asks.peek();
-            if(topAsk == null) topAsk = '-';
-            else topAsk = topAsk.getPrice();
+            if(topAsk != null) topAsk = topAsk.getPrice();
 
-            str += setW(ticker.getSymbol(), 10) + setW(ticker.getLastTradedPrice(), 10) +
-            setW(topBid, 10) + setW(topAsk, 10) + '\n';
+            str += setW(ticker.getSymbol(), 10) + setW(pricef(ticker.getLastTradedPrice()), 10) +
+            setW(pricef(topBid), 10) + setW(pricef(topAsk), 10) + '\n';
         });
         str += '```\n';
         this.#tickers.forEach(ticker => {
@@ -709,17 +707,26 @@ class OrderBook {
     submitOrder(user, direction, args) {
         let order;
         try {
-            if(args[1] == LimitOrder.CODE) {
-                order = new LimitOrder(user, direction, args[2], parseInt(args[3]), parseInt(args[4]));
-            } else if(args[1] == MarketOrder.CODE) {
-                order = new MarketOrder(user, direction, args[2], parseInt(args[3]));
-            } else if(args[1] == StopOrder.CODE) {
-                if(args[4] == LimitOrder.CODE) {
-                    let executedOrder = new LimitOrder(user, direction, args[2], parseInt(args[5]), parseInt(args[6]));
-                    order = new StopOrder(user, direction, args[2], parseInt(args[3]), executedOrder);
-                } else if(args[4] == MarketOrder.CODE) {
-                    let executedOrder = new MarketOrder(user, direction, args[2], parseInt(args[5]));
-                    order = new StopOrder(user, direction, args[2], parseInt(args[3]), executedOrder);
+            let code = args[1];
+            let ticker = args[2];
+            if(code == LimitOrder.CODE) {
+                let quantity = parseInt(args[3]);
+                let price = toPrice(args[4]);
+                order = new LimitOrder(user, direction, ticker, quantity, price);
+            } else if(code == MarketOrder.CODE) {
+                let quantity = parseInt(args[3]);
+                order = new MarketOrder(user, direction, ticker, quantity);
+            } else if(code == StopOrder.CODE) {
+                let triggerPrice = toPrice(args[3]);
+                let triggerCode = args[4];
+                let triggerQuantity = parseInt(args[5]);
+                if(triggerCode == LimitOrder.CODE) {
+                    let triggerLimitPrice = toPrice(args[6]);
+                    let executedOrder = new LimitOrder(user, direction, ticker, triggerQuantity, triggerLimitPrice);
+                    order = new StopOrder(user, direction, ticker, triggerPrice, executedOrder);
+                } else if(triggerCode == MarketOrder.CODE) {
+                    let executedOrder = new MarketOrder(user, direction, ticker, triggerQuantity);
+                    order = new StopOrder(user, direction, ticker, triggerPrice, executedOrder);
                 } else throw new Error(`Triggered order type must be one of \`${LimitOrder.CODE}\` or \`${MarketOrder.CODE}\`.`);
             } else throw new Error(`Order type must be one of \`${LimitOrder.CODE}\`, \`${MarketOrder.CODE}\` or \`${StopOrder.CODE}\`.`);
 
@@ -868,6 +875,17 @@ function pingString(user) {
 function setW(value, length) {
     value = String(value);
     return value + ' '.repeat(Math.max(length - value.length, 0));
+}
+
+function toPrice(price) {
+    return parseInt(price*100);
+}
+
+function pricef(price) {
+    if(price == null || price == undefined) return '-';
+    price = price/100;
+    if(Number.isNaN(price)) return '-';
+    return (price/100).toFixed(2);
 }
 
 function dateString(date) {
