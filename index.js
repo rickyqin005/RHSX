@@ -248,11 +248,11 @@ class NormalOrder extends Order {
     }
 
     match(existingOrder) {
-        let quantityTradable = Math.min(this.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
+        let quantity = Math.min(this.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
         let price = existingOrder.getPrice();
-        existingOrder.#increaseQuantityFilled(quantityTradable, price);
-        this.#increaseQuantityFilled(quantityTradable, price);
-        return existingOrder.getPrice();
+        existingOrder.#increaseQuantityFilled(quantity, price);
+        this.#increaseQuantityFilled(quantity, price);
+        return {quantity: quantity, price: price};
     }
 
     #increaseQuantityFilled(amount, price) {
@@ -463,10 +463,11 @@ class PriorityQueue {
 }
 
 class Ticker {
-    static #DEFAULT_STARTING_PRICE = toPrice(50);
+    static #DEFAULT_STARTING_PRICE = toPrice(10);
 
     #symbol;
     #lastTradedPrice = Ticker.#DEFAULT_STARTING_PRICE;
+    #volume = 0;
     bids = new PriorityQueue(OrderBook.BIDS_COMPARATOR);
     asks = new PriorityQueue(OrderBook.ASKS_COMPARATOR);
     buyStops = new PriorityQueue(OrderBook.TIMESTAMP_COMPARATOR);
@@ -499,6 +500,10 @@ class Ticker {
 
     getLastTradedPrice() {
         return this.#lastTradedPrice;
+    }
+
+    getVolume() {
+        return this.#volume;
     }
 
     getBidsDepth() {
@@ -561,7 +566,9 @@ class Ticker {
             while(!this.asks.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestAsk = this.asks.peek();
                 if(order.getPrice() < bestAsk.getPrice()) break;
-                newLastTradedPrice = order.match(bestAsk);
+                let res = order.match(bestAsk);
+                this.#volume += res.quantity;
+                newLastTradedPrice = res.price;
                 if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) this.asks.poll();
             }
             if(order.getStatus() != Order.COMPLETELY_FILLED) this.bids.add(order);
@@ -570,7 +577,9 @@ class Ticker {
             while(!this.bids.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestBid = this.bids.peek();
                 if(bestBid.getPrice() < order.getPrice()) break;
-                newLastTradedPrice = order.match(bestBid);
+                let res = order.match(bestBid);
+                this.#volume += res.quantity;
+                newLastTradedPrice = res.price;
                 if(bestBid.getStatus() == Order.COMPLETELY_FILLED) this.bids.poll();
             }
             if(order.getStatus() != Order.COMPLETELY_FILLED) this.asks.add(order);
@@ -586,7 +595,9 @@ class Ticker {
             }
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestAsk = this.asks.peek();
-                newLastTradedPrice = order.match(bestAsk);
+                let res = order.match(bestAsk);
+                this.#volume += res.quantity;
+                newLastTradedPrice = res.price;
                 if(bestAsk.getStatus() == Order.COMPLETELY_FILLED) this.asks.poll();
             }
         } else if(order.getDirection() == Order.SELL) {
@@ -595,7 +606,9 @@ class Ticker {
             }
             while(order.getStatus() != Order.COMPLETELY_FILLED) {
                 let bestBid = this.bids.peek();
-                newLastTradedPrice = order.match(bestBid);
+                let res = order.match(bestBid);
+                this.#volume += res.quantity;
+                newLastTradedPrice = res.price;
                 if(bestBid.getStatus() == Order.COMPLETELY_FILLED) this.bids.poll();
             }
         }
@@ -671,7 +684,7 @@ class OrderBook {
         let str = '';
         str += `Last updated at ${dateString(new Date())}\n`;
         str += '```\n';
-        str += setW('Ticker', 10) + setW('Price', 10) + setW('Bid', 10) + setW('Ask', 10) + '\n';
+        str += setW('Ticker', 10) + setW('Price', 10) + setW('Bid', 10) + setW('Ask', 10) + setW('Volume', 10) + '\n';
         this.#tickers.forEach(ticker => {
             let topBid = ticker.bids.peek();
             if(topBid != null) topBid = topBid.getPrice();
@@ -679,7 +692,7 @@ class OrderBook {
             if(topAsk != null) topAsk = topAsk.getPrice();
 
             str += setW(ticker.getSymbol(), 10) + setW(pricef(ticker.getLastTradedPrice()), 10) +
-            setW(pricef(topBid), 10) + setW(pricef(topAsk), 10) + '\n';
+            setW(pricef(topBid), 10) + setW(pricef(topAsk), 10) + setW(ticker.getVolume(), 10) + '\n';
         });
         str += '```\n';
         this.#tickers.forEach(ticker => {
