@@ -463,7 +463,7 @@ class PriorityQueue {
 }
 
 class Ticker {
-    static #DEFAULT_STARTING_PRICE = 50;
+    static #DEFAULT_STARTING_PRICE = toPrice(50);
 
     #symbol;
     #lastTradedPrice = Ticker.#DEFAULT_STARTING_PRICE;
@@ -885,7 +885,7 @@ function pricef(price) {
     if(price == null || price == undefined) return '-';
     price = price/100;
     if(Number.isNaN(price)) return '-';
-    return (price/100).toFixed(2);
+    return price.toFixed(2);
 }
 
 function dateString(date) {
