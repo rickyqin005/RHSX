@@ -64,7 +64,7 @@ class Trader {
     }
 
     addPosition(position) {
-        this.#positions.get(ticker).add(position);
+        this.#positions.get(position.getTicker()).add(position);
     }
 }
 
