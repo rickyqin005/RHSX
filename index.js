@@ -249,8 +249,9 @@ class NormalOrder extends Order {
 
     match(existingOrder) {
         let quantityTradable = Math.min(this.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
-        existingOrder.#increaseQuantityFilled(quantityTradable, existingOrder.getPrice());
-        this.#increaseQuantityFilled(quantityTradable, existingOrder.getPrice());
+        let price = existingOrder.getPrice();
+        existingOrder.#increaseQuantityFilled(quantityTradable, price);
+        this.#increaseQuantityFilled(quantityTradable, price);
         return existingOrder.getPrice();
     }
 
@@ -259,7 +260,7 @@ class NormalOrder extends Order {
         if(this.#quantityFilled == 0) this.setStatus(Order.NOT_FILLED);
         else if(this.#quantityFilled < this.#quantity) this.setStatus(Order.PARTIALLY_FILLED);
         else if(this.#quantityFilled == this.#quantity) this.setStatus(Order.COMPLETELY_FILLED);
-        let position = new Position(this.getTicker(), amount*this.getNetPositionChangeSign(), amount*price);
+        let position = new Position(this.getTicker(), amount*this.getNetPositionChangeSign(), amount*this.getNetPositionChangeSign()*price);
         traders.get(this.getUser()).addPosition(position);
     }
 }
