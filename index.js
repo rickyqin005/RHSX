@@ -10,7 +10,6 @@ const {Client, Intents} = require('discord.js');
 const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES]});
 
 
-// Traders
 const traders = new Map();
 
 function isValidTrader(user) {
@@ -28,26 +27,24 @@ class Trader {
         this.#user = user;
         this.#positionLimit = Trader.#DEFAULT_POSITION_LIMIT;
         OrderBook.VALID_TICKERS.forEach(ticker => {
-            this.#positions.set(ticker, 0);
+            this.#positions.set(ticker, new Position(ticker, 0, 0));
         });
     }
 
     toString() {
         let str = '';
-        str += 'Position:\n';
+        str += 'Positions:\n';
         str += '```';
-        let items = 0;
-        this.#positions.forEach((position, ticker) => {
-            if(position != 0) {
-                str += setW(ticker, 8) + position + '\n'; items++;
+        str += setW('Ticker', 10) + setW('Quantity', 10) + setW('Open PnL', 10) + '\n';
+        this.#positions.forEach(position => {
+            if(position.getQuantity() != 0) {
+                str += setW(position.getTicker(), 10) + setW(position.getQuantity(), 10) + setW(position.calculateOpenPnL(), 10) + '\n';
             }
         });
-        if(items == 0) str += ' ';
         str += '```\n';
-
         str += 'Pending Orders:\n';
         str += '```';
-        items = 0;
+        let items = 0;
         orderBook.filter(order => {
             return (order.getUser() == this.#user && (order.getStatus() == Order.NOT_FILLED || order.getStatus() == Order.PARTIALLY_FILLED));
         }).forEach(order => {
@@ -66,8 +63,42 @@ class Trader {
         return this.#positionLimit;
     }
 
-    increasePosition(ticker, change) {
-        this.#positions.set(ticker, this.#positions.get(ticker) + change);
+    addPosition(position) {
+        this.#positions.get(ticker).add(position);
+    }
+}
+
+class Position {
+    #ticker;
+    #quantity;
+    #costBasis;
+
+    constructor(ticker, quantity, costBasis) {
+        this.#ticker = ticker;
+        this.#quantity = quantity;
+        this.#costBasis = costBasis;
+    }
+
+    getTicker() {
+        return this.#ticker;
+    }
+
+    getQuantity() {
+        return this.#quantity;
+    }
+
+    getCostBasis() {
+        return this.#costBasis;
+    }
+
+    add(anotherPosition) {
+        if(this.#ticker != anotherPosition.#ticker) throw new Error('Positions of different tickers cannot be added.');
+        this.#quantity += anotherPosition.#quantity;
+        this.#costBasis += anotherPosition.#costBasis;
+    }
+
+    calculateOpenPnL() {
+        return orderBook.getTicker(this.#ticker).getLastTradedPrice()*this.#quantity - this.#costBasis;
     }
 }
 
@@ -218,17 +249,18 @@ class NormalOrder extends Order {
 
     match(existingOrder) {
         let quantityTradable = Math.min(this.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
-        existingOrder.#increaseQuantityFilled(quantityTradable);
-        this.#increaseQuantityFilled(quantityTradable);
+        existingOrder.#increaseQuantityFilled(quantityTradable, existingOrder.getPrice());
+        this.#increaseQuantityFilled(quantityTradable, existingOrder.getPrice());
         return existingOrder.getPrice();
     }
 
-    #increaseQuantityFilled(amount) {
+    #increaseQuantityFilled(amount, price) {
         this.#quantityFilled += amount;
         if(this.#quantityFilled == 0) this.setStatus(Order.NOT_FILLED);
         else if(this.#quantityFilled < this.#quantity) this.setStatus(Order.PARTIALLY_FILLED);
         else if(this.#quantityFilled == this.#quantity) this.setStatus(Order.COMPLETELY_FILLED);
-        traders.get(this.getUser()).increasePosition(this.getTicker(), amount * this.getNetPositionChangeSign());
+        let position = new Position(this.getTicker(), amount*this.getNetPositionChangeSign(), amount*price);
+        traders.get(this.getUser()).addPosition(position);
     }
 }
 
@@ -370,7 +402,6 @@ class StopOrder extends Order {
 }
 
 
-// Tickers
 class PriorityQueue {
     #array = [];
     #comparator;
@@ -515,15 +546,15 @@ class Ticker {
 
     submitOrder(order) {
         if(order instanceof LimitOrder) {
-            this.#submitLimitOrder(order);
+            this.#addLimitOrder(order);
         } else if(order instanceof MarketOrder) {
-            this.#submitMarketOrder(order);
+            this.#addMarketOrder(order);
         } else if(order instanceof StopOrder) {
-            this.#submitStopOrder(order);
+            this.#addStopOrder(order);
         }
     }
 
-    #submitLimitOrder(order) {
+    #addLimitOrder(order) {
         let newLastTradedPrice = this.getLastTradedPrice();
         if(order.getDirection() == Order.BUY) {
             while(!this.asks.empty() && order.getStatus() != Order.COMPLETELY_FILLED) {
@@ -546,7 +577,7 @@ class Ticker {
         this.setLastTradedPrice(newLastTradedPrice);
     }
 
-    #submitMarketOrder(order) {
+    #addMarketOrder(order) {
         let newLastTradedPrice = this.getLastTradedPrice();
         if(order.getDirection() == Order.BUY) {
             if(order.getQuantity() > this.getAsksDepth()) {
@@ -570,7 +601,7 @@ class Ticker {
         this.setLastTradedPrice(newLastTradedPrice);
     }
 
-    #submitStopOrder(order) {
+    #addStopOrder(order) {
         if(order.getDirection() == Order.BUY) {
             this.buyStops.add(order);
         } else if(order.getDirection() == Order.SELL) {
@@ -596,7 +627,6 @@ class Ticker {
 }
 
 
-// Orderbook
 class OrderBook {
     static BIDS_COMPARATOR = function(a, b) {
         if(a.getPrice() == b.getPrice()) return a.getTimestamp() < b.getTimestamp();
@@ -829,7 +859,7 @@ client.on('debug', console.log);
 
 client.login(process.env['BOT_TOKEN']);
 
-// Utility functions
+
 function pingString(user) {
     return `<@${user.id}>`;
 }
