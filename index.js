@@ -2,18 +2,64 @@
 const express = require('express');
 const app = express();
 const port = 3000;
-app.get('/', (req, res) => res.send('this is a bot'));
+app.get('/', (req, res) => res.send(`rhsx-bot is active!`));
 app.listen(port, () => console.log(`listening at port ${port}`));
 
 // Bot
 const {Client, Intents} = require('discord.js');
 const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES]});
+const env = process.env;
 
+// Set up File IO
+const fs = require('fs');
 
-const traders = new Map();
+class Users {
+    static #updateFile() {
+        let userIds = [];
+        this.#users.forEach((user, id) => {
+            userIds.push(id);
+        });
 
-function isValidTrader(user) {
-    return (traders.get(user) != undefined);
+        let json = JSON.stringify({
+            userIds: userIds
+        });
+        fs.writeFile('data/users.json', json, () => {});
+    }
+    static #users = new Map();
+
+    static add(user) {
+        this.#users.set(user.id, user);
+        this.#updateFile();
+    }
+
+    static get(id) {
+        return this.#users.get(id);
+    }
+
+    static async find(id) {
+        if(this.#users.get(id) == undefined) {
+            let user = await client.users.fetch(id);
+            this.#users.set(id, user);
+            this.#updateFile();
+        }
+        return this.#users.get(id);
+    }
+}
+
+class Traders {
+    static #traders = new Map();
+
+    static add(user) {
+        this.#traders.set(user, new Trader(user));
+    }
+
+    static get(user) {
+        return this.#traders.get(user);
+    }
+
+    static has(user) {
+        return (this.#traders.get(user) != undefined);
+    }
 }
 
 class Trader {
@@ -202,7 +248,7 @@ class Order {
     }
 
     validate() {
-        if(!isValidTrader(this.#user)) throw new Error('Invalid trader.');
+        if(!Traders.has(this.#user)) throw new Error('Invalid trader.');
         if(!(this.#direction == Order.BUY || this.#direction == Order.SELL))
             throw new Error(`'Direction' must be one of \`${Order.BUY}\` or \`${Order.SELL}\`.`);
         if(!orderBook.hasTicker(this.#ticker)) throw new Error(`Invalid ticker \`${this.#ticker}\`.`);
@@ -261,7 +307,7 @@ class NormalOrder extends Order {
         else if(this.#quantityFilled < this.#quantity) this.setStatus(Order.PARTIALLY_FILLED);
         else if(this.#quantityFilled == this.#quantity) this.setStatus(Order.COMPLETELY_FILLED);
         let position = new Position(this.getTicker(), amount*this.getNetPositionChangeSign(), amount*this.getNetPositionChangeSign()*price);
-        traders.get(this.getUser()).addPosition(position);
+        Traders.get(this.getUser()).addPosition(position);
     }
 }
 
@@ -667,8 +713,8 @@ class OrderBook {
     }
 
     async initialize() {
-        let channel = await client.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
-        this.#displayBoardMessage = await channel.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
+        let channel = await client.channels.fetch(env['DISPLAY_BOARD_CHANNEL_ID']);
+        this.#displayBoardMessage = await channel.messages.fetch(env['DISPLAY_BOARD_MESSAGE_ID']);
         this.#updateDisplayBoard();
         setInterval(() => {
             this.#updateDisplayBoard();
@@ -784,7 +830,7 @@ class MessageQueue {
     constructor() {}
 
     async initialize() {
-        this.#channel = await client.channels.fetch(process.env['BOT_SPAM_CHANNEL_ID']);
+        this.#channel = await client.channels.fetch(env['BOT_SPAM_CHANNEL_ID']);
         setInterval(() => {
             this.#processNextMessage();
         }, 1000);
@@ -815,7 +861,8 @@ client.on('ready', async() => {
 });
 
 client.on('messageCreate', (msg) => {
-    if(msg.author == process.env['BOT_ID']) return;
+    if(msg.author == env['BOT_ID']) return;
+    Users.add(msg.author);
     let args = msg.content.split(' ');
     switch(args[0]) {
         case '!help': {
@@ -842,30 +889,30 @@ client.on('messageCreate', (msg) => {
             break;
 
         case '!join':
-            if(isValidTrader(msg.author)) return;
-            traders.set(msg.author, new Trader(msg.author));
+            if(Traders.has(msg.author)) return;
+            Traders.add(msg.author);
             messageQueue.add(`${pingString(msg.author)} You've been added to the trader list.`, MessageQueue.SEND);
             break;
 
         case '!position':
-            if(!isValidTrader(msg.author)) return;
-            messageQueue.add(traders.get(msg.author).toString(), MessageQueue.SEND);
+            if(!Traders.has(msg.author)) return;
+            messageQueue.add(Traders.get(msg.author).toString(), MessageQueue.SEND);
             break;
 
         case '!buy': {
-            if(!isValidTrader(msg.author)) return;
+            if(!Traders.has(msg.author)) return;
             orderBook.submitOrder(msg.author, Order.BUY, args);
             break;
         }
 
         case '!sell': {
-            if(!isValidTrader(msg.author)) return;
+            if(!Traders.has(msg.author)) return;
             orderBook.submitOrder(msg.author, Order.SELL, args);
             break;
         }
 
         case '!cancel': {
-            if(!isValidTrader(msg.author)) return;
+            if(!Traders.has(msg.author)) return;
             try {
                 orderBook.cancelOrder(parseInt(args[1]), undefined);
             } catch(error) {
@@ -878,7 +925,7 @@ client.on('messageCreate', (msg) => {
 
 client.on('debug', console.log);
 
-client.login(process.env['BOT_TOKEN']);
+client.login(env['BOT_TOKEN']);
 
 
 function pingString(user) {
