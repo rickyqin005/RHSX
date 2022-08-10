@@ -219,8 +219,8 @@ class Ticker {
     static getTickers() {
         return mongoClient.db('RHSX').collection('Tickers');
     }
-    static async getTicker(symbol) {
-        let res = await this.getTickers().findOne({ symbol: symbol });
+    static async getTicker(_id) {
+        let res = await this.getTickers().findOne({ _id: _id });
         if(res != null) res = new Ticker(res);
         return res;
     }
@@ -231,7 +231,7 @@ class Ticker {
     }
 
     constructor(args) {
-        this.symbol = args.symbol;
+        this._id = args._id;
         this.lastTradedPrice = args.lastTradedPrice;
         this.volume = args.volume;
     }
@@ -260,21 +260,21 @@ const orderBook = new class {
         str += setW('Ticker', 10) + setW('Price', 10) + setW('Bid', 10) + setW('Ask', 10) + setW('Volume', 10) + '\n';
         let tickers = await Ticker.queryTickers({});
         for(const ticker of tickers) {
-            let topBid = (await this.getBids(ticker.symbol))[0];
+            let topBid = (await this.getBids(ticker._id))[0];
             if(topBid != undefined) topBid = topBid.price;
-            let topAsk = (await this.getAsks(ticker.symbol))[0];
+            let topAsk = (await this.getAsks(ticker._id))[0];
             if(topAsk != undefined) topAsk = topAsk.price;
-            str += setW(ticker.symbol, 10) + setW(pricef(ticker.lastTradedPrice), 10) +
+            str += setW(ticker._id, 10) + setW(pricef(ticker.lastTradedPrice), 10) +
             setW(pricef(topBid), 10) + setW(pricef(topAsk), 10) + setW(ticker.volume, 10) + '\n';
         }
         str += '```\n';
 
         for(const ticker of tickers) {
-            str += `Ticker: ${ticker.symbol}\n`;
+            str += `Ticker: ${ticker._id}\n`;
             str += '```\n';
             str += setW('Bids', 20) + 'Asks' + '\n';
-            let bids = await this.getBids(ticker.symbol);
-            let asks = await this.getAsks(ticker.symbol);
+            let bids = await this.getBids(ticker._id);
+            let asks = await this.getAsks(ticker._id);
             for(let i = 0; i < Math.max(bids.length, asks.length); i++) {
                 if(i < bids.length) str += setW(bids[i].toDisplayBoardString(), 20);
                 else str += setW('', 20);
@@ -286,21 +286,21 @@ const orderBook = new class {
         return str;
     }
 
-    async getBids(symbol) {
-        const ticker = await Ticker.getTicker(symbol);
+    async getBids(_id) {
+        const ticker = await Ticker.getTicker(_id);
         return await Order.queryOrders({
             direction: Order.BUY,
-            ticker: ticker.symbol,
+            ticker: ticker._id,
             type: Order.LIMIT_ORDER_TYPE,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { price: -1, timestamp: 1 });
     }
 
-    async getAsks(symbol) {
-        const ticker = await Ticker.getTicker(symbol);
+    async getAsks(_id) {
+        const ticker = await Ticker.getTicker(_id);
         return await Order.queryOrders({
             direction: Order.SELL,
-            ticker: ticker.symbol,
+            ticker: ticker._id,
             type: Order.LIMIT_ORDER_TYPE,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { price: 1, timestamp: 1 });
@@ -311,7 +311,7 @@ const orderBook = new class {
         const price = existingOrder.price;
         await existingOrder.increaseQuantityFilled(quantity, price);
         await newOrder.increaseQuantityFilled(quantity, price);
-        await Ticker.getTickers().updateOne({ symbol: existingOrder.ticker }, { $inc: { volume: quantity } });
+        await Ticker.getTickers().updateOne({ _id: existingOrder.ticker }, { $inc: { volume: quantity } });
         return { quantity: quantity, price: price };
     }
 
@@ -418,7 +418,7 @@ const orderBook = new class {
         let currPrice = await this.getLastTradedPrice(ticker);
         if(currPrice == newPrice) return;
 
-        await Ticker.getTickers().updateOne({ symbol: ticker }, { $set: { lastTradedPrice: newPrice } });
+        await Ticker.getTickers().updateOne({ _id: ticker }, { $set: { lastTradedPrice: newPrice } });
         let tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);
         let triggeredStops = await Order.queryOrders({
             direction: tickDirection,
