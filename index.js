@@ -8,7 +8,7 @@ const { Client, Intents } = require('discord.js');
 const discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES] });
 
 // MongoDB
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const mongoClient = new MongoClient(process.env['MONGO_URI'], { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 class Trader {
@@ -34,8 +34,8 @@ class Trader {
         str += 'Positions:\n';
         str += '```';
         str += `${setW('Ticker', 10)}${setW('Quantity', 10)}${setW('Open PnL', 10)}\n`;
-
-        for(const position in this.positions) {
+        for(const pos in this.positions) {
+            let position = this.positions[pos];
             if(position.quantity != 0) str += `${setW(position.ticker, 10)}${setW(position.quantity, 10)}${setW(pricef(await this.calculateOpenPnL(position)), 10)}\n`;
         }
         str += '```\n';
@@ -43,7 +43,7 @@ class Trader {
         str += '```';
         let pendingOrders = await Order.queryOrders({
             user: this._id,
-            $or: [ { status: Order.NOT_FILLED }, { status: Order.PARTIALLY_FILLED } ]
+            status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { timestamp: -1 });
         pendingOrders.forEach(order => str += `${order.toDetailedInfoString()}\n`);
         if(pendingOrders.length == 0) str += ' ';
@@ -52,8 +52,10 @@ class Trader {
     }
 
     async addPosition(position) {
-        if(this.positions[position.ticker] == undefined) this.positions[position.ticker] = position;
-        else {
+        if(this.positions[position.ticker] == undefined) {
+            this.positions[position.ticker] = position;
+            await Trader.getTraders().updateOne({ _id: this._id }, { $set: { [`positions.${position.ticker}`]: position }});
+        } else {
             this.positions[position.ticker].quantity += position.quantity;
             this.positions[position.ticker].costBasis += position.costBasis;
             await Trader.getTraders().updateOne({ _id: this._id }, { $inc: { [`positions.${position.ticker}.quantity`]: position.quantity, [`positions.${position.ticker}.costBasis`]: position.costBasis } });
@@ -248,22 +250,20 @@ const orderBook = new class {
     }
 
     async #updateDisplayBoard() {
-        messageQueue.add(await this.toDisplayBoardString(), messageQueue.EDIT, this.displayBoardMessage);
+        messageQueue.add(await this.#toDisplayBoardString(), messageQueue.EDIT, this.displayBoardMessage);
     }
 
-    async toDisplayBoardString() {
+    async #toDisplayBoardString() {
         let str = '';
         str += `Last updated at ${dateStr(new Date())}\n`;
         str += '```\n';
         str += setW('Ticker', 10) + setW('Price', 10) + setW('Bid', 10) + setW('Ask', 10) + setW('Volume', 10) + '\n';
-
         let tickers = await Ticker.queryTickers({});
         for(const ticker of tickers) {
             let topBid = (await this.getBids(ticker.symbol))[0];
             if(topBid != undefined) topBid = topBid.price;
             let topAsk = (await this.getAsks(ticker.symbol))[0];
             if(topAsk != undefined) topAsk = topAsk.price;
-
             str += setW(ticker.symbol, 10) + setW(pricef(ticker.lastTradedPrice), 10) +
             setW(pricef(topBid), 10) + setW(pricef(topAsk), 10) + setW(ticker.volume, 10) + '\n';
         }
@@ -292,7 +292,7 @@ const orderBook = new class {
             direction: Order.BUY,
             ticker: ticker.symbol,
             type: Order.LIMIT_ORDER_TYPE,
-            $or: [ { status: Order.NOT_FILLED }, { status: Order.PARTIALLY_FILLED } ]
+            status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { price: -1, timestamp: 1 });
     }
 
@@ -302,11 +302,11 @@ const orderBook = new class {
             direction: Order.SELL,
             ticker: ticker.symbol,
             type: Order.LIMIT_ORDER_TYPE,
-            $or: [ { status: Order.NOT_FILLED }, { status: Order.PARTIALLY_FILLED } ]
+            status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { price: 1, timestamp: 1 });
     }
 
-    async matchOrder(newOrder, existingOrder) {
+    async #matchOrder(newOrder, existingOrder) {
         const quantity = Math.min(newOrder.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
         const price = existingOrder.price;
         await existingOrder.increaseQuantityFilled(quantity, price);
@@ -344,10 +344,10 @@ const orderBook = new class {
         } catch(error) {
             messageQueue.add(error.message, messageQueue.SEND); return;
         }
-        await this.submitOrder(order);
+        await this.#submitOrder(order);
     }
 
-    async submitOrder(order) {
+    async #submitOrder(order) {
         order.timestamp = new Date();
         let dbResponse = await Order.getOrders().insertOne(order);
         order = await Order.getOrder(dbResponse.insertedId);
@@ -355,34 +355,34 @@ const orderBook = new class {
         // await order.setStatus(Order.IN_QUEUE);
         await order.setStatus(Order.NOT_FILLED);
         try {
-            if(order.type == Order.LIMIT_ORDER_TYPE) await this.submitLimitOrder(order);
-            else if(order.type == Order.MARKET_ORDER_TYPE) await this.submitMarketOrder(order);
-            else if(order.type == Order.STOP_ORDER_TYPE) await this.submitStopOrder(order);
+            if(order.type == Order.LIMIT_ORDER_TYPE) await this.#submitLimitOrder(order);
+            else if(order.type == Order.MARKET_ORDER_TYPE) await this.#submitMarketOrder(order);
+            else if(order.type == Order.STOP_ORDER_TYPE);
             await this.#updateDisplayBoard();
         } catch (error) {
             console.log(error);
         }
     }
 
-    async submitLimitOrder(order) {
+    async #submitLimitOrder(order) {
         let newLastTradedPrice = await this.getLastTradedPrice(order.ticker);
         if(order.direction == Order.BUY) {
             const asks = await this.getAsks(order.ticker);
             for(const bestAsk of asks) {
                 if(order.status == Order.COMPLETELY_FILLED || order.price < bestAsk.price) break;
-                newLastTradedPrice = (await this.matchOrder(order, bestAsk)).price;
+                newLastTradedPrice = (await this.#matchOrder(order, bestAsk)).price;
             }
         } else if(order.direction == Order.SELL) {
             const bids = await this.getBids(order.ticker);
             for(const bestBid of bids) {
                 if(order.status == Order.COMPLETELY_FILLED || bestBid.price < order.price) break;
-                newLastTradedPrice = (await this.matchOrder(order, bestBid)).price;
+                newLastTradedPrice = (await this.#matchOrder(order, bestBid)).price;
             }
         }
-        await this.setLastTradedPrice(order.ticker, newLastTradedPrice);
+        await this.#setLastTradedPrice(order.ticker, newLastTradedPrice);
     }
 
-    async submitMarketOrder(order) {
+    async #submitMarketOrder(order) {
         let newLastTradedPrice = await this.getLastTradedPrice(order.ticker);
         if(order.direction == Order.BUY) {
             const asks = await this.getAsks(order.ticker);
@@ -393,7 +393,7 @@ const orderBook = new class {
             }
             for(const bestAsk of asks) {
                 if(order.status == Order.COMPLETELY_FILLED) break;
-                newLastTradedPrice = (await this.matchOrder(order, bestAsk)).price;
+                newLastTradedPrice = (await this.#matchOrder(order, bestAsk)).price;
             }
         } else if(order.direction == Order.SELL) {
             const bids = await this.getBids(order.ticker);
@@ -404,18 +404,17 @@ const orderBook = new class {
             }
             for(const bestBid of bids) {
                 if(order.status == Order.COMPLETELY_FILLED) break;
-                newLastTradedPrice = (await this.matchOrder(order, bestBid)).price;
+                newLastTradedPrice = (await this.#matchOrder(order, bestBid)).price;
             }
         }
-        await this.setLastTradedPrice(order.ticker, newLastTradedPrice);
+        await this.#setLastTradedPrice(order.ticker, newLastTradedPrice);
     }
-
-    async submitStopOrder(order) {}
 
     async getLastTradedPrice(ticker) {
         return (await Ticker.getTicker(ticker)).lastTradedPrice;
     }
-    async setLastTradedPrice(ticker, newPrice) {
+
+    async #setLastTradedPrice(ticker, newPrice) {
         let currPrice = await this.getLastTradedPrice(ticker);
         if(currPrice == newPrice) return;
 
@@ -425,11 +424,12 @@ const orderBook = new class {
             direction: tickDirection,
             ticker: ticker,
             type: Order.STOP_ORDER_TYPE,
-            triggerPrice: { $gte: Math.min(currPrice, newPrice), $lte: Math.max(currPrice, newPrice) }
+            triggerPrice: { $gte: Math.min(currPrice, newPrice), $lte: Math.max(currPrice, newPrice) },
+            status: Order.NOT_FILLED
         }, { timestamp: 1 });
         for(const stop of triggeredStops) {
             await stop.setStatus(Order.COMPLETELY_FILLED);
-            await this.submitOrder(stop.executedOrder);
+            await this.#submitOrder(stop.executedOrder);
         }
     }
 
@@ -486,7 +486,7 @@ discordClient.on('messageCreate', async (msg) => {
                 `!sell ${Order.MARKET_ORDER_TYPE} [ticker] [quantity]\n` +
                 `!buy ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
                 `!sell ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
-                // `!cancel [order id]\n` +
+                `!cancel [order id]\n` +
                 '```';
             messageQueue.add(infoString, messageQueue.SEND);
             break;
@@ -523,15 +523,17 @@ discordClient.on('messageCreate', async (msg) => {
             break;
         }
 
-        /*case '!cancel': {
-            if(!isValidTrader(msg.author)) return;
-            try {
-                await orderBook.cancelOrder(parseInt(args[1]), undefined);
-            } catch(error) {
-                messageQueue.add(error.message, messageQueue.SEND);
+        case '!cancel': {
+            let trader = await Trader.getTrader(msg.author.id);
+            if(trader != null) {
+                try {
+                    await orderBook.cancelOrder(new ObjectId(args[1]), undefined);
+                } catch(error) {
+                    messageQueue.add(error.message, messageQueue.SEND);
+                }
             }
             break;
-        }*/
+        }
     }
 });
 
