@@ -1,3 +1,13 @@
+const process = {
+    'env': {
+        'DISPLAY_BOARD_CHANNEL_ID': '994989436741877840',
+        'DISPLAY_BOARD_MESSAGE_ID': '996076376715178004',
+        'BOT_SPAM_CHANNEL_ID': '991864163926282300',
+        'BOT_ID': '991856515122212905',
+        'BOT_TOKEN': 'OTkxODU2NTE1MTIyMjEyOTA1.G9KHQy.imJHMz78esmKBamF-VJOTwZLtoDrp2FrTR5Ji0',
+        'MONGO_URI': 'mongodb+srv://rhsx-bot:LvjhOyqd3nHql0yV@rhsx.w4kgku2.mongodb.net/?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true'
+    }
+};
 // Discord
 const express = require('express');
 const app = express();
@@ -90,6 +100,11 @@ class Order {
     }
     static async getOrder(_id) {
         let res = await this.getOrders().findOne({ _id: _id });
+        if(res != null) res = new Order(res);
+        return res;
+    }
+    static async queryOrder(query) {
+        let res = await this.getOrders().findOne(query);
         if(res != null) res = new Order(res);
         return res;
     }
@@ -317,33 +332,29 @@ const orderBook = new class {
 
     async submitRawOrder(user, direction, args) {
         let order = {};
-        try {
-            Object.assign(order, { type: args[1], timestamp: new Date(), user: user, direction: direction, ticker: args[2], status: Order.UNSUBMITTED });
-            if((await Ticker.getTicker(order.ticker)) == null) throw new Error('Invalid ticker.');
-            if(order.type == Order.LIMIT_ORDER_TYPE || order.type == Order.MARKET_ORDER_TYPE) {
-                Object.assign(order, { quantity: parseInt(args[3]), quantityFilled: 0 });
-                if(Number.isNaN(order.quantity) || !(1 <= order.quantity)) throw new Error('Quantity must be greater than 0.');
-                if(order.type == Order.LIMIT_ORDER_TYPE) {
-                    Object.assign(order, { price: toPrice(args[4]) });
-                    if(Number.isNaN(order.price)) throw new Error('Invalid limit price.');
-                } else if(order.type == Order.MARKET_ORDER_TYPE);
-            } else if(order.type == Order.STOP_ORDER_TYPE) {
-                order.triggerPrice = toPrice(args[3]);
-                if(Number.isNaN(order.triggerPrice)) throw new Error('Invalid trigger price.');
-                let executedOrder = { type: args[4], timestamp: new Date(), user: user, direction: direction, ticker: args[2], status: Order.UNSUBMITTED, quantity: parseInt(args[5]), quantityFilled: 0 };
-                if(Number.isNaN(executedOrder.quantity) || !(1 <= executedOrder.quantity)) throw new Error('Quantity must be a positive integer.');
-                if(direction == Order.BUY && !((await this.getLastTradedPrice(order.ticker)) < order.triggerPrice)) throw new Error('Trigger price must be greater than current price.');
-                if(direction == Order.SELL && !(order.triggerPrice < (await this.getLastTradedPrice(order.ticker)))) throw new Error('Trigger price must be less than current price.');
-                if(executedOrder.type == Order.LIMIT_ORDER_TYPE) {
-                    executedOrder.price = toPrice(args[6]);
-                    if(Number.isNaN(executedOrder.price)) throw new Error('Invalid limit price.');
-                } else if(executedOrder.type == Order.MARKET_ORDER_TYPE);
-                else throw new Error(`Triggered order type must be one of \`${Order.LIMIT_ORDER_TYPE}\` or \`${Order.MARKET_ORDER_TYPE}\`.`);
-                order.executedOrder = executedOrder;
-            } else throw new Error(`Order type must be one of \`${Order.LIMIT_ORDER_TYPE}\`, \`${Order.MARKET_ORDER_TYPE}\` or \`${Order.STOP_ORDER_TYPE}\`.`);
-        } catch(error) {
-            messageQueue.add(error.message, messageQueue.SEND); return;
-        }
+        Object.assign(order, { type: args[1], timestamp: new Date(), user: user, direction: direction, ticker: args[2], status: Order.UNSUBMITTED });
+        if((await Ticker.getTicker(order.ticker)) == null) throw new Error('Invalid ticker.');
+        if(order.type == Order.LIMIT_ORDER_TYPE || order.type == Order.MARKET_ORDER_TYPE) {
+            Object.assign(order, { quantity: parseInt(args[3]), quantityFilled: 0 });
+            if(Number.isNaN(order.quantity) || !(1 <= order.quantity)) throw new Error('Quantity must be greater than 0.');
+            if(order.type == Order.LIMIT_ORDER_TYPE) {
+                Object.assign(order, { price: toPrice(args[4]) });
+                if(Number.isNaN(order.price)) throw new Error('Invalid limit price.');
+            } else if(order.type == Order.MARKET_ORDER_TYPE);
+        } else if(order.type == Order.STOP_ORDER_TYPE) {
+            order.triggerPrice = toPrice(args[3]);
+            if(Number.isNaN(order.triggerPrice)) throw new Error('Invalid trigger price.');
+            let executedOrder = { type: args[4], timestamp: new Date(), user: user, direction: direction, ticker: args[2], status: Order.UNSUBMITTED, quantity: parseInt(args[5]), quantityFilled: 0 };
+            if(Number.isNaN(executedOrder.quantity) || !(1 <= executedOrder.quantity)) throw new Error('Quantity must be a positive integer.');
+            if(direction == Order.BUY && !((await this.getLastTradedPrice(order.ticker)) < order.triggerPrice)) throw new Error('Trigger price must be greater than current price.');
+            if(direction == Order.SELL && !(order.triggerPrice < (await this.getLastTradedPrice(order.ticker)))) throw new Error('Trigger price must be less than current price.');
+            if(executedOrder.type == Order.LIMIT_ORDER_TYPE) {
+                executedOrder.price = toPrice(args[6]);
+                if(Number.isNaN(executedOrder.price)) throw new Error('Invalid limit price.');
+            } else if(executedOrder.type == Order.MARKET_ORDER_TYPE);
+            else throw new Error(`Triggered order type must be one of \`${Order.LIMIT_ORDER_TYPE}\` or \`${Order.MARKET_ORDER_TYPE}\`.`);
+            order.executedOrder = executedOrder;
+        } else throw new Error(`Order type must be one of \`${Order.LIMIT_ORDER_TYPE}\`, \`${Order.MARKET_ORDER_TYPE}\` or \`${Order.STOP_ORDER_TYPE}\`.`);
         await this.#submitOrder(order);
     }
 
@@ -354,14 +365,10 @@ const orderBook = new class {
         console.log(order);
         // await order.setStatus(Order.IN_QUEUE);
         await order.setStatus(Order.NOT_FILLED);
-        try {
-            if(order.type == Order.LIMIT_ORDER_TYPE) await this.#submitLimitOrder(order);
-            else if(order.type == Order.MARKET_ORDER_TYPE) await this.#submitMarketOrder(order);
-            else if(order.type == Order.STOP_ORDER_TYPE);
-            await this.#updateDisplayBoard();
-        } catch (error) {
-            console.log(error);
-        }
+        if(order.type == Order.LIMIT_ORDER_TYPE) await this.#submitLimitOrder(order);
+        else if(order.type == Order.MARKET_ORDER_TYPE) await this.#submitMarketOrder(order);
+        else if(order.type == Order.STOP_ORDER_TYPE);
+        await this.#updateDisplayBoard();
     }
 
     async #submitLimitOrder(order) {
@@ -389,7 +396,7 @@ const orderBook = new class {
             let asksDepth = 0;
             asks.forEach(ask => asksDepth += ask.getQuantityUnfilled());
             if(order.quantity > asksDepth) {
-                await this.cancelOrder(order._id, Order.UNFULFILLABLE); return;
+                await this.cancelOrder(order.user, order._id, Order.UNFULFILLABLE); return;
             }
             for(const bestAsk of asks) {
                 if(order.status == Order.COMPLETELY_FILLED) break;
@@ -400,7 +407,7 @@ const orderBook = new class {
             let bidsDepth = 0;
             bids.forEach(bid => bidsDepth += bid.getQuantityUnfilled());
             if(order.quantity > bidsDepth) {
-                await this.cancelOrder(order._id, Order.UNFULFILLABLE); return;
+                await this.cancelOrder(order.user, order._id, Order.UNFULFILLABLE); return;
             }
             for(const bestBid of bids) {
                 if(order.status == Order.COMPLETELY_FILLED) break;
@@ -433,8 +440,8 @@ const orderBook = new class {
         }
     }
 
-    async cancelOrder(order, reason) {
-        order = await Order.getOrder(order);
+    async cancelOrder(user, order, reason) {
+        order = await Order.queryOrder({ _id: order, user: user });
         if(order == null) throw new Error('Invalid id.');
         if(order.status == Order.CANCELLED) throw new Error('Order is already cancelled.');
         if(order.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled.');
@@ -455,8 +462,8 @@ const messageQueue = new class {
     }
 
     add(string, type, messageObj) {
-        if(type == messageQueue.SEND) this.#messages.push({type: type, content: string});
-        else this.#messages.push({type: type, content: string, messageObj: messageObj});
+        if(type == messageQueue.SEND) this.#messages.push({ type: type, content: string });
+        else this.#messages.push({ type: type, content: string, messageObj: messageObj });
     }
 
     #processNextMessage() {
@@ -469,71 +476,66 @@ const messageQueue = new class {
     }
 }();
 
-discordClient.on('messageCreate', async (msg) => {
+discordClient.on('messageCreate', async msg => {
     if(msg.author == process.env['BOT_ID']) return;
     let args = msg.content.split(' ');
-    switch(args[0]) {
-        case '!help': {
-            let infoString =
-                '```\n' +
-                `!help\n` +
-                `!bot\n` +
-                `!join\n` +
-                `!position\n` +
-                `!buy ${Order.LIMIT_ORDER_TYPE} [ticker] [quantity] [price]\n` +
-                `!sell ${Order.LIMIT_ORDER_TYPE} [ticker] [quantity] [price]\n` +
-                `!buy ${Order.MARKET_ORDER_TYPE} [ticker] [quantity]\n` +
-                `!sell ${Order.MARKET_ORDER_TYPE} [ticker] [quantity]\n` +
-                `!buy ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
-                `!sell ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
-                `!cancel [order id]\n` +
-                '```';
-            messageQueue.add(infoString, messageQueue.SEND);
-            break;
-        }
-
-        case '!bot':
-            messageQueue.add(`Active since ${dateStr(orderBook.startUpTime)}.`, messageQueue.SEND);
-            break;
-
-        case '!join': {
-            let trader = await Trader.getTrader(msg.author.id);
-            if(trader == null) {
-                await Trader.getTraders().insertOne(new Trader({ _id: msg.author.id, positionLimit: Trader.DEFAULT_POSITION_LIMIT, positions: {} }));
-                messageQueue.add(`${msg.author} You're now a trader.`, messageQueue.SEND);
-            } else {
-                messageQueue.add(`${msg.author} You're already a trader.`, messageQueue.SEND);
+    try {
+        switch(args[0]) {
+            case '!help': {
+                let infoString =
+                    '```\n' +
+                    `!help\n` +
+                    `!bot\n` +
+                    `!join\n` +
+                    `!position\n` +
+                    `!buy ${Order.LIMIT_ORDER_TYPE} [ticker] [quantity] [price]\n` +
+                    `!sell ${Order.LIMIT_ORDER_TYPE} [ticker] [quantity] [price]\n` +
+                    `!buy ${Order.MARKET_ORDER_TYPE} [ticker] [quantity]\n` +
+                    `!sell ${Order.MARKET_ORDER_TYPE} [ticker] [quantity]\n` +
+                    `!buy ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
+                    `!sell ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
+                    `!cancel [order id]\n` +
+                    '```';
+                messageQueue.add(infoString, messageQueue.SEND);
+                break;
             }
-            break;
-        }
-        case '!position': {
-            let trader = await Trader.getTrader(msg.author.id);
-            if(trader != null) messageQueue.add(await trader.toString(), messageQueue.SEND);
-            break;
-        }
-        case '!buy': {
-            let trader = await Trader.getTrader(msg.author.id);
-            if(trader != null) await orderBook.submitRawOrder(msg.author.id, Order.BUY, args);
-            break;
-        }
-
-        case '!sell': {
-            let trader = await Trader.getTrader(msg.author.id);
-            if(trader != null) await orderBook.submitRawOrder(msg.author.id, Order.SELL, args);
-            break;
-        }
-
-        case '!cancel': {
-            let trader = await Trader.getTrader(msg.author.id);
-            if(trader != null) {
-                try {
-                    await orderBook.cancelOrder(new ObjectId(args[1]), undefined);
-                } catch(error) {
-                    messageQueue.add(error.message, messageQueue.SEND);
+            case '!bot': {
+                messageQueue.add(`Active since ${dateStr(orderBook.startUpTime)}.`, messageQueue.SEND);
+                break;
+            }
+            case '!join': {
+                let trader = await Trader.getTrader(msg.author.id);
+                if(trader == null) {
+                    await Trader.getTraders().insertOne(new Trader({ _id: msg.author.id, positionLimit: Trader.DEFAULT_POSITION_LIMIT, positions: {} }));
+                    messageQueue.add(`${msg.author} You're now a trader.`, messageQueue.SEND);
+                } else {
+                    messageQueue.add(`${msg.author} You're already a trader.`, messageQueue.SEND);
                 }
+                break;
             }
-            break;
+            case '!position': {
+                let trader = await Trader.getTrader(msg.author.id);
+                if(trader != null) messageQueue.add(await trader.toString(), messageQueue.SEND);
+                break;
+            }
+            case '!buy': {
+                let trader = await Trader.getTrader(msg.author.id);
+                if(trader != null) await orderBook.submitRawOrder(msg.author.id, Order.BUY, args);
+                break;
+            }
+            case '!sell': {
+                let trader = await Trader.getTrader(msg.author.id);
+                if(trader != null) await orderBook.submitRawOrder(msg.author.id, Order.SELL, args);
+                break;
+            }
+            case '!cancel': {
+                let trader = await Trader.getTrader(msg.author.id);
+                if(trader != null) await orderBook.cancelOrder(msg.author.id, new ObjectId(args[1]));
+                break;
+            }
         }
+    } catch(error) {
+        messageQueue.add(error.message, messageQueue.SEND);
     }
 });
 
