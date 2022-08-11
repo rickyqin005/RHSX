@@ -1,11 +1,6 @@
 // Discord
-const express = require('express');
-const app = express();
-const port = 3000;
-app.get('/', (req, res) => res.send('this is a bot'));
-app.listen(port, () => console.log(`listening at port ${port}`));
 const { Client, Intents } = require('discord.js');
-const discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES] });
+const discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
 // MongoDB
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
