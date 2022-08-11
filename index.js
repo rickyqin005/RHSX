@@ -1,13 +1,3 @@
-const process = {
-    'env': {
-        'DISPLAY_BOARD_CHANNEL_ID': '994989436741877840',
-        'DISPLAY_BOARD_MESSAGE_ID': '996076376715178004',
-        'BOT_SPAM_CHANNEL_ID': '991864163926282300',
-        'BOT_ID': '991856515122212905',
-        'BOT_TOKEN': 'OTkxODU2NTE1MTIyMjEyOTA1.G9KHQy.imJHMz78esmKBamF-VJOTwZLtoDrp2FrTR5Ji0',
-        'MONGO_URI': 'mongodb+srv://rhsx-bot:LvjhOyqd3nHql0yV@rhsx.w4kgku2.mongodb.net/?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true'
-    }
-};
 // Discord
 const express = require('express');
 const app = express();
