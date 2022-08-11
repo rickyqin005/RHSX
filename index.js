@@ -209,9 +209,9 @@ class Order {
         this.status = newStatus;
         await Order.getOrders().updateOne({ _id: this._id }, { $set: { status: newStatus } });
 
-        if(newStatus == Order.NOT_FILLED) messageQueue.add(this.orderSubmittedString(), messageQueue.SEND);
-        else if(newStatus == Order.COMPLETELY_FILLED) messageQueue.add(this.orderFilledString(), messageQueue.SEND);
-        else if(newStatus == Order.CANCELLED) messageQueue.add(this.orderCancelledString(reason), messageQueue.SEND);
+        if(newStatus == Order.IN_QUEUE) CHANNEL.ORDER_SUBMISSION.send(this.orderSubmittedString());
+        else if(newStatus == Order.COMPLETELY_FILLED) CHANNEL.ORDER_STATUS.send(this.orderFilledString());
+        else if(newStatus == Order.CANCELLED) CHANNEL.ORDER_STATUS.send(this.orderCancelledString(reason));
     }
 }
 
@@ -242,15 +242,14 @@ const orderBook = new class {
     startUpTime;
 
     async initialize() {
-        let channel = await discordClient.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
-        this.displayBoardMessage = await channel.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
+        this.displayBoardMessage = await CHANNEL.DISPLAY_BOARD.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
         await this.#updateDisplayBoard();
         setInterval(async () => await this.#updateDisplayBoard(), 60000);
         this.startUpTime = new Date();
     }
 
     async #updateDisplayBoard() {
-        messageQueue.add(await this.#toDisplayBoardString(), messageQueue.EDIT, this.displayBoardMessage);
+        this.displayBoardMessage.edit(await this.#toDisplayBoardString());
     }
 
     async #toDisplayBoardString() {
@@ -348,7 +347,7 @@ const orderBook = new class {
         let dbResponse = await Order.getOrders().insertOne(order);
         order = await Order.getOrder(dbResponse.insertedId);
         console.log(order);
-        // await order.setStatus(Order.IN_QUEUE);
+        await order.setStatus(Order.IN_QUEUE);
         await order.setStatus(Order.NOT_FILLED);
         if(order.type == Order.LIMIT_ORDER_TYPE) await this.#submitLimitOrder(order);
         else if(order.type == Order.MARKET_ORDER_TYPE) await this.#submitMarketOrder(order);
@@ -435,104 +434,95 @@ const orderBook = new class {
     }
 }();
 
-const messageQueue = new class {
-    SEND = 'send';
-    EDIT = 'edit';
-    #messages = [];
-    #channel;
-
-    async initialize() {
-        this.#channel = await discordClient.channels.fetch(process.env['BOT_SPAM_CHANNEL_ID']);
-        setInterval(() => this.#processNextMessage(), 1000);
-    }
-
-    add(string, type, messageObj) {
-        if(type == messageQueue.SEND) this.#messages.push({ type: type, content: string });
-        else this.#messages.push({ type: type, content: string, messageObj: messageObj });
-    }
-
-    #processNextMessage() {
-        if(this.#messages.length > 0) {
-            let item = this.#messages[0];
-            if(item.type == messageQueue.SEND) this.#channel.send(item.content);
-            else if(item.type == messageQueue.EDIT) item.messageObj.edit(item.content);
-            this.#messages.splice(0, 1);
-        }
-    }
-}();
-
 discordClient.on('messageCreate', async msg => {
     if(msg.author == process.env['BOT_ID']) return;
     let args = msg.content.split(' ');
     try {
         switch(args[0]) {
             case '!help': {
-                let infoString =
-                    '```\n' +
-                    `!help\n` +
-                    `!bot\n` +
-                    `!join\n` +
-                    `!position\n` +
-                    `!buy ${Order.LIMIT_ORDER_TYPE} [ticker] [quantity] [price]\n` +
-                    `!sell ${Order.LIMIT_ORDER_TYPE} [ticker] [quantity] [price]\n` +
-                    `!buy ${Order.MARKET_ORDER_TYPE} [ticker] [quantity]\n` +
-                    `!sell ${Order.MARKET_ORDER_TYPE} [ticker] [quantity]\n` +
-                    `!buy ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
-                    `!sell ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
-                    `!cancel [order id]\n` +
-                    '```';
-                messageQueue.add(infoString, messageQueue.SEND);
+                if(msg.channel == CHANNEL.GENERAL_COMMANDS) {
+                    let infoString =
+                        '```\n' +
+                        `!help\n` +
+                        `!bot\n` +
+                        `!join\n` +
+                        `!position\n` +
+                        '```';
+                    msg.channel.send(infoString);
+                } else if(msg.channel == CHANNEL.ORDER_SUBMISSION) {
+                    let infoString =
+                        '```\n' +
+                        `!help\n` +
+                        `!buy ${Order.LIMIT_ORDER_TYPE} [ticker] [quantity] [price]\n` +
+                        `!sell ${Order.LIMIT_ORDER_TYPE} [ticker] [quantity] [price]\n` +
+                        `!buy ${Order.MARKET_ORDER_TYPE} [ticker] [quantity]\n` +
+                        `!sell ${Order.MARKET_ORDER_TYPE} [ticker] [quantity]\n` +
+                        `!buy ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
+                        `!sell ${Order.STOP_ORDER_TYPE} [ticker] [trigger price] [order type] [quantity] [[price]]\n` +
+                        `!cancel [order id]\n` +
+                        '```';
+                    msg.channel.send(infoString);
+                }
                 break;
             }
             case '!bot': {
-                messageQueue.add(`Active since ${dateStr(orderBook.startUpTime)}.`, messageQueue.SEND);
+                if(!(msg.channel == CHANNEL.GENERAL_COMMANDS)) return;
+                msg.channel.send(`Active since ${dateStr(orderBook.startUpTime)}.`);
                 break;
             }
             case '!join': {
+                if(!(msg.channel == CHANNEL.GENERAL_COMMANDS)) return;
                 let trader = await Trader.getTrader(msg.author.id);
                 if(trader == null) {
                     await Trader.getTraders().insertOne(new Trader({ _id: msg.author.id, positionLimit: Trader.DEFAULT_POSITION_LIMIT, positions: {} }));
-                    messageQueue.add(`${msg.author} You're now a trader.`, messageQueue.SEND);
+                    msg.channel.send(`${msg.author} You're now a trader.`);
                 } else {
-                    messageQueue.add(`${msg.author} You're already a trader.`, messageQueue.SEND);
+                    msg.channel.send(`${msg.author} You're already a trader.`);
                 }
                 break;
             }
             case '!position': {
+                if(!(msg.channel == CHANNEL.GENERAL_COMMANDS)) return;
                 let trader = await Trader.getTrader(msg.author.id);
-                if(trader != null) messageQueue.add(await trader.toString(), messageQueue.SEND);
+                if(trader != null) msg.channel.send(await trader.toString());
                 break;
             }
             case '!buy': {
+                if(!(msg.channel == CHANNEL.ORDER_SUBMISSION)) return;
                 let trader = await Trader.getTrader(msg.author.id);
                 if(trader != null) await orderBook.submitRawOrder(msg.author.id, Order.BUY, args);
                 break;
             }
             case '!sell': {
+                if(!(msg.channel == CHANNEL.ORDER_SUBMISSION)) return;
                 let trader = await Trader.getTrader(msg.author.id);
                 if(trader != null) await orderBook.submitRawOrder(msg.author.id, Order.SELL, args);
                 break;
             }
             case '!cancel': {
+                if(!(msg.channel == CHANNEL.ORDER_SUBMISSION)) return;
                 let trader = await Trader.getTrader(msg.author.id);
                 if(trader != null) await orderBook.cancelOrder(msg.author.id, new ObjectId(args[1]));
                 break;
             }
         }
     } catch(error) {
-        messageQueue.add(error.message, messageQueue.SEND);
+        msg.channel.send(error.message);
     }
 });
-
 discordClient.on('debug', console.log);
 
+const CHANNEL = {};
 async function run() {
     await mongoClient.connect();
     console.log(`Connected to MongoDB!`);
     await discordClient.login(process.env['BOT_TOKEN']);
     console.log(`Connected to Discord!`);
+    CHANNEL.GENERAL_COMMANDS = await discordClient.channels.fetch(process.env['GENERAL_COMMANDS_CHANNEL_ID']);
+    CHANNEL.DISPLAY_BOARD = await discordClient.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
+    CHANNEL.ORDER_SUBMISSION = await discordClient.channels.fetch(process.env['ORDER_SUBMISSION_CHANNEL_ID']);
+    CHANNEL.ORDER_STATUS = await discordClient.channels.fetch(process.env['ORDER_STATUS_CHANNEL_ID']);
     await orderBook.initialize();
-    await messageQueue.initialize();
 }
 run();
 
