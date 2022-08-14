@@ -1,15 +1,3 @@
-const process = {
-    'env': {
-        'DISPLAY_BOARD_CHANNEL_ID': '994989436741877840',
-        'DISPLAY_BOARD_MESSAGE_ID': '996076376715178004',
-        'GENERAL_COMMANDS_CHANNEL_ID': '1007298068326141972',
-        'ORDER_SUBMISSION_CHANNEL_ID': '1007273479499956275',
-        'ORDER_STATUS_CHANNEL_ID': '1007273892571787294',
-        'BOT_ID': '991856515122212905',
-        'BOT_TOKEN': 'OTkxODU2NTE1MTIyMjEyOTA1.GymHkU.vicN67RjYKwuhjB_EpiJcryoAB9HkQ-BqAapns',
-        'MONGO_URI': 'mongodb+srv://rhsx-bot:gCkTrrc0gbnbnylA@rhsx.w4kgku2.mongodb.net/?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true'
-    }
-};
 // Discord
 const { Client, Intents } = require('discord.js');
 const discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
