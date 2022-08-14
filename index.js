@@ -1,3 +1,15 @@
+const process = {
+    'env': {
+        'DISPLAY_BOARD_CHANNEL_ID': '994989436741877840',
+        'DISPLAY_BOARD_MESSAGE_ID': '996076376715178004',
+        'GENERAL_COMMANDS_CHANNEL_ID': '1007298068326141972',
+        'ORDER_SUBMISSION_CHANNEL_ID': '1007273479499956275',
+        'ORDER_STATUS_CHANNEL_ID': '1007273892571787294',
+        'BOT_ID': '991856515122212905',
+        'BOT_TOKEN': 'OTkxODU2NTE1MTIyMjEyOTA1.GymHkU.vicN67RjYKwuhjB_EpiJcryoAB9HkQ-BqAapns',
+        'MONGO_URI': 'mongodb+srv://rhsx-bot:gCkTrrc0gbnbnylA@rhsx.w4kgku2.mongodb.net/?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true'
+    }
+};
 // Discord
 const { Client, Intents } = require('discord.js');
 const discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
@@ -21,17 +33,27 @@ class Trader {
     constructor(args) {
         this._id = args._id;
         this.positionLimit = args.positionLimit;
+        this.balance = args.balance;
         this.positions = args.positions;
     }
 
     async toString() {
         let str = '';
+        str += `${pingStr(this._id)}\n`;
+        let accountValue = this.balance;
+        for(const pos in this.positions) {
+            accountValue += this.positions[pos].quantity*(await orderBook.getLastTradedPrice(pos));
+        }
+        str += `Account Value: ${Price.format(accountValue)}\n`;
+        str += `Cash Balance: ${Price.format(this.balance)}\n\n`;
         str += 'Positions:\n';
         str += '```';
-        str += `${setW('Ticker', 10)}${setW('Quantity', 10)}${setW('Open PnL', 10)}\n`;
+        str += setW('Ticker', 10) + setW('Price', 10) + setW('Quantity', 10) + setW('Mkt Value', 12) + setW('Open PnL', 10) + '\n';
         for(const pos in this.positions) {
             let position = this.positions[pos];
-            if(position.quantity != 0) str += `${setW(position.ticker, 10)}${setW(position.quantity, 10)}${setW(pricef(await this.calculateOpenPnL(position)), 10)}\n`;
+            let price = await orderBook.getLastTradedPrice(pos);
+            if(position.quantity != 0) str += setW(position.ticker, 10) + setW(Price.format(price), 10) + setW(position.quantity, 10) +
+            setW(Price.format(price*position.quantity), 12) + setW(Price.format(await this.calculateOpenPnL(position)), 10) + '\n';
         }
         str += '```\n';
         str += 'Pending Orders:\n';
@@ -46,15 +68,24 @@ class Trader {
         return str;
     }
 
-    async addPosition(position) {
-        if(this.positions[position.ticker] == undefined) {
-            this.positions[position.ticker] = position;
-            await Trader.getTraders().updateOne({ _id: this._id }, { $set: { [`positions.${position.ticker}`]: position }});
-        } else {
-            this.positions[position.ticker].quantity += position.quantity;
-            this.positions[position.ticker].costBasis += position.costBasis;
-            await Trader.getTraders().updateOne({ _id: this._id }, { $inc: { [`positions.${position.ticker}.quantity`]: position.quantity, [`positions.${position.ticker}.costBasis`]: position.costBasis } });
+    async addPosition(pos) {
+        let currPos = this.positions[pos.ticker];
+        if(currPos == undefined) currPos = pos;
+        else {
+            if(Math.sign(currPos.quantity) == Math.sign(pos.quantity) || currPos.quantity == 0) {// increase size of current position
+                currPos.quantity += pos.quantity;
+                currPos.costBasis += pos.costBasis;
+            } else if(Math.abs(currPos.quantity) > Math.abs(pos.quantity)) {// reduce size of current position
+                currPos.costBasis += Math.round(currPos.costBasis*pos.quantity/currPos.quantity);
+                currPos.quantity += pos.quantity;
+            } else {// close current position and open new position in opposite direction
+                let posPrice = pos.costBasis/pos.quantity;
+                currPos.quantity += pos.quantity;
+                currPos.costBasis = currPos.quantity*posPrice;
+            }
         }
+        this.balance -= pos.costBasis;
+        await Trader.getTraders().updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } });
     }
 
     async calculateOpenPnL(position) {
@@ -115,7 +146,7 @@ class Order {
 
             this.toStopString = function () {
                 if(this.type == Order.LIMIT_ORDER_TYPE) {
-                    return `${this.direction} ${this.type} x${this.quantity} @${pricef(this.price)}`;
+                    return `${this.direction} ${this.type} x${this.quantity} @${Price.format(this.price)}`;
                 } else if(this.type == Order.MARKET_ORDER_TYPE) {
                     return `${this.direction} ${this.type} x${this.quantity}`;
                 }
@@ -151,31 +182,31 @@ class Order {
 
     toDisplayBoardString() {
         if(this.type == Order.LIMIT_ORDER_TYPE) {
-            return `@${pricef(this.price)} x${this.getQuantityUnfilled()}`;
+            return `@${Price.format(this.price)} x${this.getQuantityUnfilled()}`;
         } else if(this.type == Order.MARKET_ORDER_TYPE) {
             return `x${this.quantity}`;
         } else if(this.type == Order.STOP_ORDER_TYPE) {
-            return `@${pricef(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
+            return `@${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
         }
     }
 
     toInfoString() {
         if(this.type == Order.LIMIT_ORDER_TYPE) {
-            return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker} @${pricef(this.price)}`;
+            return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`;
         } else if(this.type == Order.MARKET_ORDER_TYPE) {
             return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker}`;
         } else if(this.type == Order.STOP_ORDER_TYPE) {
-            return `#${this._id}, ${this.executedOrder.ticker} @${pricef(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
+            return `#${this._id}, ${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
         }
     }
 
     toDetailedInfoString() {
         if(this.type == Order.LIMIT_ORDER_TYPE) {
-            return `#${this._id}, ${this.direction} x${this.quantity} (x${this.quantityFilled} filled) ${this.ticker} @${pricef(this.price)}, submitted ${dateStr(this.timestamp)}`;
+            return `#${this._id}, ${this.direction} x${this.quantity} (x${this.quantityFilled} filled) ${this.ticker} @${Price.format(this.price)}, submitted ${dateStr(this.timestamp)}`;
         } else if(this.type == Order.MARKET_ORDER_TYPE) {
             return `#${this._id}, ${this.direction} x${this.quantity} (x${this.quantityFilled} filled) ${this.ticker}, submitted ${dateStr(this.timestamp)}`;
         } else if(this.type == Order.STOP_ORDER_TYPE) {
-            return `#${this._id}, ${this.executedOrder.ticker} @${pricef(this.triggerPrice)}, ${this.executedOrder.toStopString()}, submitted ${dateStr(this.timestamp)}`;
+            return `#${this._id}, ${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}, submitted ${dateStr(this.timestamp)}`;
         }
     }
 
@@ -263,20 +294,20 @@ const orderBook = new class {
             if(topBid != undefined) topBid = topBid.price;
             let topAsk = (await this.getAsks(ticker._id))[0];
             if(topAsk != undefined) topAsk = topAsk.price;
-            str += setW(ticker._id, 10) + setW(pricef(ticker.lastTradedPrice), 10) +
-            setW(pricef(topBid), 10) + setW(pricef(topAsk), 10) + setW(ticker.volume, 10) + '\n';
+            str += setW(ticker._id, 10) + setW(Price.format(ticker.lastTradedPrice), 10) +
+            setW(Price.format(topBid), 10) + setW(Price.format(topAsk), 10) + setW(ticker.volume, 10) + '\n';
         }
         str += '```\n';
 
         for(const ticker of tickers) {
             str += `Ticker: ${ticker._id}\n`;
             str += '```\n';
-            str += setW('Bids', 20) + 'Asks' + '\n';
+            str += setW('Bids', 15) + 'Asks' + '\n';
             let bids = await this.getBids(ticker._id);
             let asks = await this.getAsks(ticker._id);
             for(let i = 0; i < Math.max(bids.length, asks.length); i++) {
-                if(i < bids.length) str += setW(bids[i].toDisplayBoardString(), 20);
-                else str += setW('', 20);
+                if(i < bids.length) str += setW(bids[i].toDisplayBoardString(), 15);
+                else str += setW('', 15);
                 if(i < asks.length) str += asks[i].toDisplayBoardString();
                 str += '\n';
             }
@@ -322,18 +353,18 @@ const orderBook = new class {
             Object.assign(order, { quantity: parseInt(args[3]), quantityFilled: 0 });
             if(Number.isNaN(order.quantity) || !(1 <= order.quantity)) throw new Error('Quantity must be greater than 0.');
             if(order.type == Order.LIMIT_ORDER_TYPE) {
-                Object.assign(order, { price: toPrice(args[4]) });
+                Object.assign(order, { price: Price.toPrice(args[4]) });
                 if(Number.isNaN(order.price)) throw new Error('Invalid limit price.');
             } else if(order.type == Order.MARKET_ORDER_TYPE);
         } else if(order.type == Order.STOP_ORDER_TYPE) {
-            order.triggerPrice = toPrice(args[3]);
+            order.triggerPrice = Price.toPrice(args[3]);
             if(Number.isNaN(order.triggerPrice)) throw new Error('Invalid trigger price.');
             let executedOrder = { type: args[4], timestamp: new Date(), user: user, direction: direction, ticker: args[2], status: Order.UNSUBMITTED, quantity: parseInt(args[5]), quantityFilled: 0 };
             if(Number.isNaN(executedOrder.quantity) || !(1 <= executedOrder.quantity)) throw new Error('Quantity must be a positive integer.');
             if(direction == Order.BUY && !((await this.getLastTradedPrice(order.ticker)) < order.triggerPrice)) throw new Error('Trigger price must be greater than current price.');
             if(direction == Order.SELL && !(order.triggerPrice < (await this.getLastTradedPrice(order.ticker)))) throw new Error('Trigger price must be less than current price.');
             if(executedOrder.type == Order.LIMIT_ORDER_TYPE) {
-                executedOrder.price = toPrice(args[6]);
+                executedOrder.price = Price.toPrice(args[6]);
                 if(Number.isNaN(executedOrder.price)) throw new Error('Invalid limit price.');
             } else if(executedOrder.type == Order.MARKET_ORDER_TYPE);
             else throw new Error(`Triggered order type must be one of \`${Order.LIMIT_ORDER_TYPE}\` or \`${Order.MARKET_ORDER_TYPE}\`.`);
@@ -474,7 +505,7 @@ discordClient.on('messageCreate', async msg => {
                 if(!(msg.channel == CHANNEL.GENERAL_COMMANDS)) return;
                 let trader = await Trader.getTrader(msg.author.id);
                 if(trader == null) {
-                    await Trader.getTraders().insertOne(new Trader({ _id: msg.author.id, positionLimit: Trader.DEFAULT_POSITION_LIMIT, positions: {} }));
+                    await Trader.getTraders().insertOne(new Trader({ _id: msg.author.id, positionLimit: Trader.DEFAULT_POSITION_LIMIT, balance: 0, positions: {} }));
                     msg.channel.send(`${msg.author} You're now a trader.`);
                 } else {
                     msg.channel.send(`${msg.author} You're already a trader.`);
@@ -533,14 +564,19 @@ function setW(value, length) {
     value = String(value);
     return value + ' '.repeat(Math.max(length - value.length, 0));
 }
-function toPrice(price) {
-    return parseInt(price*100);
-}
-function pricef(price) {
-    if(price == null || price == undefined) return '-';
-    price = price/100;
-    if(Number.isNaN(price)) return '-';
-    return price.toFixed(2);
+class Price {
+    static toPrice(price) {
+        return Math.round(price*100);
+    }
+    static format(price) {
+        if(price == null || price == undefined) return '-';
+        price = price/100;
+        if(Number.isNaN(price)) return '-';
+        return Price.round(price).toFixed(2);
+    }
+    static round(price) {
+        return Math.round((price+Number.EPSILON)*100)/100;
+    }
 }
 function dateStr(date) {
     return date.toLocaleString('en-US', { timeZone: 'America/Toronto' });
