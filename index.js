@@ -324,6 +324,10 @@ const orderBook = new class {
         }, { price: 1, timestamp: 1 });
     }
 
+    async checkPositionLimit(user) {
+
+    }
+
     async #matchOrder(newOrder, existingOrder) {
         const quantity = Math.min(newOrder.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
         const price = existingOrder.price;
