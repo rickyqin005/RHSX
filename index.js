@@ -265,7 +265,7 @@ const orderBook = new class {
     async initialize() {
         this.displayBoardMessage = await CHANNEL.DISPLAY_BOARD.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
         await this.#updateDisplayBoard();
-        setInterval(async () => await this.#updateDisplayBoard(), 60000);
+        setInterval(async () => await this.#updateDisplayBoard(), 20000);
         this.startUpTime = new Date();
     }
 
@@ -442,22 +442,24 @@ discordClient.on('interactionCreate', async interaction => {
     currentInteraction.interaction = interaction;
     try {
         if(interaction.commandName === 'join') {
+            await interaction.deferReply();
             let trader = await Trader.getTrader(interaction.user.id);
             if(trader == null) {
                 await Trader.getTraders().insertOne(new Trader({ _id: interaction.user.id, positionLimit: Trader.DEFAULT_POSITION_LIMIT, balance: 0, positions: {} }));
-                await interaction.reply(`You're now a trader.`);
-            } else await interaction.reply(`You're already a trader.`);
+                await interaction.editReply(`You're now a trader.`);
+            } else await interaction.editReply(`You're already a trader.`);
 
         } else if(interaction.commandName === 'position') {
+            await interaction.deferReply();
             let trader = await Trader.getTrader(interaction.user.id);
-            if(trader == null) await interaction.reply(`You're not a trader.`);
-            else await interaction.reply(await trader.toString());
+            if(trader == null) await interaction.editReply(`You're not a trader.`);
+            else await interaction.editReply(await trader.toString());
 
         } else if(interaction.commandName === 'submit') {
+            await interaction.deferReply();
             let trader = await Trader.getTrader(interaction.user.id);
-            if(trader == null) await interaction.reply(`You're not a trader.`);
+            if(trader == null) await interaction.editReply(`You're not a trader.`);
             else {
-                await interaction.reply(`Your order is being processed...`);
                 let order = {
                     timestamp: new Date(),
                     user: interaction.user.id,
@@ -487,8 +489,8 @@ discordClient.on('interactionCreate', async interaction => {
                         quantity: interaction.options.getInteger('quantity'),
                         quantityFilled: 0
                     };
-                    if(executedOrder.direction == Order.BUY && !((await orderBook.getLastTradedPrice(order.ticker)) < order.triggerPrice)) throw new Error('Trigger price must be greater than current price.');
-                    if(executedOrder.direction == Order.SELL && !(order.triggerPrice < (await orderBook.getLastTradedPrice(order.ticker)))) throw new Error('Trigger price must be less than current price.');
+                    if(executedOrder.direction == Order.BUY && !((await orderBook.getLastTradedPrice(order.ticker)) < order.triggerPrice)) throw new Error('Trigger price must be greater than the current price.');
+                    if(executedOrder.direction == Order.SELL && !(order.triggerPrice < (await orderBook.getLastTradedPrice(order.ticker)))) throw new Error('Trigger price must be less than the current price.');
                     if(executedOrder.type == Order.LIMIT_ORDER_TYPE) {
                         executedOrder.price = Price.toPrice(interaction.options.getNumber('limit_price'));
                     }
@@ -498,10 +500,10 @@ discordClient.on('interactionCreate', async interaction => {
             }
 
         } else if(interaction.commandName === 'cancel') {
+            await interaction.deferReply();
             let trader = await Trader.getTrader(interaction.user.id);
-            if(trader == null) await interaction.reply(`You're not a trader.`);
+            if(trader == null) await interaction.editReply(`You're not a trader.`);
             else {
-                await interaction.reply(`Fetching order...`);
                 await orderBook.cancelOrder(interaction.user.id, new ObjectId(interaction.options.getString('order_id')));
             }
         }
@@ -514,7 +516,6 @@ discordClient.on('interactionCreate', async interaction => {
         order: null
     };
 });
-
 discordClient.on('debug', console.log);
 
 const CHANNEL = {};
