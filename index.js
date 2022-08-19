@@ -15,7 +15,7 @@ class Trader {
         return mongoClient.db('RHSX').collection('Traders');
     }
     static async getTrader(_id) {
-        let res = await this.getTraders().findOne({ _id: _id });
+        let res = await this.getTraders().findOne({ _id: _id }, current.mongoSession);
         if(res != null) res = new Trader(res);
         return res;
     }
@@ -74,7 +74,7 @@ class Trader {
             }
         }
         this.balance -= pos.costBasis;
-        await Trader.getTraders().updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } });
+        await Trader.getTraders().updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, current.mongoSession);
     }
 
     async calculateOpenPnL(position) {
@@ -104,17 +104,17 @@ class Order {
         return mongoClient.db('RHSX').collection('Orders');
     }
     static async getOrder(_id) {
-        let res = await this.getOrders().findOne({ _id: _id });
+        let res = await this.getOrders().findOne({ _id: _id }, current.mongoSession);
         if(res != null) res = new Order(res);
         return res;
     }
     static async queryOrder(query) {
-        let res = await this.getOrders().findOne(query);
+        let res = await this.getOrders().findOne(query, current.mongoSession);
         if(res != null) res = new Order(res);
         return res;
     }
     static async queryOrders(query, sort) {
-        let res = await this.getOrders().find(query).sort(sort).toArray();
+        let res = await this.getOrders().find(query, current.mongoSession).sort(sort).toArray();
         for(let i = 0; i < res.length; i++) res[i] = new Order(res[i]);
         return res;
     }
@@ -147,7 +147,7 @@ class Order {
 
             this.increaseQuantityFilled = async function (amount, price) {
                 this.quantityFilled += amount;
-                await Order.getOrders().updateOne({ _id: this._id }, { $inc: { quantityFilled: amount } });
+                await Order.getOrders().updateOne({ _id: this._id }, { $inc: { quantityFilled: amount } }, current.mongoSession);
 
                 if(this.quantityFilled == 0) await this.setStatus(Order.NOT_FILLED);
                 else if(this.quantityFilled < this.quantity) await this.setStatus(Order.PARTIALLY_FILLED);
@@ -227,11 +227,11 @@ class Order {
         if(newStatus == this.status) return;
 
         this.status = newStatus;
-        await Order.getOrders().updateOne({ _id: this._id }, { $set: { status: newStatus } });
-        if(currentInteraction.interaction != null && currentInteraction.order.equals(this._id)) {
-            if(newStatus == Order.IN_QUEUE) await currentInteraction.interaction.editReply(this.orderSubmittedString());
-            else if(newStatus == Order.COMPLETELY_FILLED) await currentInteraction.interaction.editReply(this.orderFilledString());
-            else if(newStatus == Order.CANCELLED) await currentInteraction.interaction.editReply(this.orderCancelledString(reason));
+        await Order.getOrders().updateOne({ _id: this._id }, { $set: { status: newStatus } }, current.mongoSession);
+        if(current.interaction != null && current.order.equals(this._id)) {
+            if(newStatus == Order.IN_QUEUE) await current.interaction.editReply(this.orderSubmittedString());
+            else if(newStatus == Order.COMPLETELY_FILLED) await current.interaction.editReply(this.orderFilledString());
+            else if(newStatus == Order.CANCELLED) await current.interaction.editReply(this.orderCancelledString(reason));
         }
     }
 }
@@ -241,12 +241,12 @@ class Ticker {
         return mongoClient.db('RHSX').collection('Tickers');
     }
     static async getTicker(_id) {
-        let res = await this.getTickers().findOne({ _id: _id });
+        let res = await this.getTickers().findOne({ _id: _id }, current.mongoSession);
         if(res != null) res = new Ticker(res);
         return res;
     }
     static async queryTickers(query, sort) {
-        let res = await this.getTickers().find(query).sort(sort).toArray();
+        let res = await this.getTickers().find(query, current.mongoSession).sort(sort).toArray();
         for(let i = 0; i < res.length; i++) res[i] = new Ticker(res[i]);
         return res;
     }
@@ -264,12 +264,17 @@ const orderBook = new class {
 
     async initialize() {
         this.displayBoardMessage = await CHANNEL.DISPLAY_BOARD.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
-        await this.#updateDisplayBoard();
-        setInterval(async () => await this.#updateDisplayBoard(), 20000);
+        let refresh = async function () {
+            current.mongoSession = mongoClient.startSession();
+            await orderBook.updateDisplayBoard();
+            await current.mongoSession.endSession();
+        }
+        await refresh();
+        setInterval(refresh, 30000);
         this.startUpTime = new Date();
     }
 
-    async #updateDisplayBoard() {
+    async updateDisplayBoard() {
         this.displayBoardMessage.edit(await this.#toDisplayBoardString());
     }
 
@@ -335,22 +340,22 @@ const orderBook = new class {
         const price = existingOrder.price;
         await existingOrder.increaseQuantityFilled(quantity, price);
         await newOrder.increaseQuantityFilled(quantity, price);
-        await Ticker.getTickers().updateOne({ _id: existingOrder.ticker }, { $inc: { volume: quantity } });
+        await Ticker.getTickers().updateOne({ _id: existingOrder.ticker }, { $inc: { volume: quantity } }, current.mongoSession);
         return { quantity: quantity, price: price };
     }
 
     async submitOrder(order) {
         order.timestamp = new Date();
-        let dbResponse = await Order.getOrders().insertOne(order);
+        let dbResponse = await Order.getOrders().insertOne(order, current.mongoSession);
         order = await Order.getOrder(dbResponse.insertedId);
-        if(currentInteraction.order == null) currentInteraction.order = order._id;
+        if(current.order == null) current.order = order._id;
         console.log(order);
         await order.setStatus(Order.IN_QUEUE);
         await order.setStatus(Order.NOT_FILLED);
         if(order.type == Order.LIMIT_ORDER_TYPE) await this.#submitLimitOrder(order);
         else if(order.type == Order.MARKET_ORDER_TYPE) await this.#submitMarketOrder(order);
         else if(order.type == Order.STOP_ORDER_TYPE);
-        await this.#updateDisplayBoard();
+        await this.updateDisplayBoard();
     }
 
     async #submitLimitOrder(order) {
@@ -407,7 +412,7 @@ const orderBook = new class {
         let currPrice = await this.getLastTradedPrice(ticker);
         if(currPrice == newPrice) return;
 
-        await Ticker.getTickers().updateOne({ _id: ticker }, { $set: { lastTradedPrice: newPrice } });
+        await Ticker.getTickers().updateOne({ _id: ticker }, { $set: { lastTradedPrice: newPrice } }, current.mongoSession);
         let tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);
         let triggeredStops = await Order.queryOrders({
             direction: tickDirection,
@@ -427,40 +432,50 @@ const orderBook = new class {
         if(order == null) throw new Error('Invalid id.');
         if(order.status == Order.CANCELLED) throw new Error('Order is already cancelled.');
         if(order.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled.');
-        if(currentInteraction.order == null) currentInteraction.order = order._id;
+        if(current.order == null) current.order = order._id;
         await order.setStatus(Order.CANCELLED, reason);
-        await this.#updateDisplayBoard();
+        await this.updateDisplayBoard();
     }
 }();
 
-let currentInteraction = {
+let current = {
     interaction: null,
-    order: null
+    order: null,
+    mongoSession: null
 };
 discordClient.on('interactionCreate', async interaction => {
     if(!interaction.isCommand()) return;
-    currentInteraction.interaction = interaction;
+    current.interaction = interaction;
+    current.mongoSession = mongoClient.startSession();
     try {
         if(interaction.commandName === 'join') {
             await interaction.deferReply();
-            let trader = await Trader.getTrader(interaction.user.id);
-            if(trader == null) {
-                await Trader.getTraders().insertOne(new Trader({ _id: interaction.user.id, positionLimit: Trader.DEFAULT_POSITION_LIMIT, balance: 0, positions: {} }));
-                await interaction.editReply(`You're now a trader.`);
-            } else await interaction.editReply(`You're already a trader.`);
+            await current.mongoSession.withTransaction(async session => {
+                const trader = await Trader.getTrader(interaction.user.id);
+                if(trader != null) throw new Error('Already a trader');
+                await Trader.getTraders().insertOne(new Trader({
+                    _id: interaction.user.id,
+                    positionLimit: Trader.DEFAULT_POSITION_LIMIT,
+                    balance: 0,
+                    positions: {}
+                }), current.mongoSession);
+            });
+            await interaction.editReply(`You're now a trader.`);
 
         } else if(interaction.commandName === 'position') {
             await interaction.deferReply();
-            let trader = await Trader.getTrader(interaction.user.id);
-            if(trader == null) await interaction.editReply(`You're not a trader.`);
-            else await interaction.editReply(await trader.toString());
+            await current.mongoSession.withTransaction(async session => {
+                const trader = await Trader.getTrader(interaction.user.id);
+                if(trader == null) throw new Error('Not a trader');
+                await interaction.editReply(await trader.toString());
+            });
 
         } else if(interaction.commandName === 'submit') {
             await interaction.deferReply();
-            let trader = await Trader.getTrader(interaction.user.id);
-            if(trader == null) await interaction.editReply(`You're not a trader.`);
-            else {
-                let order = {
+            await current.mongoSession.withTransaction(async session => {
+                const trader = await Trader.getTrader(interaction.user.id);
+                if(trader == null) throw new Error('Not a trader');
+                const order = {
                     timestamp: new Date(),
                     user: interaction.user.id,
                     direction: interaction.options.getString('direction'),
@@ -479,7 +494,7 @@ discordClient.on('interactionCreate', async interaction => {
                 } else if(interaction.options.getSubcommandGroup(false) == Order.STOP_ORDER_TYPE) {
                     order.triggerPrice = Price.toPrice(interaction.options.getNumber('trigger_price'));
                     order.type = Order.STOP_ORDER_TYPE;
-                    let executedOrder = {
+                    const executedOrder = {
                         type: interaction.options.getSubcommand(),
                         timestamp: new Date(),
                         user: interaction.user.id,
@@ -497,24 +512,21 @@ discordClient.on('interactionCreate', async interaction => {
                     order.executedOrder = executedOrder;
                 }
                 await orderBook.submitOrder(order);
-            }
+            });
 
         } else if(interaction.commandName === 'cancel') {
             await interaction.deferReply();
-            let trader = await Trader.getTrader(interaction.user.id);
-            if(trader == null) await interaction.editReply(`You're not a trader.`);
-            else {
+            await current.mongoSession.withTransaction(async session => {
+                const trader = await Trader.getTrader(interaction.user.id);
+                if(trader == null) throw new Error('Not a trader');
                 await orderBook.cancelOrder(interaction.user.id, new ObjectId(interaction.options.getString('order_id')));
-            }
+            });
         }
     } catch(error) {
         console.log(error);
-        await interaction.editReply(error.message);
+        await interaction.editReply(`Error: ${error.message}`);
     }
-    currentInteraction = {
-        interaction: null,
-        order: null
-    };
+    await current.mongoSession.endSession();
 });
 discordClient.on('debug', console.log);
 
