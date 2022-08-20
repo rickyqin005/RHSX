@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 // Discord
-const { Client, Intents } = require('discord.js');
+const { Client, Intents, MessageEmbed } = require('discord.js');
 const discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
 // MongoDB
@@ -28,33 +28,50 @@ class Trader {
     }
 
     async toString() {
-        let str = '';
         let accountValue = this.balance;
         for(const pos in this.positions) {
             accountValue += this.positions[pos].quantity*(await orderBook.getLastTradedPrice(pos));
         }
-        str += `Account Value: ${Price.format(accountValue)}\n`;
-        str += `Cash Balance: ${Price.format(this.balance)}\n\n`;
-        str += 'Positions:\n';
-        str += '```';
-        str += setW('Ticker', 10) + setW('Price', 10) + setW('Quantity', 10) + setW('Mkt Value', 12) + setW('Open PnL', 10) + '\n';
+        let traderInfoEmbed = new MessageEmbed()
+            .setTitle('Trader Info')
+            .setColor('#3ba55d')
+            .setAuthor({ name: (await discordClient.users.fetch(this._id)).tag })
+            .addFields(
+                { name: 'Account Value', value: Price.format(accountValue), inline: true },
+                { name: 'Cash Balance', value: Price.format(this.balance), inline: true },
+            );
+
+        let positionsEmbed = new MessageEmbed()
+        .setTitle('Positions')
+        .setColor('#3ba55d')
+        .addFields(
+            { name: '\u200B', value: '**Symbol/Price**', inline: true },
+            { name: '\u200B', value: '**Mkt Value/Quantity**', inline: true },
+            { name: '\u200B', value: '**Open P&L**', inline: true },
+        );
         for(const pos in this.positions) {
             let position = this.positions[pos];
             let price = await orderBook.getLastTradedPrice(pos);
-            if(position.quantity != 0) str += setW(position.ticker, 10) + setW(Price.format(price), 10) + setW(position.quantity, 10) +
-            setW(Price.format(price*position.quantity), 12) + setW(Price.format(await this.calculateOpenPnL(position)), 10) + '\n';
+            if(position.quantity == 0) continue;
+            positionsEmbed.addFields(
+                { name: position.ticker, value: Price.format(price), inline: true },
+                { name: Price.format(price*position.quantity), value: position.quantity.toString(), inline: true },
+                { name: Price.format(await this.calculateOpenPnL(position)), value: '\u200B', inline: true },
+            );
         }
-        str += '```\n';
-        str += 'Pending Orders:\n';
-        str += '```';
+
+        let pendingOrdersEmbed = new MessageEmbed()
+        .setTitle('Pending Orders')
+        .setColor('#3ba55d');
         let pendingOrders = await Order.queryOrders({
             user: this._id,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { timestamp: -1 });
-        pendingOrders.forEach(order => str += `${order.toDetailedInfoString()}\n`);
-        if(pendingOrders.length == 0) str += ' ';
-        str += '```';
-        return str;
+        pendingOrders.forEach(order => {
+            const fields = order.toEmbedFields();
+            pendingOrdersEmbed.addFields(fields[0], fields[1], fields[2]);
+        });
+        return { embeds: [traderInfoEmbed, positionsEmbed, pendingOrdersEmbed] };
     }
 
     async addPosition(pos) {
@@ -189,14 +206,19 @@ class Order {
         }
     }
 
-    toDetailedInfoString() {
+    toEmbedFields() {
+        let fields = [
+            { name: this.type.toUpperCase(), value: '\u200B', inline: true },
+            { name: dateStr(this.timestamp), value: `#${this._id}`, inline: true },
+        ];
         if(this.type == Order.LIMIT_ORDER_TYPE) {
-            return `#${this._id}, ${this.direction} x${this.quantity} (x${this.quantityFilled} filled) ${this.ticker} @${Price.format(this.price)}, submitted ${dateStr(this.timestamp)}`;
+            fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
         } else if(this.type == Order.MARKET_ORDER_TYPE) {
-            return `#${this._id}, ${this.direction} x${this.quantity} (x${this.quantityFilled} filled) ${this.ticker}, submitted ${dateStr(this.timestamp)}`;
+            fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
         } else if(this.type == Order.STOP_ORDER_TYPE) {
-            return `#${this._id}, ${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}, submitted ${dateStr(this.timestamp)}`;
+            fields.push({ name: `${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}`, value: `**${this.executedOrder.toStopString()}**`, inline: true });
         }
+        return fields;
     }
 
     orderSubmittedString() {
