@@ -16,7 +16,12 @@ class Trader {
     }
     static async getTrader(_id) {
         let res = await this.getTraders().findOne({ _id: _id }, current.mongoSession);
-        if(res != null) res = new Trader(res);
+        if(res != null) {
+            res = new Trader(res);
+            for(const pos in this.positions) {
+                this.positions[pos] = new Position(this.positions[pos]);
+            }
+        }
         return res;
     }
 
@@ -63,15 +68,19 @@ class Trader {
         let pendingOrdersEmbed = new MessageEmbed()
         .setTitle('Pending Orders')
         .setColor('#3ba55d');
-        let pendingOrders = await Order.queryOrders({
-            user: this._id,
-            status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
-        }, { timestamp: -1 });
+        let pendingOrders = await this.getPendingOrders();
         pendingOrders.forEach(order => {
             const fields = order.toEmbedFields();
             pendingOrdersEmbed.addFields(fields[0], fields[1], fields[2]);
         });
         return { embeds: [traderInfoEmbed, positionsEmbed, pendingOrdersEmbed] };
+    }
+
+    async getPendingOrders(/*add optional parameter for order type*/) {
+        return await Order.queryOrders({
+            user: this._id,
+            status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
+        }, { timestamp: -1 });
     }
 
     async addPosition(pos) {
@@ -96,6 +105,14 @@ class Trader {
 
     async calculateOpenPnL(position) {
         return (await orderBook.getLastTradedPrice(position.ticker))*position.quantity - position.costBasis;
+    }
+}
+
+class Position {
+    constructor(args) {
+        this.ticker = args.ticker;
+        this.quantity = args.quantity;
+        this.costBasis = args.costBasis;
     }
 }
 
@@ -169,8 +186,11 @@ class Order {
                 if(this.quantityFilled == 0) await this.setStatus(Order.NOT_FILLED);
                 else if(this.quantityFilled < this.quantity) await this.setStatus(Order.PARTIALLY_FILLED);
                 else if(this.quantityFilled == this.quantity) await this.setStatus(Order.COMPLETELY_FILLED);
-                let position = { ticker: this.ticker, quantity: amount*this.netPositionChangeSign, costBasis: amount*this.netPositionChangeSign*price };
-                await (await Trader.getTrader(this.user)).addPosition(position);
+                await (await Trader.getTrader(this.user)).addPosition(new Position({
+                    ticker: this.ticker,
+                    quantity: amount*this.netPositionChangeSign,
+                    costBasis: amount*this.netPositionChangeSign*price
+                }));
             }
 
             if(this.type == Order.LIMIT_ORDER_TYPE) {
@@ -251,9 +271,8 @@ class Order {
         this.status = newStatus;
         await Order.getOrders().updateOne({ _id: this._id }, { $set: { status: newStatus } }, current.mongoSession);
         if(current.interaction != null && current.order.equals(this._id)) {
-            if(newStatus == Order.IN_QUEUE) await current.interaction.editReply(this.orderSubmittedString());
-            else if(newStatus == Order.COMPLETELY_FILLED) await current.interaction.editReply(this.orderFilledString());
-            else if(newStatus == Order.CANCELLED) await current.interaction.editReply(this.orderCancelledString(reason));
+            if(newStatus == Order.IN_QUEUE) current.interaction.editReply(this.orderSubmittedString());
+            else if(newStatus == Order.CANCELLED) current.interaction.editReply(this.orderCancelledString(reason));
         }
     }
 }
@@ -286,21 +305,16 @@ const orderBook = new class {
 
     async initialize() {
         this.displayBoardMessage = await CHANNEL.DISPLAY_BOARD.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
-        let refresh = async function () {
-            current.mongoSession = mongoClient.startSession();
-            await orderBook.updateDisplayBoard();
-            await current.mongoSession.endSession();
-        }
-        await refresh();
-        setInterval(refresh, 30000);
         this.startUpTime = new Date();
+        this.updateDisplayBoard();
     }
 
     async updateDisplayBoard() {
-        this.displayBoardMessage.edit(await this.#toDisplayBoardString());
+        await orderBook.displayBoardMessage.edit(await orderBook.toDisplayBoardString());
+        setTimeout(orderBook.updateDisplayBoard, 5000);
     }
 
-    async #toDisplayBoardString() {
+    async toDisplayBoardString() {
         let str = '';
         str += `Last updated at ${dateStr(new Date())}\n`;
         str += '```\n';
@@ -353,10 +367,6 @@ const orderBook = new class {
         }, { price: 1, timestamp: 1 });
     }
 
-    async checkPositionLimit(user) {
-
-    }
-
     async #matchOrder(newOrder, existingOrder) {
         const quantity = Math.min(newOrder.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
         const price = existingOrder.price;
@@ -371,13 +381,26 @@ const orderBook = new class {
         let dbResponse = await Order.getOrders().insertOne(order, current.mongoSession);
         order = await Order.getOrder(dbResponse.insertedId);
         if(current.order == null) current.order = order._id;
-        console.log(order);
+
+        if(order.type == Order.LIMIT_ORDER_TYPE || order.type == Order.MARKET_ORDER_TYPE) {
+            const trader = await Trader.getTrader(order.user);
+            const currPosition = trader.positions[order.ticker];
+            let extremePosition = (currPosition == undefined ? 0 : currPosition.quantity) + order.quantity;
+            (await trader.getPendingOrders()).forEach(pendingOrder => {
+                if(pendingOrder.type != Order.STOP_ORDER_TYPE) {
+                    if(order.netPositionChangeSign == pendingOrder.netPositionChangeSign) extremePosition += pendingOrder.quantity;
+                }
+            });
+            if(Math.abs(extremePosition) > trader.positionLimit) {
+                await this.cancelOrder(order.user, order._id, Order.VIOLATES_POSITION_LIMITS); return;
+            }
+        }
+
         await order.setStatus(Order.IN_QUEUE);
         await order.setStatus(Order.NOT_FILLED);
         if(order.type == Order.LIMIT_ORDER_TYPE) await this.#submitLimitOrder(order);
         else if(order.type == Order.MARKET_ORDER_TYPE) await this.#submitMarketOrder(order);
         else if(order.type == Order.STOP_ORDER_TYPE);
-        await this.updateDisplayBoard();
     }
 
     async #submitLimitOrder(order) {
@@ -456,7 +479,6 @@ const orderBook = new class {
         if(order.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled.');
         if(current.order == null) current.order = order._id;
         await order.setStatus(Order.CANCELLED, reason);
-        await this.updateDisplayBoard();
     }
 }();
 
@@ -465,13 +487,17 @@ let current = {
     order: null,
     mongoSession: null
 };
-discordClient.on('interactionCreate', async interaction => {
-    if(!interaction.isCommand()) return;
+const interactionList = [];
+const interactionHandler = async function () {
+    if(interactionList.length > 0) {
+    const interaction = interactionList[0];
+    interactionList.splice(0, 1);
+    console.log(`started processing interaction ${interaction.id} at ${new Date()}`);
     current.interaction = interaction;
+    current.order = null;
     current.mongoSession = mongoClient.startSession();
     try {
         if(interaction.commandName === 'join') {
-            await interaction.deferReply();
             await current.mongoSession.withTransaction(async session => {
                 const trader = await Trader.getTrader(interaction.user.id);
                 if(trader != null) throw new Error('Already a trader');
@@ -482,18 +508,16 @@ discordClient.on('interactionCreate', async interaction => {
                     positions: {}
                 }), current.mongoSession);
             });
-            await interaction.editReply(`You're now a trader.`);
+            interaction.editReply(`You're now a trader.`);
 
         } else if(interaction.commandName === 'position') {
-            await interaction.deferReply();
             await current.mongoSession.withTransaction(async session => {
                 const trader = await Trader.getTrader(interaction.user.id);
                 if(trader == null) throw new Error('Not a trader');
-                await interaction.editReply(await trader.toString());
+                interaction.editReply(await trader.toString());
             });
 
         } else if(interaction.commandName === 'submit') {
-            await interaction.deferReply();
             await current.mongoSession.withTransaction(async session => {
                 const trader = await Trader.getTrader(interaction.user.id);
                 if(trader == null) throw new Error('Not a trader');
@@ -537,7 +561,6 @@ discordClient.on('interactionCreate', async interaction => {
             });
 
         } else if(interaction.commandName === 'cancel') {
-            await interaction.deferReply();
             await current.mongoSession.withTransaction(async session => {
                 const trader = await Trader.getTrader(interaction.user.id);
                 if(trader == null) throw new Error('Not a trader');
@@ -546,9 +569,20 @@ discordClient.on('interactionCreate', async interaction => {
         }
     } catch(error) {
         console.log(error);
-        await interaction.editReply(`Error: ${error.message}`);
+        interaction.editReply(`Error: ${error.message}`);
     }
     await current.mongoSession.endSession();
+    console.log(`finished processing interaction ${interaction.id} at ${new Date()}`);
+    }
+    setTimeout(interactionHandler, 200);
+}
+discordClient.on('interactionCreate', interaction => {
+    setImmediate(() => {
+        console.log(`received interaction ${interaction.id} at ${new Date()}`);
+        if(!interaction.isCommand()) return;
+        interactionList.push(interaction);
+        interaction.deferReply();
+    });
 });
 discordClient.on('debug', console.log);
 
@@ -560,6 +594,7 @@ async function run() {
     console.log(`Connected to Discord!`);
     CHANNEL.DISPLAY_BOARD = await discordClient.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
     await orderBook.initialize();
+    interactionHandler();
 }
 run();
 
