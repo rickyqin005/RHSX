@@ -10,18 +10,11 @@ const mongoClient = new MongoClient(process.env['MONGO_URI'], { useNewUrlParser:
 
 class Trader {
     static DEFAULT_POSITION_LIMIT = 100000;
+    static collection = mongoClient.db('RHSX').collection('Traders');
 
-    static getTraders() {
-        return mongoClient.db('RHSX').collection('Traders');
-    }
     static async getTrader(_id) {
-        let res = await this.getTraders().findOne({ _id: _id }, current.mongoSession);
-        if(res != null) {
-            res = new Trader(res);
-            for(const pos in this.positions) {
-                this.positions[pos] = new Position(this.positions[pos]);
-            }
-        }
+        let res = await this.collection.findOne({ _id: _id }, current.mongoSession);
+        if(res != null) res = new Trader(res);
         return res;
     }
 
@@ -29,7 +22,8 @@ class Trader {
         this._id = args._id;
         this.positionLimit = args.positionLimit;
         this.balance = args.balance;
-        this.positions = args.positions;
+        this.positions = {};
+        for(const pos in args.positions) this.positions[pos] = new Position(args.positions[pos]);
     }
 
     async toString() {
@@ -100,7 +94,7 @@ class Trader {
             }
         }
         this.balance -= pos.costBasis;
-        await Trader.getTraders().updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, current.mongoSession);
+        await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, current.mongoSession);
     }
 
     async calculateOpenPnL(position) {
@@ -117,12 +111,6 @@ class Position {
 }
 
 class Order {
-    static LIMIT_ORDER_TYPE = 'limit';
-    static LIMIT_ORDER_LABEL = 'limit order';
-    static MARKET_ORDER_TYPE = 'market';
-    static MARKET_ORDER_LABEL = 'market order';
-    static STOP_ORDER_TYPE = 'stop';
-    static STOP_ORDER_LABEL = 'stop order';
     static BUY = 'BUY';
     static SELL = 'SELL';
     static CANCELLED = -1;
@@ -133,23 +121,29 @@ class Order {
     static COMPLETELY_FILLED = 4;
     static UNFULFILLABLE = 0;
     static VIOLATES_POSITION_LIMITS = 1;
+    static collection = mongoClient.db('RHSX').collection('Orders');
 
+    static assignOrderType(order) {
+        if(order.type == LimitOrder.TYPE) return new LimitOrder(order);
+        else if(order.type == MarketOrder.TYPE) return new MarketOrder(order);
+        else if(order.type == StopOrder.TYPE) return new StopOrder(order);
+    }
     static getOrders() {
         return mongoClient.db('RHSX').collection('Orders');
     }
     static async getOrder(_id) {
-        let res = await this.getOrders().findOne({ _id: _id }, current.mongoSession);
-        if(res != null) res = new Order(res);
+        let res = await this.collection.findOne({ _id: _id }, current.mongoSession);
+        if(res != null) res = this.assignOrderType(res);
         return res;
     }
     static async queryOrder(query) {
-        let res = await this.getOrders().findOne(query, current.mongoSession);
-        if(res != null) res = new Order(res);
+        let res = await this.collection.findOne(query, current.mongoSession);
+        if(res != null) res = this.assignOrderType(res);
         return res;
     }
     static async queryOrders(query, sort) {
-        let res = await this.getOrders().find(query, current.mongoSession).sort(sort).toArray();
-        for(let i = 0; i < res.length; i++) res[i] = new Order(res[i]);
+        let res = await this.collection.find(query, current.mongoSession).sort(sort).toArray();
+        for(let i = 0; i < res.length; i++) res[i] = this.assignOrderType(res[i]);
         return res;
     }
 
@@ -161,97 +155,23 @@ class Order {
         this.direction = args.direction;
         this.ticker = args.ticker;
         this.status = args.status;
-
-        if(this.type == Order.LIMIT_ORDER_TYPE || this.type == Order.MARKET_ORDER_TYPE) {
-            this.quantity = args.quantity;
-            this.quantityFilled = args.quantityFilled;
-            this.netPositionChangeSign = ((this.direction == Order.BUY) ? 1 : -1);
-
-            this.toStopString = function () {
-                if(this.type == Order.LIMIT_ORDER_TYPE) {
-                    return `${this.direction} x${this.quantity} @${Price.format(this.price)}`;
-                } else if(this.type == Order.MARKET_ORDER_TYPE) {
-                    return `${this.direction} x${this.quantity}`;
-                }
-            }
-
-            this.getQuantityUnfilled = function () {
-                return this.quantity - this.quantityFilled;
-            }
-
-            this.increaseQuantityFilled = async function (amount, price) {
-                this.quantityFilled += amount;
-                await Order.getOrders().updateOne({ _id: this._id }, { $inc: { quantityFilled: amount } }, current.mongoSession);
-
-                if(this.quantityFilled == 0) await this.setStatus(Order.NOT_FILLED);
-                else if(this.quantityFilled < this.quantity) await this.setStatus(Order.PARTIALLY_FILLED);
-                else if(this.quantityFilled == this.quantity) await this.setStatus(Order.COMPLETELY_FILLED);
-                await (await Trader.getTrader(this.user)).addPosition(new Position({
-                    ticker: this.ticker,
-                    quantity: amount*this.netPositionChangeSign,
-                    costBasis: amount*this.netPositionChangeSign*price
-                }));
-            }
-
-            if(this.type == Order.LIMIT_ORDER_TYPE) {
-                this.label = Order.LIMIT_ORDER_LABEL;
-                this.price = args.price;
-            } else if(this.type == Order.MARKET_ORDER_TYPE) {
-                this.label = Order.MARKET_ORDER_LABEL;
-            }
-        } else if(this.type == Order.STOP_ORDER_TYPE) {
-            this.label = Order.STOP_ORDER_LABEL;
-            this.triggerPrice = args.triggerPrice;
-            this.executedOrder = new Order(args.executedOrder);
-        }
     }
 
-    toDisplayBoardString() {
-        if(this.type == Order.LIMIT_ORDER_TYPE) {
-            return `@${Price.format(this.price)} x${this.getQuantityUnfilled()}`;
-        } else if(this.type == Order.MARKET_ORDER_TYPE) {
-            return `x${this.quantity}`;
-        } else if(this.type == Order.STOP_ORDER_TYPE) {
-            return `@${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
-        }
-    }
-
-    toInfoString() {
-        if(this.type == Order.LIMIT_ORDER_TYPE) {
-            return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`;
-        } else if(this.type == Order.MARKET_ORDER_TYPE) {
-            return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker}`;
-        } else if(this.type == Order.STOP_ORDER_TYPE) {
-            return `#${this._id}, ${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
-        }
-    }
+    toDisplayBoardString() {}
+    toInfoString() {}
 
     toEmbedFields() {
-        let fields = [
+        return [
             { name: this.type.toUpperCase(), value: '\u200B', inline: true },
-            { name: dateStr(this.timestamp), value: `#${this._id}`, inline: true },
+            { name: dateStr(this.timestamp), value: `#${this._id}`, inline: true }
         ];
-        if(this.type == Order.LIMIT_ORDER_TYPE) {
-            fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
-        } else if(this.type == Order.MARKET_ORDER_TYPE) {
-            fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
-        } else if(this.type == Order.STOP_ORDER_TYPE) {
-            fields.push({ name: `${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}`, value: `**${this.executedOrder.toStopString()}**`, inline: true });
-        }
-        return fields;
     }
 
     orderSubmittedString() {
         return `Your ${this.label}: \`${this.toInfoString()}\` is submitted.`;
     }
 
-    orderFilledString() {
-        if(this.type == Order.LIMIT_ORDER_TYPE || this.type == Order.MARKET_ORDER_TYPE) {
-            return `Your ${this.label}: \`${this.toInfoString()}\` is filled.`;
-        } else if(this.type == Order.STOP_ORDER_TYPE) {
-            return `Your ${this.label}: \`${this.toInfoString()}\` is triggered.`;
-        }
-    }
+    orderFilledString() {}
 
     orderCancelledString(reason) {
         switch(reason) {
@@ -265,11 +185,11 @@ class Order {
     }
 
     async setStatus(newStatus, reason) {
-        if(!(Order.CANCELLED <= newStatus && newStatus <= Order.COMPLETELY_FILLED)) throw new Error('Invalid status.');
+        if(!(Order.CANCELLED <= newStatus && newStatus <= Order.COMPLETELY_FILLED)) throw new Error('Invalid status');
         if(newStatus == this.status) return;
 
         this.status = newStatus;
-        await Order.getOrders().updateOne({ _id: this._id }, { $set: { status: newStatus } }, current.mongoSession);
+        await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus } }, current.mongoSession);
         if(current.interaction != null && current.order.equals(this._id)) {
             if(newStatus == Order.IN_QUEUE) current.interaction.editReply(this.orderSubmittedString());
             else if(newStatus == Order.CANCELLED) current.interaction.editReply(this.orderCancelledString(reason));
@@ -277,17 +197,140 @@ class Order {
     }
 }
 
-class Ticker {
-    static getTickers() {
-        return mongoClient.db('RHSX').collection('Tickers');
+class NormalOrder extends Order {
+    constructor(args) {
+        super(args);
+        this.quantity = args.quantity;
+        this.quantityFilled = args.quantityFilled;
+        this.netPositionChangeSign = ((this.direction == Order.BUY) ? 1 : -1);
     }
+
+    toStopString() {}
+
+    orderFilledString() {
+        return `Your ${this.label}: \`${this.toInfoString()}\` is filled.`;
+    }
+
+    getQuantityUnfilled() {
+        return this.quantity - this.quantityFilled;
+    }
+
+    async increaseQuantityFilled(amount, price) {
+        this.quantityFilled += amount;
+        await Order.collection.updateOne({ _id: this._id }, { $inc: { quantityFilled: amount } }, current.mongoSession);
+
+        if(this.quantityFilled == 0) await this.setStatus(Order.NOT_FILLED);
+        else if(this.quantityFilled < this.quantity) await this.setStatus(Order.PARTIALLY_FILLED);
+        else if(this.quantityFilled == this.quantity) await this.setStatus(Order.COMPLETELY_FILLED);
+        await (await Trader.getTrader(this.user)).addPosition(new Position({
+            ticker: this.ticker,
+            quantity: amount*this.netPositionChangeSign,
+            costBasis: amount*this.netPositionChangeSign*price
+        }));
+    }
+}
+
+class LimitOrder extends NormalOrder {
+    static TYPE = 'limit';
+    static LABEL = 'limit order';
+
+    constructor(args) {
+        super(args);
+        this.price = args.price;
+        this.type = LimitOrder.TYPE;
+        this.label = LimitOrder.LABEL;
+    }
+
+    toDisplayBoardString() {
+        return `@${Price.format(this.price)} x${this.getQuantityUnfilled()}`;
+    }
+
+    toInfoString() {
+        return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`;
+    }
+
+    toStopString() {
+        return `${this.direction} x${this.quantity} @${Price.format(this.price)}`;
+    }
+
+    toEmbedFields() {
+        const fields = super.toEmbedFields();
+        fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
+        return fields;
+    }
+}
+
+class MarketOrder extends NormalOrder {
+    static TYPE = 'market';
+    static LABEL = 'market order';
+
+    constructor(args) {
+        super(args);
+        this.type = MarketOrder.TYPE;
+        this.label = MarketOrder.LABEL;
+    }
+
+    toDisplayBoardString() {
+        return `x${this.quantity}`;
+    }
+
+    toInfoString() {
+        return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker}`;
+    }
+
+    toStopString() {
+        return `${this.direction} x${this.quantity}`;
+    }
+
+    toEmbedFields() {
+        const fields = super.toEmbedFields();
+        fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
+        return fields;
+    }
+}
+
+class StopOrder extends Order {
+    static TYPE = 'stop';
+    static LABEL = 'stop order';
+
+    constructor(args) {
+        super(args);
+        this.triggerPrice = args.triggerPrice;
+        if(args.executedOrder.type == LimitOrder.TYPE) this.executedOrder = new LimitOrder(args.executedOrder);
+        else if(args.executedOrder.type == MarketOrder.TYPE) this.executedOrder = new MarketOrder(args.executedOrder);
+        this.type = StopOrder.TYPE;
+        this.label = StopOrder.LABEL;
+    }
+
+    toDisplayBoardString() {
+        return `@${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
+    }
+
+    toInfoString() {
+        return `#${this._id}, ${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
+    }
+
+    orderFilledString() {
+        return `Your ${this.label}: \`${this.toInfoString()}\` is triggered.`;
+    }
+
+    toEmbedFields() {
+        const fields = super.toEmbedFields();
+        fields.push({ name: `${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}`, value: `**${this.executedOrder.toStopString()}**`, inline: true });
+        return fields;
+    }
+}
+
+class Ticker {
+    static collection = mongoClient.db('RHSX').collection('Tickers');
+
     static async getTicker(_id) {
-        let res = await this.getTickers().findOne({ _id: _id }, current.mongoSession);
+        let res = await this.collection.findOne({ _id: _id }, current.mongoSession);
         if(res != null) res = new Ticker(res);
         return res;
     }
     static async queryTickers(query, sort) {
-        let res = await this.getTickers().find(query, current.mongoSession).sort(sort).toArray();
+        let res = await this.collection.find(query, current.mongoSession).sort(sort).toArray();
         for(let i = 0; i < res.length; i++) res[i] = new Ticker(res[i]);
         return res;
     }
@@ -310,8 +353,7 @@ const orderBook = new class {
     }
 
     async updateDisplayBoard() {
-        await orderBook.displayBoardMessage.edit(await orderBook.toDisplayBoardString());
-        setTimeout(orderBook.updateDisplayBoard, 5000);
+        orderBook.displayBoardMessage.edit(await orderBook.toDisplayBoardString()).then(() => setTimeout(orderBook.updateDisplayBoard, 5500));
     }
 
     async toDisplayBoardString() {
@@ -347,22 +389,20 @@ const orderBook = new class {
         return str;
     }
 
-    async getBids(_id) {
-        const ticker = await Ticker.getTicker(_id);
+    async getBids(ticker) {
         return await Order.queryOrders({
             direction: Order.BUY,
-            ticker: ticker._id,
-            type: Order.LIMIT_ORDER_TYPE,
+            ticker: ticker,
+            type: LimitOrder.TYPE,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { price: -1, timestamp: 1 });
     }
 
-    async getAsks(_id) {
-        const ticker = await Ticker.getTicker(_id);
+    async getAsks(ticker) {
         return await Order.queryOrders({
             direction: Order.SELL,
-            ticker: ticker._id,
-            type: Order.LIMIT_ORDER_TYPE,
+            ticker: ticker,
+            type: LimitOrder.TYPE,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { price: 1, timestamp: 1 });
     }
@@ -372,35 +412,35 @@ const orderBook = new class {
         const price = existingOrder.price;
         await existingOrder.increaseQuantityFilled(quantity, price);
         await newOrder.increaseQuantityFilled(quantity, price);
-        await Ticker.getTickers().updateOne({ _id: existingOrder.ticker }, { $inc: { volume: quantity } }, current.mongoSession);
+        await Ticker.collection.updateOne({ _id: existingOrder.ticker }, { $inc: { volume: quantity } }, current.mongoSession);
         return { quantity: quantity, price: price };
     }
 
     async submitOrder(order) {
         order.timestamp = new Date();
-        let dbResponse = await Order.getOrders().insertOne(order, current.mongoSession);
+        let dbResponse = await Order.collection.insertOne(order, current.mongoSession);
         order = await Order.getOrder(dbResponse.insertedId);
+        console.log(order);
         if(current.order == null) current.order = order._id;
 
-        if(order.type == Order.LIMIT_ORDER_TYPE || order.type == Order.MARKET_ORDER_TYPE) {
+        if(order instanceof NormalOrder) {
             const trader = await Trader.getTrader(order.user);
             const currPosition = trader.positions[order.ticker];
             let extremePosition = (currPosition == undefined ? 0 : currPosition.quantity) + order.quantity;
             (await trader.getPendingOrders()).forEach(pendingOrder => {
-                if(pendingOrder.type != Order.STOP_ORDER_TYPE) {
+                if(pendingOrder.type != StopOrder.TYPE) {
                     if(order.netPositionChangeSign == pendingOrder.netPositionChangeSign) extremePosition += pendingOrder.quantity;
                 }
             });
             if(Math.abs(extremePosition) > trader.positionLimit) {
-                await this.cancelOrder(order.user, order._id, Order.VIOLATES_POSITION_LIMITS); return;
+                await this.cancelOrder(order, Order.VIOLATES_POSITION_LIMITS); return;
             }
         }
 
         await order.setStatus(Order.IN_QUEUE);
         await order.setStatus(Order.NOT_FILLED);
-        if(order.type == Order.LIMIT_ORDER_TYPE) await this.#submitLimitOrder(order);
-        else if(order.type == Order.MARKET_ORDER_TYPE) await this.#submitMarketOrder(order);
-        else if(order.type == Order.STOP_ORDER_TYPE);
+        if(order instanceof LimitOrder) await this.#submitLimitOrder(order);
+        else if(order instanceof MarketOrder) await this.#submitMarketOrder(order);
     }
 
     async #submitLimitOrder(order) {
@@ -428,7 +468,7 @@ const orderBook = new class {
             let asksDepth = 0;
             asks.forEach(ask => asksDepth += ask.getQuantityUnfilled());
             if(order.quantity > asksDepth) {
-                await this.cancelOrder(order.user, order._id, Order.UNFULFILLABLE); return;
+                await this.cancelOrder(order, Order.UNFULFILLABLE); return;
             }
             for(const bestAsk of asks) {
                 if(order.status == Order.COMPLETELY_FILLED) break;
@@ -439,7 +479,7 @@ const orderBook = new class {
             let bidsDepth = 0;
             bids.forEach(bid => bidsDepth += bid.getQuantityUnfilled());
             if(order.quantity > bidsDepth) {
-                await this.cancelOrder(order.user, order._id, Order.UNFULFILLABLE); return;
+                await this.cancelOrder(order, Order.UNFULFILLABLE); return;
             }
             for(const bestBid of bids) {
                 if(order.status == Order.COMPLETELY_FILLED) break;
@@ -462,7 +502,7 @@ const orderBook = new class {
         let triggeredStops = await Order.queryOrders({
             direction: tickDirection,
             ticker: ticker,
-            type: Order.STOP_ORDER_TYPE,
+            type: StopOrder.TYPE,
             triggerPrice: { $gte: Math.min(currPrice, newPrice), $lte: Math.max(currPrice, newPrice) },
             status: Order.NOT_FILLED
         }, { timestamp: 1 });
@@ -472,11 +512,10 @@ const orderBook = new class {
         }
     }
 
-    async cancelOrder(user, order, reason) {
-        order = await Order.queryOrder({ _id: order, user: user });
-        if(order == null) throw new Error('Invalid id.');
-        if(order.status == Order.CANCELLED) throw new Error('Order is already cancelled.');
-        if(order.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled.');
+    async cancelOrder(order, reason) {
+        if(order == null) throw new Error('Invalid id');
+        if(order.status == Order.CANCELLED) throw new Error('Order is already cancelled');
+        if(order.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled');
         if(current.order == null) current.order = order._id;
         await order.setStatus(Order.CANCELLED, reason);
     }
@@ -490,99 +529,99 @@ let current = {
 const interactionList = [];
 const interactionHandler = async function () {
     if(interactionList.length > 0) {
-    const interaction = interactionList[0];
-    interactionList.splice(0, 1);
-    console.log(`started processing interaction ${interaction.id} at ${new Date()}`);
-    current.interaction = interaction;
-    current.order = null;
-    current.mongoSession = mongoClient.startSession();
-    try {
-        if(interaction.commandName === 'join') {
-            await current.mongoSession.withTransaction(async session => {
-                const trader = await Trader.getTrader(interaction.user.id);
-                if(trader != null) throw new Error('Already a trader');
-                await Trader.getTraders().insertOne(new Trader({
-                    _id: interaction.user.id,
-                    positionLimit: Trader.DEFAULT_POSITION_LIMIT,
-                    balance: 0,
-                    positions: {}
-                }), current.mongoSession);
-            });
-            interaction.editReply(`You're now a trader.`);
+        const interaction = interactionList[0];
+        interactionList.splice(0, 1);
+        console.log(`started processing interaction ${interaction.id}`);
+        current.interaction = interaction;
+        current.order = null;
+        current.mongoSession = mongoClient.startSession();
+        try {
+            if(interaction.commandName === 'join') {
+                await current.mongoSession.withTransaction(async session => {
+                    const trader = await Trader.getTrader(interaction.user.id);
+                    if(trader != null) throw new Error('Already a trader');
+                    await Trader.collection.insertOne(new Trader({
+                        _id: interaction.user.id,
+                        positionLimit: Trader.DEFAULT_POSITION_LIMIT,
+                        balance: 0,
+                        positions: {}
+                    }), current.mongoSession);
+                });
+                interaction.editReply(`You're now a trader.`);
 
-        } else if(interaction.commandName === 'position') {
-            await current.mongoSession.withTransaction(async session => {
-                const trader = await Trader.getTrader(interaction.user.id);
-                if(trader == null) throw new Error('Not a trader');
-                interaction.editReply(await trader.toString());
-            });
+            } else if(interaction.commandName === 'position') {
+                await current.mongoSession.withTransaction(async session => {
+                    const trader = await Trader.getTrader(interaction.user.id);
+                    if(trader == null) throw new Error('Not a trader');
+                    interaction.editReply(await trader.toString());
+                });
 
-        } else if(interaction.commandName === 'submit') {
-            await current.mongoSession.withTransaction(async session => {
-                const trader = await Trader.getTrader(interaction.user.id);
-                if(trader == null) throw new Error('Not a trader');
-                const order = {
-                    timestamp: new Date(),
-                    user: interaction.user.id,
-                    direction: interaction.options.getString('direction'),
-                    ticker: interaction.options.getString('ticker'),
-                    status: Order.UNSUBMITTED
-                };
-                if(interaction.options.getSubcommandGroup(false) == null) {
-                    order.quantity = interaction.options.getInteger('quantity');
-                    order.quantityFilled = 0;
-                    if(interaction.options.getSubcommand(false) == Order.LIMIT_ORDER_TYPE) {
-                        order.price = Price.toPrice(interaction.options.getNumber('limit_price'));
-                        order.type = Order.LIMIT_ORDER_TYPE;
-                    } else if(interaction.options.getSubcommand(false) == Order.MARKET_ORDER_TYPE) {
-                        order.type = Order.MARKET_ORDER_TYPE;
-                    }
-                } else if(interaction.options.getSubcommandGroup(false) == Order.STOP_ORDER_TYPE) {
-                    order.triggerPrice = Price.toPrice(interaction.options.getNumber('trigger_price'));
-                    order.type = Order.STOP_ORDER_TYPE;
-                    const executedOrder = {
-                        type: interaction.options.getSubcommand(),
+            } else if(interaction.commandName === 'submit') {
+                await current.mongoSession.withTransaction(async session => {
+                    const trader = await Trader.getTrader(interaction.user.id);
+                    if(trader == null) throw new Error('Not a trader');
+                    let order = {
                         timestamp: new Date(),
                         user: interaction.user.id,
                         direction: interaction.options.getString('direction'),
                         ticker: interaction.options.getString('ticker'),
-                        status: Order.UNSUBMITTED,
-                        quantity: interaction.options.getInteger('quantity'),
-                        quantityFilled: 0
+                        status: Order.UNSUBMITTED
                     };
-                    if(executedOrder.direction == Order.BUY && !((await orderBook.getLastTradedPrice(order.ticker)) < order.triggerPrice)) throw new Error('Trigger price must be greater than the current price.');
-                    if(executedOrder.direction == Order.SELL && !(order.triggerPrice < (await orderBook.getLastTradedPrice(order.ticker)))) throw new Error('Trigger price must be less than the current price.');
-                    if(executedOrder.type == Order.LIMIT_ORDER_TYPE) {
-                        executedOrder.price = Price.toPrice(interaction.options.getNumber('limit_price'));
+                    if(interaction.options.getSubcommandGroup(false) == null) {
+                        order.quantity = interaction.options.getInteger('quantity');
+                        order.quantityFilled = 0;
+                        if(interaction.options.getSubcommand(false) == LimitOrder.TYPE) {
+                            order.price = Price.toPrice(interaction.options.getNumber('limit_price'));
+                            order.type = LimitOrder.TYPE;
+                        } else if(interaction.options.getSubcommand(false) == MarketOrder.TYPE) {
+                            order.type = MarketOrder.TYPE;
+                        }
+                    } else if(interaction.options.getSubcommandGroup(false) == StopOrder.TYPE) {
+                        order.triggerPrice = Price.toPrice(interaction.options.getNumber('trigger_price'));
+                        order.type = StopOrder.TYPE;
+                        const executedOrder = {
+                            type: interaction.options.getSubcommand(),
+                            timestamp: new Date(),
+                            user: interaction.user.id,
+                            direction: interaction.options.getString('direction'),
+                            ticker: interaction.options.getString('ticker'),
+                            status: Order.UNSUBMITTED,
+                            quantity: interaction.options.getInteger('quantity'),
+                            quantityFilled: 0
+                        };
+                        if(executedOrder.direction == Order.BUY && !((await orderBook.getLastTradedPrice(order.ticker)) < order.triggerPrice)) throw new Error('Trigger price must be greater than the current price');
+                        if(executedOrder.direction == Order.SELL && !(order.triggerPrice < (await orderBook.getLastTradedPrice(order.ticker)))) throw new Error('Trigger price must be less than the current price');
+                        if(executedOrder.type == LimitOrder.TYPE) {
+                            executedOrder.price = Price.toPrice(interaction.options.getNumber('limit_price'));
+                        }
+                        order.executedOrder = executedOrder;
                     }
-                    order.executedOrder = executedOrder;
-                }
-                await orderBook.submitOrder(order);
-            });
+                    order = Order.assignOrderType(order);
+                    await orderBook.submitOrder(order);
+                });
 
-        } else if(interaction.commandName === 'cancel') {
-            await current.mongoSession.withTransaction(async session => {
-                const trader = await Trader.getTrader(interaction.user.id);
-                if(trader == null) throw new Error('Not a trader');
-                await orderBook.cancelOrder(interaction.user.id, new ObjectId(interaction.options.getString('order_id')));
-            });
+            } else if(interaction.commandName === 'cancel') {
+                await current.mongoSession.withTransaction(async session => {
+                    const trader = await Trader.getTrader(interaction.user.id);
+                    if(trader == null) throw new Error('Not a trader');
+                    const order = await Order.getOrder(new ObjectId(interaction.options.getString('order_id')));
+                    await orderBook.cancelOrder(order);
+                });
+            }
+        } catch(error) {
+            console.log(error);
+            interaction.editReply(`Error: ${error.message}`);
         }
-    } catch(error) {
-        console.log(error);
-        interaction.editReply(`Error: ${error.message}`);
-    }
-    await current.mongoSession.endSession();
-    console.log(`finished processing interaction ${interaction.id} at ${new Date()}`);
+        await current.mongoSession.endSession();
+        console.log(`finished processing interaction ${interaction.id}`);
     }
     setTimeout(interactionHandler, 200);
 }
-discordClient.on('interactionCreate', interaction => {
-    setImmediate(() => {
-        console.log(`received interaction ${interaction.id} at ${new Date()}`);
-        if(!interaction.isCommand()) return;
-        interactionList.push(interaction);
-        interaction.deferReply();
-    });
+discordClient.on('interactionCreate', async interaction => {
+    if(!interaction.isCommand()) return;
+    console.log(`received interaction ${interaction.id}`);
+    await interaction.deferReply();
+    interactionList.push(interaction);
 });
 discordClient.on('debug', console.log);
 
