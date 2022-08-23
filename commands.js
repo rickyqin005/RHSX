@@ -5,9 +5,82 @@ const rest = new REST({ version: '9' }).setToken(process.env['BOT_TOKEN']);
 const { Routes } = require('discord-api-types/v9');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 
+const DIRECTION_CHOICES = [
+    { name: 'BUY', value: 'BUY' },
+    { name: 'SELL', value: 'SELL' }
+];
+const TICKER_CHOICES = [
+    { name: 'CRZY', value: 'CRZY' },
+    { name: 'TAME', value: 'TAME' }
+];
+
 const commands = [
-    { name: 'join', description: 'Turns you into a trader' },
+    { name: 'join', description: 'Become a trader' },
     { name: 'position', description: 'View your portfolio' },
+    {
+        name: 'orders',
+        description: 'View your orders',
+        options: [
+            {
+                type: 1,
+                name: 'find',
+                description: 'Find a specific order',
+                options: [
+                    {
+                        required: true,
+                        type: 3,
+                        name: 'order_id',
+                        description: 'order id',
+                        min_length: 24,
+                        max_length: 24
+                    }
+                ]
+            },
+            {
+                type: 1,
+                name: 'query',
+                description: 'Query your orders',
+                options: [
+                    {
+                        required: false,
+                        type: 3,
+                        name: 'type',
+                        description: 'type',
+                        choices: [
+                            { name: 'Limit Order', value: 'limit' },
+                            { name: 'Market Order', value: 'market' },
+                            { name: 'Stop Order', value: 'stop' }
+                        ]
+                    },
+                    {
+                        required: false,
+                        type: 3,
+                        name: 'direction',
+                        description: 'buy or sell',
+                        choices: DIRECTION_CHOICES
+                    },
+                    {
+                        required: false,
+                        type: 3,
+                        name: 'ticker',
+                        description: 'ticker',
+                        choices: TICKER_CHOICES
+                    },
+                    {
+                        required: false,
+                        type: 3,
+                        name: 'status',
+                        description: 'status',
+                        choices: [
+                            { name: 'Pending', value: 'pending' },
+                            { name: 'Completed', value: 'completed' },
+                            { name: 'Cancelled', value: 'cancelled' }
+                        ]
+                    }
+                ]
+            },
+        ]
+    },
     {
         name: 'submit',
         description: 'Submit an order',
@@ -22,20 +95,14 @@ const commands = [
                         type: 3,
                         name: 'ticker',
                         description: 'ticker',
-                        choices: [
-                            { name: 'CRZY', value: 'CRZY' },
-                            { name: 'TAME', value: 'TAME' }
-                        ]
+                        choices: TICKER_CHOICES
                     },
                     {
                         required: true,
                         type: 3,
                         name: 'direction',
                         description: 'buy or sell',
-                        choices: [
-                            { name: 'BUY', value: 'BUY' },
-                            { name: 'SELL', value: 'SELL' }
-                        ]
+                        choices: DIRECTION_CHOICES
                     },
                     {
                         required: true,
@@ -65,20 +132,14 @@ const commands = [
                         type: 3,
                         name: 'ticker',
                         description: 'ticker',
-                        choices: [
-                            { name: 'CRZY', value: 'CRZY' },
-                            { name: 'TAME', value: 'TAME' }
-                        ]
+                        choices: TICKER_CHOICES
                     },
                     {
                         required: true,
                         type: 3,
                         name: 'direction',
                         description: 'buy or sell',
-                        choices: [
-                            { name: 'BUY', value: 'BUY' },
-                            { name: 'SELL', value: 'SELL' }
-                        ]
+                        choices: DIRECTION_CHOICES
                     },
                     {
                         required: true,
@@ -105,10 +166,7 @@ const commands = [
                                 type: 3,
                                 name: 'ticker',
                                 description: 'ticker',
-                                choices: [
-                                    { name: 'CRZY', value: 'CRZY' },
-                                    { name: 'TAME', value: 'TAME' }
-                                ]
+                                choices: TICKER_CHOICES
                             },
                             {
                                 required: true,
@@ -123,10 +181,7 @@ const commands = [
                                 type: 3,
                                 name: 'direction',
                                 description: 'buy or sell',
-                                choices: [
-                                    { name: 'BUY', value: 'BUY' },
-                                    { name: 'SELL', value: 'SELL' }
-                                ]
+                                choices: DIRECTION_CHOICES
                             },
                             {
                                 required: true,
@@ -156,10 +211,7 @@ const commands = [
                                 type: 3,
                                 name: 'ticker',
                                 description: 'ticker',
-                                choices: [
-                                    { name: 'CRZY', value: 'CRZY' },
-                                    { name: 'TAME', value: 'TAME' }
-                                ]
+                                choices: TICKER_CHOICES
                             },
                             {
                                 required: true,
@@ -174,10 +226,7 @@ const commands = [
                                 type: 3,
                                 name: 'direction',
                                 description: 'buy or sell',
-                                choices: [
-                                    { name: 'BUY', value: 'BUY' },
-                                    { name: 'SELL', value: 'SELL' }
-                                ]
+                                choices: DIRECTION_CHOICES
                             },
                             {
                                 required: true,
