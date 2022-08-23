@@ -31,26 +31,23 @@ class Trader {
         for(const pos in this.positions) {
             accountValue += this.positions[pos].quantity*(await orderBook.getLastTradedPrice(pos));
         }
-        let traderInfoEmbed = new MessageEmbed()
+        const traderInfoEmbed = (await this.templateEmbed())
             .setTitle('Trader Info')
-            .setColor('#3ba55d')
-            .setAuthor({ name: (await discordClient.users.fetch(this._id)).tag })
             .addFields(
                 { name: 'Account Value', value: Price.format(accountValue), inline: true },
                 { name: 'Cash Balance', value: Price.format(this.balance), inline: true },
             );
 
-        let positionsEmbed = new MessageEmbed()
-        .setTitle('Positions')
-        .setColor('#3ba55d')
-        .addFields(
-            { name: '\u200B', value: '**Symbol/Price**', inline: true },
-            { name: '\u200B', value: '**Mkt Value/Quantity**', inline: true },
-            { name: '\u200B', value: '**Open P&L**', inline: true },
-        );
+        const positionsEmbed = (await this.templateEmbed())
+            .setTitle('Positions')
+            .addFields(
+                { name: '\u200B', value: '**Symbol/Price**', inline: true },
+                { name: '\u200B', value: '**Mkt Value/Quantity**', inline: true },
+                { name: '\u200B', value: '**Open P&L**', inline: true },
+            );
         for(const pos in this.positions) {
-            let position = this.positions[pos];
-            let price = await orderBook.getLastTradedPrice(pos);
+            const position = this.positions[pos];
+            const price = await orderBook.getLastTradedPrice(pos);
             if(position.quantity == 0) continue;
             positionsEmbed.addFields(
                 { name: position.ticker, value: Price.format(price), inline: true },
@@ -58,16 +55,13 @@ class Trader {
                 { name: Price.format(await this.calculateOpenPnL(position)), value: '\u200B', inline: true },
             );
         }
+        return { embeds: [traderInfoEmbed, positionsEmbed] };
+    }
 
-        let pendingOrdersEmbed = new MessageEmbed()
-        .setTitle('Pending Orders')
-        .setColor('#3ba55d');
-        let pendingOrders = await this.getPendingOrders();
-        pendingOrders.forEach(order => {
-            const fields = order.toEmbedFields();
-            pendingOrdersEmbed.addFields(fields[0], fields[1], fields[2]);
-        });
-        return { embeds: [traderInfoEmbed, positionsEmbed, pendingOrdersEmbed] };
+    async templateEmbed() {
+        return new MessageEmbed()
+            .setAuthor({ name: (await discordClient.users.fetch(this._id)).tag })
+            .setColor('#3ba55d');
     }
 
     async getPendingOrders(/*add optional parameter for order type*/) {
@@ -128,9 +122,6 @@ class Order {
         else if(order.type == MarketOrder.TYPE) return new MarketOrder(order);
         else if(order.type == StopOrder.TYPE) return new StopOrder(order);
     }
-    static getOrders() {
-        return mongoClient.db('RHSX').collection('Orders');
-    }
     static async getOrder(_id) {
         let res = await this.collection.findOne({ _id: _id }, current.mongoSession);
         if(res != null) res = this.assignOrderType(res);
@@ -157,12 +148,34 @@ class Order {
         this.status = args.status;
     }
 
+    statusLabel() {
+        if(this.status == Order.CANCELLED) return 'Cancelled';
+        else if(this.status == Order.UNSUBMITTED) return 'Unsubmitted';
+        else if(this.status == Order.IN_QUEUE) return 'In queue';
+        else if(this.status == Order.NOT_FILLED) return 'Pending';
+        else if(this.status == Order.PARTIALLY_FILLED) return 'Pending';
+        else if(this.status == Order.COMPLETELY_FILLED) return 'Completed';
+    }
+
     toDisplayBoardString() {}
     toInfoString() {}
 
-    toEmbedFields() {
+    async toEmbed() {
+        return new MessageEmbed()
+            .setAuthor({ name: (await discordClient.users.fetch(this.user)).tag })
+            .setColor('#3ba55d')
+            .setTitle('Order Info')
+            .setDescription(`**${this.toInfoString()}**`)
+            .addFields(
+                { name: 'Type', value: this.label, inline: true },
+                { name: 'Status', value: this.statusLabel(), inline: true },
+                { name: 'Submitted', value: dateStr(this.timestamp), inline: false }
+            );
+    }
+
+    toOrderQueryEmbedFields() {
         return [
-            { name: this.type.toUpperCase(), value: '\u200B', inline: true },
+            { name: this.type.toUpperCase(), value: this.statusLabel(), inline: true },
             { name: dateStr(this.timestamp), value: `#${this._id}`, inline: true }
         ];
     }
@@ -170,8 +183,6 @@ class Order {
     orderSubmittedString() {
         return `Your ${this.label}: \`${this.toInfoString()}\` is submitted.`;
     }
-
-    orderFilledString() {}
 
     orderCancelledString(reason) {
         switch(reason) {
@@ -206,10 +217,6 @@ class NormalOrder extends Order {
     }
 
     toStopString() {}
-
-    orderFilledString() {
-        return `Your ${this.label}: \`${this.toInfoString()}\` is filled.`;
-    }
 
     getQuantityUnfilled() {
         return this.quantity - this.quantityFilled;
@@ -253,8 +260,8 @@ class LimitOrder extends NormalOrder {
         return `${this.direction} x${this.quantity} @${Price.format(this.price)}`;
     }
 
-    toEmbedFields() {
-        const fields = super.toEmbedFields();
+    toOrderQueryEmbedFields() {
+        const fields = super.toOrderQueryEmbedFields();
         fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
         return fields;
     }
@@ -282,8 +289,8 @@ class MarketOrder extends NormalOrder {
         return `${this.direction} x${this.quantity}`;
     }
 
-    toEmbedFields() {
-        const fields = super.toEmbedFields();
+    toOrderQueryEmbedFields() {
+        const fields = super.toOrderQueryEmbedFields();
         fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
         return fields;
     }
@@ -310,12 +317,8 @@ class StopOrder extends Order {
         return `#${this._id}, ${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
     }
 
-    orderFilledString() {
-        return `Your ${this.label}: \`${this.toInfoString()}\` is triggered.`;
-    }
-
-    toEmbedFields() {
-        const fields = super.toEmbedFields();
+    toOrderQueryEmbedFields() {
+        const fields = super.toOrderQueryEmbedFields();
         fields.push({ name: `${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}`, value: `**${this.executedOrder.toStopString()}**`, inline: true });
         return fields;
     }
@@ -497,7 +500,7 @@ const orderBook = new class {
         let currPrice = await this.getLastTradedPrice(ticker);
         if(currPrice == newPrice) return;
 
-        await Ticker.getTickers().updateOne({ _id: ticker }, { $set: { lastTradedPrice: newPrice } }, current.mongoSession);
+        await Ticker.collection.updateOne({ _id: ticker }, { $set: { lastTradedPrice: newPrice } }, current.mongoSession);
         let tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);
         let triggeredStops = await Order.queryOrders({
             direction: tickDirection,
@@ -521,7 +524,7 @@ const orderBook = new class {
     }
 }();
 
-let current = {
+const current = {
     interaction: null,
     order: null,
     mongoSession: null
@@ -536,7 +539,7 @@ const interactionHandler = async function () {
         current.order = null;
         current.mongoSession = mongoClient.startSession();
         try {
-            if(interaction.commandName === 'join') {
+            if(interaction.commandName == 'join') {
                 await current.mongoSession.withTransaction(async session => {
                     const trader = await Trader.getTrader(interaction.user.id);
                     if(trader != null) throw new Error('Already a trader');
@@ -549,14 +552,42 @@ const interactionHandler = async function () {
                 });
                 interaction.editReply(`You're now a trader.`);
 
-            } else if(interaction.commandName === 'position') {
+            } else if(interaction.commandName == 'position') {
                 await current.mongoSession.withTransaction(async session => {
                     const trader = await Trader.getTrader(interaction.user.id);
                     if(trader == null) throw new Error('Not a trader');
                     interaction.editReply(await trader.toString());
                 });
 
-            } else if(interaction.commandName === 'submit') {
+            } else if(interaction.commandName == 'orders') {
+                await current.mongoSession.withTransaction(async session => {
+                    const trader = await Trader.getTrader(interaction.user.id);
+                    if(trader == null) throw new Error('Not a trader');
+                    if(interaction.options.getSubcommand() == 'find') {
+                        const order = await Order.getOrder(new ObjectId(interaction.options.getString('order_id')));
+                        if(order == null) throw new Error('Invalid id');
+                        interaction.editReply({ embeds: [await order.toEmbed()] });
+
+                    } else if(interaction.options.getSubcommand() == 'query') {
+                        const type = interaction.options.getString('type');
+                        const direction = interaction.options.getString('direction');
+                        const ticker = interaction.options.getString('ticker');
+                        let status = interaction.options.getString('status');
+                        if(status == 'pending') status = { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] };
+                        else if(status == 'completed') status = Order.COMPLETELY_FILLED;
+                        else if(status == 'cancelled') status = Order.CANCELLED;
+                        const query = {};
+                        if(type != null) query.type = type;
+                        if(direction != null) query.direction = direction;
+                        if(ticker != null) query.ticker = ticker;
+                        if(status != null) query.status = status;
+                        const embed = await trader.templateEmbed();
+                        (await Order.queryOrders(query, { timestamp: -1 })).forEach(order => embed.addFields(order.toOrderQueryEmbedFields()));
+                        interaction.editReply({ embeds: [embed] });
+                    }
+                });
+
+            } else if(interaction.commandName == 'submit') {
                 await current.mongoSession.withTransaction(async session => {
                     const trader = await Trader.getTrader(interaction.user.id);
                     if(trader == null) throw new Error('Not a trader');
@@ -600,7 +631,7 @@ const interactionHandler = async function () {
                     await orderBook.submitOrder(order);
                 });
 
-            } else if(interaction.commandName === 'cancel') {
+            } else if(interaction.commandName == 'cancel') {
                 await current.mongoSession.withTransaction(async session => {
                     const trader = await Trader.getTrader(interaction.user.id);
                     if(trader == null) throw new Error('Not a trader');
