@@ -13,17 +13,26 @@ const { Trader, Order, NormalOrder, LimitOrder, MarketOrder, StopOrder, Ticker, 
 
 const orderBook = new class {
     displayBoardMessage;
+    leaderBoardMessage;
     startUpTime;
 
     async initialize() {
         this.displayBoardMessage = await CHANNEL.DISPLAY_BOARD.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
+        this.leaderBoardMessage = await CHANNEL.LEADERBOARD.messages.fetch(process.env['LEADERBOARD_MESSAGE_ID']);
         this.startUpTime = new Date();
-        this.updateDisplayBoard();
+        setTimeout(orderBook.updateDisplayBoard, 5000);
     }
 
     async updateDisplayBoard() {
+        await orderBook.displayBoardMessage.edit(await orderBook.toDisplayBoardString());
         console.log('updated display board');
-        orderBook.displayBoardMessage.edit(await orderBook.toDisplayBoardString()).then(() => setTimeout(orderBook.updateDisplayBoard, 2000));
+        setTimeout(orderBook.updateLeaderBoard, 2500);
+    }
+
+    async updateLeaderBoard() {
+        await orderBook.leaderBoardMessage.edit(await orderBook.toLeaderBoardString());
+        console.log('updated leaderboard');
+        setTimeout(orderBook.updateDisplayBoard, 2500);
     }
 
     async toDisplayBoardString() {
@@ -31,7 +40,7 @@ const orderBook = new class {
         str += `Last updated at ${Tools.dateStr(new Date())}\n`;
         str += '```\n';
         str += Tools.setW('Ticker', 10) + Tools.setW('Price', 10) + Tools.setW('Bid', 10) + Tools.setW('Ask', 10) + Tools.setW('Volume', 10) + '\n';
-        let tickers = await Ticker.queryTickers({});
+        const tickers = await Ticker.queryTickers({});
         for(const ticker of tickers) {
             let topBid = (await this.getBids(ticker._id))[0];
             if(topBid != undefined) topBid = topBid.price;
@@ -56,6 +65,20 @@ const orderBook = new class {
             }
             str += '```\n';
         }
+        return str;
+    }
+
+    async toLeaderBoardString() {
+        let str = '';
+        str += `Last updated at ${Tools.dateStr(new Date())}\n`;
+        str += '```\n';
+        str += Tools.setW('Username', 20) + Tools.setW('Account Value', 10) + '\n';
+        const traders = await Trader.queryTraders({}, {});
+        for(const trader of traders) {
+            str += Tools.setW((await trader.getDiscordUser()).tag, 20) +
+            Tools.setW(Price.format(await trader.getAccountValue()), 10) + '\n';
+        }
+        str += '```\n';
         return str;
     }
 
@@ -322,6 +345,8 @@ global.discordClient.on('interactionCreate', async interaction => {
     interactionList.push(interaction);
 });
 global.discordClient.on('debug', console.log);
+// global.discordClient.on('apiRequest', () => console.log('api request'));
+// global.discordClient.on('apiResponse', () => console.log('api response'));
 
 const CHANNEL = {};
 async function run() {
@@ -330,6 +355,7 @@ async function run() {
     await global.discordClient.login(process.env['BOT_TOKEN']);
     console.log(`Connected to Discord!`);
     CHANNEL.DISPLAY_BOARD = await global.discordClient.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
+    CHANNEL.LEADERBOARD = await global.discordClient.channels.fetch(process.env['LEADERBOARD_CHANNEL_ID']);
     await orderBook.initialize();
     interactionHandler();
 }

@@ -1,5 +1,6 @@
 const Position = require('./Position');
 const { Order } = require('./Orders');
+const Ticker = require('./Ticker');
 const Price = require('../utils/Price');
 const { MessageEmbed } = require('discord.js');
 
@@ -13,6 +14,12 @@ module.exports = class Trader {
         return res;
     }
 
+    static async queryTraders(query, sort) {
+        let res = await this.collection.find(query, global.current.mongoSession).sort(sort).toArray();
+        for(let i = 0; i < res.length; i++) res[i] = new Trader(res[i]);
+        return res;
+    }
+
     constructor(args) {
         this._id = args._id;
         this.positionLimit = args.positionLimit;
@@ -22,14 +29,10 @@ module.exports = class Trader {
     }
 
     async toString() {
-        let accountValue = this.balance;
-        for(const pos in this.positions) {
-            accountValue += this.positions[pos].quantity*(await orderBook.getLastTradedPrice(pos));
-        }
         const traderInfoEmbed = (await this.templateEmbed())
             .setTitle('Trader Info')
             .addFields(
-                { name: 'Account Value', value: Price.format(accountValue), inline: true },
+                { name: 'Account Value', value: Price.format(await this.getAccountValue()), inline: true },
                 { name: 'Cash Balance', value: Price.format(this.balance), inline: true },
             );
 
@@ -55,8 +58,20 @@ module.exports = class Trader {
 
     async templateEmbed() {
         return new MessageEmbed()
-            .setAuthor({ name: (await global.discordClient.users.fetch(this._id)).tag })
+            .setAuthor({ name: (await this.getDiscordUser()).tag })
             .setColor('#3ba55d');
+    }
+
+    async getDiscordUser() {
+        return await global.discordClient.users.fetch(this._id);
+    }
+
+    async getAccountValue() {
+        let accountValue = this.balance;
+        for(const pos in this.positions) {
+            accountValue += this.positions[pos].quantity*((await Ticker.getTicker(pos)).lastTradedPrice);
+        }
+        return accountValue;
     }
 
     async getPendingOrders(/*add optional parameter for order type*/) {
