@@ -4,6 +4,7 @@ const { REST } = require('@discordjs/rest');
 const rest = new REST({ version: '9' }).setToken(process.env['BOT_TOKEN']);
 const { Routes } = require('discord-api-types/v9');
 const { SlashCommandBuilder } = require('@discordjs/builders');
+const { PermissionFlagsBits } = require('discord-api-types/v10');
 
 const DIRECTION_CHOICES = [
     { name: 'BUY', value: 'BUY' },
@@ -255,13 +256,19 @@ const commands = [
                 max_length: 24
             }
         ]
-    }
+    },
+    // new SlashCommandBuilder()
+	// .setName('halt')
+	// .setDescription('Suspends trading')
+	// .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    // .toJSON()
 ];
 
-async function run() {
-    await rest.put(
-        Routes.applicationGuildCommands(process.env['BOT_ID'], process.env['FINANCE_CLUB_GUILD_ID']),
-        { body: commands },
-    );
-}
-run();
+module.exports = {
+    initialize: async function () {
+        await rest.put(
+            Routes.applicationGuildCommands(process.env['BOT_ID'], process.env['FINANCE_CLUB_GUILD_ID']),
+            { body: commands },
+        );
+    }
+};
