@@ -1,5 +1,5 @@
 const Position = require('./Position');
-const { Order } = require('./Orders');
+const Order = require('./orders/Order');
 const Ticker = require('./Ticker');
 const Price = require('../utils/Price');
 const { MessageEmbed } = require('discord.js');

@@ -121,7 +121,7 @@ const orderBook = new class {
             const currPosition = trader.positions[order.ticker];
             let extremePosition = (currPosition == undefined ? 0 : currPosition.quantity) + order.quantity;
             (await trader.getPendingOrders()).forEach(pendingOrder => {
-                if(pendingOrder.type != StopOrder.TYPE) {
+                if(pendingOrder instanceof NormalOrder) {
                     if(order.netPositionChangeSign == pendingOrder.netPositionChangeSign) extremePosition += pendingOrder.quantity;
                 }
             });
@@ -274,6 +274,10 @@ const interactionHandler = async function () {
                         const embed = await trader.templateEmbed();
                         (await Order.queryOrders(query, { timestamp: -1 })).forEach(order => embed.addFields(order.toOrderQueryEmbedFields()));
                         interaction.editReply({ embeds: [embed] });
+
+                    } else if(interaction.options.getSubcommand() == 'cancel') {
+                        const order = await Order.getOrder(new ObjectId(interaction.options.getString('order_id')));
+                        await orderBook.cancelOrder(order);
                     }
                 });
 
@@ -321,13 +325,6 @@ const interactionHandler = async function () {
                     await orderBook.submitOrder(order);
                 });
 
-            } else if(interaction.commandName == 'cancel') {
-                await global.current.mongoSession.withTransaction(async session => {
-                    const trader = await Trader.getTrader(interaction.user.id);
-                    if(trader == null) throw new Error('Not a trader');
-                    const order = await Order.getOrder(new ObjectId(interaction.options.getString('order_id')));
-                    await orderBook.cancelOrder(order);
-                });
             }
         } catch(error) {
             console.log(error);

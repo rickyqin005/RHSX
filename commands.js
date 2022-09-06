@@ -80,6 +80,21 @@ const commands = [
                     }
                 ]
             },
+            {
+                type: 1,
+                name: 'cancel',
+                description: 'Cancel an order',
+                options: [
+                    {
+                        required: true,
+                        type: 3,
+                        name: 'order_id',
+                        description: 'order id',
+                        min_length: 24,
+                        max_length: 24
+                    }
+                ]
+            }
         ]
     },
     {
@@ -240,20 +255,6 @@ const commands = [
                         ]
                     }
                 ]
-            }
-        ]
-    },
-    {
-        name: 'cancel',
-        description: 'Cancel an order',
-        options: [
-            {
-                required: true,
-                type: 3,
-                name: 'order_id',
-                description: 'order id',
-                min_length: 24,
-                max_length: 24
             }
         ]
     },
