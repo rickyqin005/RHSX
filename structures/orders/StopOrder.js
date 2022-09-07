@@ -1,19 +1,24 @@
 const Order = require('./Order');
-const LimitOrder = require('./LimitOrder');
-const MarketOrder = require('./MarketOrder');
 const Price = require('../../utils/Price');
 
-class StopOrder extends Order {
+module.exports = class StopOrder extends Order {
     static TYPE = 'stop';
     static LABEL = 'stop order';
 
     constructor(args) {
         super(args);
         this.triggerPrice = args.triggerPrice;
-        if(args.executedOrder.type == LimitOrder.TYPE) this.executedOrder = new LimitOrder(args.executedOrder);
-        else if(args.executedOrder.type == MarketOrder.TYPE) this.executedOrder = new MarketOrder(args.executedOrder);
+        this.executedOrder = args.executedOrder;
         this.type = StopOrder.TYPE;
         this.label = StopOrder.LABEL;
+    }
+    async resolve() {
+        await super.resolve();
+        const LimitOrder = require('./LimitOrder');
+        const MarketOrder = require('./MarketOrder');
+        if(this.executedOrder.type == LimitOrder.TYPE) this.executedOrder = await new LimitOrder(this.executedOrder).resolve();
+        else if(this.executedOrder.type == MarketOrder.TYPE) this.executedOrder = await new MarketOrder(this.executedOrder).resolve();
+        return this;
     }
 
     toDisplayBoardString() {
@@ -29,7 +34,18 @@ class StopOrder extends Order {
         fields.push({ name: `${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}`, value: `**${this.executedOrder.toStopString()}**`, inline: true });
         return fields;
     }
-}
-Order.orderSubclasses[StopOrder.TYPE] = (order) => (order.type == StopOrder.TYPE ? new StopOrder(order) : null);
 
-module.exports = StopOrder;
+    async addToDB() {
+        const trader = this.user;
+        const ticker = this.ticker;
+        this.user = this.user._id;
+        this.ticker = this.ticker._id;
+        this.executedOrder.user = this.executedOrder.user._id;
+        this.executedOrder.ticker = this.executedOrder.ticker._id;
+        await Order.collection.insertOne(this, global.current.mongoSession);
+        this.user = trader;
+        this.ticker = ticker;
+        this.executedOrder.user = trader;
+        this.executedOrder.ticker = ticker;
+    }
+};

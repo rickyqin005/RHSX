@@ -2,7 +2,7 @@ const NormalOrder = require('./NormalOrder');
 const Order = require('./Order');
 const Price = require('../../utils/Price');
 
-class LimitOrder extends NormalOrder {
+module.exports = class LimitOrder extends NormalOrder {
     static TYPE = 'limit';
     static LABEL = 'limit order';
 
@@ -30,7 +30,22 @@ class LimitOrder extends NormalOrder {
         fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
         return fields;
     }
-}
-Order.orderSubclasses[LimitOrder.TYPE] = (order) => (order.type == LimitOrder.TYPE ? new LimitOrder(order) : null);
 
-module.exports = LimitOrder;
+    async fill() {
+        let newLastTradedPrice = this.ticker.lastTradedPrice;
+        if(this.direction == Order.BUY) {
+            const asks = await this.ticker.getAsks();
+            for(const bestAsk of asks) {
+                if(this.status == Order.COMPLETELY_FILLED || this.price < bestAsk.price) break;
+                newLastTradedPrice = (await this.match(bestAsk)).price;
+            }
+        } else if(this.direction == Order.SELL) {
+            const bids = await this.ticker.getBids();
+            for(const bestBid of bids) {
+                if(this.status == Order.COMPLETELY_FILLED || bestBid.price < this.price) break;
+                newLastTradedPrice = (await this.match(bestBid)).price;
+            }
+        }
+        await this.ticker.setLastTradedPrice(newLastTradedPrice);
+    }
+};

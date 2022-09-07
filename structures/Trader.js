@@ -1,8 +1,4 @@
-const Position = require('./Position');
-const Order = require('./orders/Order');
-const Ticker = require('./Ticker');
 const Price = require('../utils/Price');
-const { MessageEmbed } = require('discord.js');
 
 module.exports = class Trader {
     static DEFAULT_POSITION_LIMIT = 100000;
@@ -25,6 +21,7 @@ module.exports = class Trader {
         this.positionLimit = args.positionLimit;
         this.balance = args.balance;
         this.positions = {};
+        const Position = require('./Position');
         for(const pos in args.positions) this.positions[pos] = new Position(args.positions[pos]);
     }
 
@@ -45,8 +42,9 @@ module.exports = class Trader {
             );
         for(const pos in this.positions) {
             const position = this.positions[pos];
-            const price = await orderBook.getLastTradedPrice(pos);
-            if(position.quantity == 0) continue;
+            const Ticker = require('./Ticker');
+            const price = (await Ticker.getTicker(pos)).getLastTradedPrice;
+            // if(position.quantity == 0) continue;
             positionsEmbed.addFields(
                 { name: position.ticker, value: Price.format(price), inline: true },
                 { name: Price.format(price*position.quantity), value: position.quantity.toString(), inline: true },
@@ -57,6 +55,7 @@ module.exports = class Trader {
     }
 
     async templateEmbed() {
+        const { MessageEmbed } = require('discord.js');
         return new MessageEmbed()
             .setAuthor({ name: (await this.getDiscordUser()).tag })
             .setColor('#3ba55d');
@@ -67,6 +66,7 @@ module.exports = class Trader {
     }
 
     async getAccountValue() {
+        const Ticker = require('./Ticker');
         let accountValue = this.balance;
         for(const pos in this.positions) {
             accountValue += this.positions[pos].quantity*((await Ticker.getTicker(pos)).lastTradedPrice);
@@ -75,6 +75,7 @@ module.exports = class Trader {
     }
 
     async getPendingOrders(/*add optional parameter for order type*/) {
+        const Order = require('./orders/Order');
         return await Order.queryOrders({
             user: this._id,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }

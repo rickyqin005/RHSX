@@ -1,3 +1,5 @@
+const Tools = require('../../utils/Tools');
+
 module.exports = class Order {
     static BUY = 'BUY';
     static SELL = 'SELL';
@@ -12,29 +14,30 @@ module.exports = class Order {
 
     static collection = global.mongoClient.db('RHSX').collection('Orders');
 
-    static orderSubclasses = {};
-    static assignOrderType(order) {
-        for(const type in orderSubclasses) {
-            const newOrder = this.orderSubclasses[type](order);
-            if(newOrder != null) return newOrder;
-        }
+    static async assignOrderType(order) {
+        const LimitOrder = require('./LimitOrder');
+        const MarketOrder = require('./MarketOrder');
+        const StopOrder = require('./StopOrder');
+        if(order.type == LimitOrder.TYPE) return await new LimitOrder(order).resolve();
+        else if(order.type == MarketOrder.TYPE) return await new MarketOrder(order).resolve();
+        else if(order.type == StopOrder.TYPE) return await new StopOrder(order).resolve();
     }
 
     static async getOrder(_id) {
         let res = await this.collection.findOne({ _id: _id }, global.current.mongoSession);
-        if(res != null) res = this.assignOrderType(res);
+        if(res != null) res = await this.assignOrderType(res);
         return res;
     }
 
     static async queryOrder(query) {
         let res = await this.collection.findOne(query, global.current.mongoSession);
-        if(res != null) res = this.assignOrderType(res);
+        if(res != null) res = await this.assignOrderType(res);
         return res;
     }
 
     static async queryOrders(query, sort) {
         let res = await this.collection.find(query, global.current.mongoSession).sort(sort).toArray();
-        for(let i = 0; i < res.length; i++) res[i] = this.assignOrderType(res[i]);
+        for(let i = 0; i < res.length; i++) res[i] = await this.assignOrderType(res[i]);
         return res;
     }
 
@@ -47,6 +50,13 @@ module.exports = class Order {
         this.ticker = args.ticker;
         this.status = args.status;
     }
+    async resolve() {
+        const Trader = require('../Trader');
+        const Ticker = require('../Ticker');
+        this.user = await Trader.getTrader(this.user);
+        this.ticker = await Ticker.getTicker(this.ticker);
+        return this;
+    }
 
     statusLabel() {
         if(this.status == Order.CANCELLED) return 'Cancelled';
@@ -58,11 +68,13 @@ module.exports = class Order {
     }
 
     toDisplayBoardString() {}
+
     toInfoString() {}
 
     async toEmbed() {
+        const { MessageEmbed } = require('discord.js');
         return new MessageEmbed()
-            .setAuthor({ name: (await global.discordClient.users.fetch(this.user)).tag })
+            .setAuthor({ name: (await this.user.getDiscordUser()).tag })
             .setColor('#3ba55d')
             .setTitle('Order Info')
             .setDescription(`**${this.toInfoString()}**`)
@@ -101,9 +113,42 @@ module.exports = class Order {
 
         this.status = newStatus;
         await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus } }, global.current.mongoSession);
-        if(global.current.interaction != null && global.current.order.equals(this._id)) {
+        if(global.current.order.equals(this._id)) {
             if(newStatus == Order.IN_QUEUE) global.current.interaction.editReply(this.orderSubmittedString());
             else if(newStatus == Order.CANCELLED) global.global.current.interaction.editReply(this.orderCancelledString(reason));
         }
+    }
+
+    async addToDB() {
+        const trader = this.user;
+        const ticker = this.ticker;
+        this.user = this.user._id;
+        this.ticker = this.ticker._id;
+        await Order.collection.insertOne(this, global.current.mongoSession);
+        this.user = trader;
+        this.ticker = ticker;
+    }
+
+    async checkPositionLimits() {
+        return this.status;
+    }
+
+    async submit() {
+        this.timestamp = new Date();
+        await this.addToDB();
+        console.log('Submitted order:');
+        console.log(this);
+        if((await this.checkPositionLimits()) == Order.CANCELLED) return;
+        await this.setStatus(Order.IN_QUEUE);
+        await this.setStatus(Order.NOT_FILLED);
+        await this.fill();
+    }
+
+    async fill() {}
+
+    async cancel(reason) {
+        if(this.status == Order.CANCELLED) throw new Error('Order is already cancelled');
+        if(this.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled');
+        await this.setStatus(Order.CANCELLED, reason);
     }
 };

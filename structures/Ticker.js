@@ -1,3 +1,6 @@
+const Order = require('./orders/Order');
+const OrderConstants = require('./orders/OrderConstants');
+
 module.exports = class Ticker {
     static collection = global.mongoClient.db('RHSX').collection('Tickers');
 
@@ -16,5 +19,53 @@ module.exports = class Ticker {
         this._id = args._id;
         this.lastTradedPrice = args.lastTradedPrice;
         this.volume = args.volume;
+    }
+
+    toString() {
+        return this._id;
+    }
+
+    async getBids() {
+        return await Order.queryOrders({
+            direction: Order.BUY,
+            ticker: this._id,
+            type: OrderConstants.LimitOrder.TYPE,
+            status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
+        }, { price: -1, timestamp: 1 });
+    }
+
+    async getAsks() {
+        return await Order.queryOrders({
+            direction: Order.SELL,
+            ticker: this._id,
+            type: OrderConstants.LimitOrder.TYPE,
+            status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
+        }, { price: 1, timestamp: 1 });
+    }
+
+    async increaseVolume(quantity) {
+        await Ticker.collection.updateOne({ _id: this._id }, { $inc: { volume: quantity } }, global.current.mongoSession);
+        this.volume += quantity;
+    }
+
+    async setLastTradedPrice(newPrice) {
+        if(this.lastTradedPrice == newPrice) return;
+        const currPrice = this.lastTradedPrice;
+
+        await Ticker.collection.updateOne({ _id: this._id }, { $set: { lastTradedPrice: newPrice } }, global.current.mongoSession);
+        this.lastTradedPrice = newPrice;
+
+        let tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);
+        let triggeredStops = await Order.queryOrders({
+            direction: tickDirection,
+            ticker: this._id,
+            type: OrderConstants.StopOrder.TYPE,
+            triggerPrice: { $gte: Math.min(currPrice, newPrice), $lte: Math.max(currPrice, newPrice) },
+            status: Order.NOT_FILLED
+        }, { timestamp: 1 });
+        for(const stop of triggeredStops) {
+            await stop.setStatus(Order.COMPLETELY_FILLED);
+            await stop.executedOrder.submit();
+        }
     }
 };
