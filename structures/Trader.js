@@ -103,6 +103,6 @@ module.exports = class Trader {
     }
 
     async calculateOpenPnL(position) {
-        return (await orderBook.getLastTradedPrice(position.ticker))*position.quantity - position.costBasis;
+        return (await Ticker.getTicker(position.ticker)).lastTradedPrice*position.quantity - position.costBasis;
     }
 };

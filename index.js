@@ -209,7 +209,7 @@ const interactionHandler = async function () {
         };
         console.log(`finished processing interaction ${interaction.id}`);
     }
-    setTimeout(interactionHandler, 200);
+    setTimeout(interactionHandler, 250);
 }
 global.discordClient.on('interactionCreate', async interaction => {
     if(!interaction.isCommand()) return;
