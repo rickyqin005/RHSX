@@ -103,6 +103,7 @@ module.exports = class Trader {
     }
 
     async calculateOpenPnL(position) {
+        const Ticker = require('./Ticker');
         return (await Ticker.getTicker(position.ticker)).lastTradedPrice*position.quantity - position.costBasis;
     }
 };
