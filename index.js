@@ -134,6 +134,7 @@ const interactionHandler = async function () {
                         else if(status == 'completed') status = Order.COMPLETELY_FILLED;
                         else if(status == 'cancelled') status = Order.CANCELLED;
                         const query = {};
+                        query.user = interaction.user.id;
                         if(type != null) query.type = type;
                         if(direction != null) query.direction = direction;
                         if(ticker != null) query.ticker = ticker;
@@ -143,7 +144,10 @@ const interactionHandler = async function () {
                         interaction.editReply({ embeds: [embed] });
 
                     } else if(interaction.options.getSubcommand() == 'cancel') {
-                        const order = await Order.getOrder(new ObjectId(interaction.options.getString('order_id')));
+                        const order = await Order.queryOrder({
+                            _id: new ObjectId(interaction.options.getString('order_id')),
+                            user: interaction.user.id
+                        });
                         if(order == null) throw new Error('Invalid id');
                         global.current.order = order._id;
                         await order.cancel();

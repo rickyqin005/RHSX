@@ -43,11 +43,11 @@ module.exports = class Trader {
         for(const pos in this.positions) {
             const position = this.positions[pos];
             const Ticker = require('./Ticker');
-            const price = (await Ticker.getTicker(pos)).getLastTradedPrice;
+            const price = (await Ticker.getTicker(pos)).lastTradedPrice;
             // if(position.quantity == 0) continue;
             positionsEmbed.addFields(
                 { name: position.ticker, value: Price.format(price), inline: true },
-                { name: Price.format(price*position.quantity), value: position.quantity.toString(), inline: true },
+                { name: Price.format(price*position.quantity), value: `**${position.quantity}**`, inline: true },
                 { name: Price.format(await this.calculateOpenPnL(position)), value: '\u200B', inline: true },
             );
         }

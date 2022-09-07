@@ -41,10 +41,10 @@ module.exports = class NormalOrder extends Order {
 
     async checkPositionLimits() {
         const currPosition = this.user.positions[this.ticker._id];
-        let extremePosition = (currPosition == undefined ? 0 : currPosition.quantity) + this.quantity;
+        let extremePosition = (currPosition == undefined ? 0 : currPosition.quantity) + this.quantity*this.netPositionChangeSign;
         (await this.user.getPendingOrders()).forEach(pendingOrder => {
             if(pendingOrder instanceof NormalOrder) {
-                if(this.netPositionChangeSign == pendingOrder.netPositionChangeSign) extremePosition += pendingOrder.quantity;
+                if(this.netPositionChangeSign == pendingOrder.netPositionChangeSign) extremePosition += pendingOrder.getQuantityUnfilled()*pendingOrder.netPositionChangeSign;
             }
         });
         if(Math.abs(extremePosition) > this.user.positionLimit) await this.cancel(Order.VIOLATES_POSITION_LIMITS);
