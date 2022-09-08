@@ -100,9 +100,9 @@ const interactionHandler = async function () {
             mongoSession: global.mongoClient.startSession()
         }
         let path = './commands';
-        if(interaction.options.getSubcommand(false) != null) path += `/${interaction.options.getSubcommand()}`;
-        if(interaction.options.getSubcommandGroup(false) != null) path += `/${interaction.options.getSubcommandGroup()}`;
         path += `/${interaction.commandName}`;
+        if(interaction.options.getSubcommandGroup(false) != null) path += `/${interaction.options.getSubcommandGroup()}`;
+        if(interaction.options.getSubcommand(false) != null) path += `/${interaction.options.getSubcommand()}`;
         console.log(path);
         await global.current.mongoSession.withTransaction(async session => {
             try {

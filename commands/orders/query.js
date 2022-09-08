@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { Trader, Order } = require('../rhsx');
+const { Trader, Order } = require('../../rhsx');
 
 module.exports = {
 	execute: async function (interaction) {

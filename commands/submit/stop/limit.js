@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { Trader, Order, LimitOrder, StopOrder, Price } = require('../rhsx');
+const { Trader, Order, LimitOrder, StopOrder, Price } = require('../../../rhsx');
 const { ObjectId } = require('mongodb');
 
 module.exports = {
