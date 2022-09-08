@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 // Discord
-const { Client, Intents, MessageEmbed } = require('discord.js');
+const { Client, Intents } = require('discord.js');
 global.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
 // MongoDB
@@ -9,7 +9,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 global.mongoClient = new MongoClient(process.env['MONGO_URI'], { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 // Local Modules
-const { Trader, Order, NormalOrder, LimitOrder, MarketOrder, StopOrder, Ticker, Price, Tools } = require('./rhsx');
+const { Trader, Ticker, Price, Tools } = require('./rhsx');
 
 const orderBook = new class {
     displayBoardMessage;
@@ -99,106 +99,14 @@ const interactionHandler = async function () {
             order: null,
             mongoSession: global.mongoClient.startSession()
         }
+        let path = './commands';
+        if(interaction.options.getSubcommand(false) != null) path += `/${interaction.options.getSubcommand()}`;
+        if(interaction.options.getSubcommandGroup(false) != null) path += `/${interaction.options.getSubcommandGroup()}`;
+        path += `/${interaction.commandName}`;
+        console.log(path);
         await global.current.mongoSession.withTransaction(async session => {
             try {
-                if(interaction.commandName == 'join') {
-                    const trader = await Trader.getTrader(interaction.user.id);
-                    if(trader != null) throw new Error('Already a trader');
-                    await Trader.collection.insertOne(new Trader({
-                        _id: interaction.user.id,
-                        positionLimit: Trader.DEFAULT_POSITION_LIMIT,
-                        balance: 0,
-                        positions: {}
-                    }), global.current.mongoSession);
-                    interaction.editReply(`You're now a trader.`);
-
-                } else if(interaction.commandName == 'position') {
-                    const trader = await Trader.getTrader(interaction.user.id);
-                    if(trader == null) throw new Error('Not a trader');
-                    interaction.editReply(await trader.toString());
-
-                } else if(interaction.commandName == 'orders') {
-                    const trader = await Trader.getTrader(interaction.user.id);
-                    if(trader == null) throw new Error('Not a trader');
-                    if(interaction.options.getSubcommand() == 'find') {
-                        const order = await Order.getOrder(new ObjectId(interaction.options.getString('order_id')));
-                        if(order == null) throw new Error('Invalid id');
-                        interaction.editReply({ embeds: [await order.toEmbed()] });
-
-                    } else if(interaction.options.getSubcommand() == 'query') {
-                        const type = interaction.options.getString('type');
-                        const direction = interaction.options.getString('direction');
-                        const ticker = interaction.options.getString('ticker');
-                        let status = interaction.options.getString('status');
-                        if(status == 'pending') status = { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] };
-                        else if(status == 'completed') status = Order.COMPLETELY_FILLED;
-                        else if(status == 'cancelled') status = Order.CANCELLED;
-                        const query = {};
-                        query.user = interaction.user.id;
-                        if(type != null) query.type = type;
-                        if(direction != null) query.direction = direction;
-                        if(ticker != null) query.ticker = ticker;
-                        if(status != null) query.status = status;
-                        const embed = await trader.templateEmbed();
-                        (await Order.queryOrders(query, { timestamp: -1 })).forEach(order => embed.addFields(order.toOrderQueryEmbedFields()));
-                        interaction.editReply({ embeds: [embed] });
-
-                    } else if(interaction.options.getSubcommand() == 'cancel') {
-                        const order = await Order.queryOrder({
-                            _id: new ObjectId(interaction.options.getString('order_id')),
-                            user: interaction.user.id
-                        });
-                        if(order == null) throw new Error('Invalid id');
-                        global.current.order = order._id;
-                        await order.cancel();
-                    }
-
-                } else if(interaction.commandName == 'submit') {
-                    const trader = await Trader.getTrader(interaction.user.id);
-                    if(trader == null) throw new Error('Not a trader');
-                    let order = {
-                        _id: ObjectId(),
-                        timestamp: new Date(),
-                        user: interaction.user.id,
-                        direction: interaction.options.getString('direction'),
-                        ticker: interaction.options.getString('ticker'),
-                        status: Order.UNSUBMITTED
-                    };
-                    if(interaction.options.getSubcommandGroup(false) == null) {
-                        order.quantity = interaction.options.getInteger('quantity');
-                        order.quantityFilled = 0;
-                        if(interaction.options.getSubcommand(false) == LimitOrder.TYPE) {
-                            order.price = Price.toPrice(interaction.options.getNumber('limit_price'));
-                            order.type = LimitOrder.TYPE;
-                        } else if(interaction.options.getSubcommand(false) == MarketOrder.TYPE) {
-                            order.type = MarketOrder.TYPE;
-                        }
-                    } else if(interaction.options.getSubcommandGroup(false) == StopOrder.TYPE) {
-                        order.triggerPrice = Price.toPrice(interaction.options.getNumber('trigger_price'));
-                        order.type = StopOrder.TYPE;
-                        const executedOrder = {
-                            _id: ObjectId(),
-                            type: interaction.options.getSubcommand(),
-                            timestamp: new Date(),
-                            user: interaction.user.id,
-                            direction: interaction.options.getString('direction'),
-                            ticker: interaction.options.getString('ticker'),
-                            status: Order.UNSUBMITTED,
-                            quantity: interaction.options.getInteger('quantity'),
-                            quantityFilled: 0
-                        };
-                        if(executedOrder.direction == Order.BUY && !((await Ticker.getTicker(order.ticker)).lastTradedPrice < order.triggerPrice)) throw new Error('Trigger price must be greater than the current price');
-                        if(executedOrder.direction == Order.SELL && !(order.triggerPrice < (await Ticker.getTicker(order.ticker)).lastTradedPrice)) throw new Error('Trigger price must be less than the current price');
-                        if(executedOrder.type == LimitOrder.TYPE) {
-                            executedOrder.price = Price.toPrice(interaction.options.getNumber('limit_price'));
-                        }
-                        order.executedOrder = executedOrder;
-                    }
-                    order = await Order.assignOrderType(order);
-                    global.current.order = order._id;
-                    await order.submit();
-
-                }
+                await require(path).execute(interaction);
             } catch(error) {
                 console.log(error);
                 interaction.editReply(`Error: ${error.message}`);
@@ -234,7 +142,7 @@ async function run() {
     CHANNEL.DISPLAY_BOARD = await global.discordClient.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
     CHANNEL.LEADERBOARD = await global.discordClient.channels.fetch(process.env['LEADERBOARD_CHANNEL_ID']);
     await orderBook.initialize();
-    await require('./commands').initialize();
+    await require('./deploy_commands').initialize();
     interactionHandler();
 }
 run();

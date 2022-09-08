@@ -4,7 +4,7 @@ rhsx-bot is an interactive Discord bot where users can trade fictitious stocks.
 ## Commands
 
 ### /join
-Turns a user into trader, granting access to the trading platform.
+Adds a user to the trader list, granting access to the trading platform.
 
 ### /submit limit [ticker] [direction] [quantity] [limit_price]
 Submits a limit order.
