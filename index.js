@@ -138,7 +138,7 @@ async function run() {
     CHANNEL.DISPLAY_BOARD = await global.discordClient.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
     CHANNEL.LEADERBOARD = await global.discordClient.channels.fetch(process.env['LEADERBOARD_CHANNEL_ID']);
     await orderBook.initialize();
-    await require('./deploy_commands').initialize();
+    await require('./deploy_commands').run();
     interactionHandler();
 }
 run();
