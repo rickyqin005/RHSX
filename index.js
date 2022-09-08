@@ -25,19 +25,16 @@ const orderBook = new class {
 
     async updateDisplayBoard() {
         await orderBook.displayBoardMessage.edit(await orderBook.toDisplayBoardString());
-        // console.log('updated display board');
         setTimeout(orderBook.updateLeaderBoard, 3000);
     }
 
     async updateLeaderBoard() {
         await orderBook.leaderBoardMessage.edit(await orderBook.toLeaderBoardString());
-        // console.log('updated leaderboard');
         setTimeout(orderBook.updateDisplayBoard, 3000);
     }
 
     async toDisplayBoardString() {
-        let str = '';
-        str += `Last updated at ${Tools.dateStr(new Date())}\n`;
+        let str = `Last updated at ${Tools.dateStr(new Date())}\n`;
         str += '```\n';
         str += Tools.setW('Ticker', 10) + Tools.setW('Price', 10) + Tools.setW('Bid', 10) + Tools.setW('Ask', 10) + Tools.setW('Volume', 10) + '\n';
         const tickers = await Ticker.queryTickers({});
@@ -99,8 +96,7 @@ const interactionHandler = async function () {
             order: null,
             mongoSession: global.mongoClient.startSession()
         }
-        let path = './commands';
-        path += `/${interaction.commandName}`;
+        let path = `./commands/${interaction.commandName}`;
         if(interaction.options.getSubcommandGroup(false) != null) path += `/${interaction.options.getSubcommandGroup()}`;
         if(interaction.options.getSubcommand(false) != null) path += `/${interaction.options.getSubcommand()}`;
         console.log(path);
@@ -121,7 +117,7 @@ const interactionHandler = async function () {
         };
         console.log(`finished processing interaction ${interaction.id}`);
     }
-    setTimeout(interactionHandler, 250);
+    setTimeout(interactionHandler, 200);
 }
 global.discordClient.on('interactionCreate', async interaction => {
     if(!interaction.isCommand()) return;

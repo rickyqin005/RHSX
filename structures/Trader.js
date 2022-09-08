@@ -25,7 +25,7 @@ module.exports = class Trader {
         for(const pos in args.positions) this.positions[pos] = new Position(args.positions[pos]);
     }
 
-    async toString() {
+    async toInfoEmbed() {
         const traderInfoEmbed = (await this.templateEmbed())
             .setTitle('Trader Info')
             .addFields(
@@ -44,7 +44,7 @@ module.exports = class Trader {
             const position = this.positions[pos];
             const Ticker = require('./Ticker');
             const price = (await Ticker.getTicker(pos)).lastTradedPrice;
-            // if(position.quantity == 0) continue;
+            if(position.quantity == 0) continue;
             positionsEmbed.addFields(
                 { name: position.ticker, value: Price.format(price), inline: true },
                 { name: Price.format(price*position.quantity), value: `**${position.quantity}**`, inline: true },

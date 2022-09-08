@@ -5,15 +5,14 @@ const rest = new REST({ version: '9' }).setToken(process.env['BOT_TOKEN']);
 const { Routes } = require('discord-api-types/v9');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits } = require('discord-api-types/v10');
+const { Ticker } = require('./rhsx');
 
 const DIRECTION_CHOICES = [
     { name: 'BUY', value: 'BUY' },
     { name: 'SELL', value: 'SELL' }
 ];
-const TICKER_CHOICES = [
-    { name: 'CRZY', value: 'CRZY' },
-    { name: 'TAME', value: 'TAME' }
-];
+const TICKER_CHOICES = [];
+(await Ticker.queryTickers({})).forEach((ticker) => TICKER_CHOICES.push({ name: ticker._id, value: ticker._id }));
 
 const commands = [
     { name: 'join', description: 'Become a trader' },
