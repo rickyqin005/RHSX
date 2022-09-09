@@ -12,6 +12,7 @@ module.exports = class StopOrder extends Order {
         this.type = StopOrder.TYPE;
         this.label = StopOrder.LABEL;
     }
+
     async resolve() {
         await super.resolve();
         const LimitOrder = require('./LimitOrder');

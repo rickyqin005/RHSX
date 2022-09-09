@@ -65,7 +65,7 @@ module.exports = class Trader {
     }
 
     async getDiscordUser() {
-        return await global.discordClient.users.fetch(this._id);
+        return await global.discordClient.users.fetch(this._id);// only reference of global.discordClient
     }
 
     async getAccountValue() {

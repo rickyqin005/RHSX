@@ -1,5 +1,4 @@
 const Order = require('./orders/Order');
-const OrderConstants = require('./orders/OrderConstants');
 
 module.exports = class Ticker {
     static collection = global.mongoClient.db('RHSX').collection('Tickers');
@@ -26,19 +25,21 @@ module.exports = class Ticker {
     }
 
     async getBids() {
+        const LimitOrder = require('./orders/LimitOrder');
         return await Order.queryOrders({
             direction: Order.BUY,
             ticker: this._id,
-            type: OrderConstants.LimitOrder.TYPE,
+            type: LimitOrder.TYPE,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { price: -1, timestamp: 1 });
     }
 
     async getAsks() {
+        const LimitOrder = require('./orders/LimitOrder');
         return await Order.queryOrders({
             direction: Order.SELL,
             ticker: this._id,
-            type: OrderConstants.LimitOrder.TYPE,
+            type: LimitOrder.TYPE,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { price: 1, timestamp: 1 });
     }
@@ -56,10 +57,11 @@ module.exports = class Ticker {
         this.lastTradedPrice = newPrice;
 
         let tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);
+        const StopOrder = require('./orders/StopOrder');
         let triggeredStops = await Order.queryOrders({
             direction: tickDirection,
             ticker: this._id,
-            type: OrderConstants.StopOrder.TYPE,
+            type: StopOrder.TYPE,
             triggerPrice: { $gte: Math.min(currPrice, newPrice), $lte: Math.max(currPrice, newPrice) },
             status: Order.NOT_FILLED
         }, { timestamp: 1 });

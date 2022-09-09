@@ -50,6 +50,7 @@ module.exports = class Order {
         this.ticker = args.ticker;
         this.status = args.status;
     }
+
     async resolve() {
         const Trader = require('../Trader');
         const Ticker = require('../Ticker');
@@ -140,11 +141,12 @@ module.exports = class Order {
         console.log(this);
         if((await this.checkPositionLimits()) == Order.CANCELLED) return;
         await this.setStatus(Order.IN_QUEUE);
-        await this.setStatus(Order.NOT_FILLED);
         await this.fill();
     }
 
-    async fill() {}
+    async fill() {
+        await this.setStatus(Order.NOT_FILLED);
+    }
 
     async cancel(reason) {
         if(this.status == Order.CANCELLED) throw new Error('Order is already cancelled');

@@ -32,6 +32,7 @@ module.exports = class LimitOrder extends NormalOrder {
     }
 
     async fill() {
+        await super.fill();
         let newLastTradedPrice = this.ticker.lastTradedPrice;
         if(this.direction == Order.BUY) {
             const asks = await this.ticker.getAsks();
