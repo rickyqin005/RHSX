@@ -5,7 +5,7 @@ const rest = new REST({ version: '9' }).setToken(process.env['BOT_TOKEN']);
 const { Routes } = require('discord-api-types/v9');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits } = require('discord-api-types/v10');
-const { Ticker } = require('./rhsx');
+const { Ticker } = require('../../rhsx');
 
 module.exports = {
     run: async function () {
@@ -269,5 +269,6 @@ module.exports = {
             Routes.applicationGuildCommands(process.env['BOT_ID'], process.env['FINANCE_CLUB_GUILD_ID']),
             { body: commands },
         );
+        console.log('Deployed slash commands');
     }
 };

@@ -3,10 +3,11 @@ const { Trader, Price, Tools } = require('../rhsx');
 
 const discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 let message;
+const REFRESH_RATE = 2000;
 
 async function update() {
     await message.edit(await leaderBoardString());
-    setTimeout(update, 1000);
+    setTimeout(update, REFRESH_RATE);
 }
 
 async function leaderBoardString() {
@@ -29,6 +30,6 @@ module.exports = {
         console.log(`${discordClient.user.tag} is logged in`);
         const channel = await discordClient.channels.fetch(process.env['LEADERBOARD_CHANNEL_ID']);
         message = await channel.messages.fetch(process.env['LEADERBOARD_MESSAGE_ID']);
-        setTimeout(update, 1000);
+        setTimeout(update, REFRESH_RATE);
     }
 };
