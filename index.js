@@ -122,23 +122,21 @@ const interactionHandler = async function () {
 global.discordClient.on('interactionCreate', async interaction => {
     if(!interaction.isCommand()) return;
     console.log(`received interaction ${interaction.id}`);
-    await interaction.deferReply();
     interactionList.push(interaction);
+    await interaction.deferReply();
 });
-global.discordClient.on('debug', console.log);
-// global.discordClient.on('apiRequest', () => console.log('api request'));
-// global.discordClient.on('apiResponse', () => console.log('api response'));
 
 const CHANNEL = {};
 async function run() {
     await global.mongoClient.connect();
-    console.log(`Connected to MongoDB!`);
+    console.log('Connected to MongoDB');
     await global.discordClient.login(process.env['BOT_TOKEN']);
-    console.log(`Connected to Discord!`);
+    console.log('Connected to Discord');
     CHANNEL.DISPLAY_BOARD = await global.discordClient.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
     CHANNEL.LEADERBOARD = await global.discordClient.channels.fetch(process.env['LEADERBOARD_CHANNEL_ID']);
-    await orderBook.initialize();
     await require('./deploy_commands').run();
+    console.log('Deployed slash commands');
+    await orderBook.initialize();
     interactionHandler();
 }
 run();
