@@ -1,4 +1,5 @@
 const Price = require('../utils/Price');
+const Tools = require('../utils/Tools');
 
 module.exports = class Trader {
     static DEFAULT_POSITION_LIMIT = 100000;
@@ -18,6 +19,7 @@ module.exports = class Trader {
 
     constructor(args) {
         this._id = args._id;
+        this.joined = args.joined;
         this.positionLimit = args.positionLimit;
         this.balance = args.balance;
         this.positions = {};
@@ -31,6 +33,7 @@ module.exports = class Trader {
             .addFields(
                 { name: 'Account Value', value: Price.format(await this.getAccountValue()), inline: true },
                 { name: 'Cash Balance', value: Price.format(this.balance), inline: true },
+                { name: 'Joined', value: Tools.dateStr(this.joined), inline: false },
             );
 
         const positionsEmbed = (await this.templateEmbed())
