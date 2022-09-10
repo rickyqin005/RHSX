@@ -266,7 +266,11 @@ module.exports = {
         ];
 
         await rest.put(
-            Routes.applicationGuildCommands(process.env['BOT_ID'], '943592876837859350'/*process.env['FINANCE_CLUB_GUILD_ID']*/),
+            Routes.applicationGuildCommands(process.env['BOT_ID'], process.env['FINANCE_CLUB_GUILD_ID']),
+            { body: commands },
+        );
+        await rest.put(
+            Routes.applicationGuildCommands(process.env['BOT_ID'], process.env['SANDBOX_GUILD_ID']),
             { body: commands },
         );
         console.log('Deployed slash commands');
