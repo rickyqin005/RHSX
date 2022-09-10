@@ -27,16 +27,19 @@ module.exports = class Trader {
         for(const pos in args.positions) this.positions[pos] = new Position(args.positions[pos]);
     }
 
-    async toInfoEmbed() {
-        const traderInfoEmbed = (await this.templateEmbed())
+    async infoEmbed() {
+        const embed = (await this.templateEmbed())
             .setTitle('Trader Info')
             .addFields(
                 { name: 'Account Value', value: Price.format(await this.getAccountValue()), inline: true },
                 { name: 'Cash Balance', value: Price.format(this.balance), inline: true },
                 { name: 'Joined', value: Tools.dateStr(this.joined), inline: false },
             );
+        return { embeds: [embed] };
+    }
 
-        const positionsEmbed = (await this.templateEmbed())
+    async positionEmbed() {
+        const embed = (await this.templateEmbed())
             .setTitle('Positions')
             .addFields(
                 { name: '\u200B', value: '**Symbol/Price**', inline: true },
@@ -48,13 +51,13 @@ module.exports = class Trader {
             const Ticker = require('./Ticker');
             const price = (await Ticker.getTicker(pos)).lastTradedPrice;
             if(position.quantity == 0) continue;
-            positionsEmbed.addFields(
+            embed.addFields(
                 { name: position.ticker, value: Price.format(price), inline: true },
                 { name: Price.format(price*position.quantity), value: `**${position.quantity}**`, inline: true },
                 { name: Price.format(await this.calculateOpenPnL(position)), value: '\u200B', inline: true },
             );
         }
-        return { embeds: [traderInfoEmbed, positionsEmbed] };
+        return { embeds: [embed] };
     }
 
     async templateEmbed() {

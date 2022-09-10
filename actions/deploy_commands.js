@@ -17,7 +17,6 @@ module.exports = {
         (await Ticker.queryTickers({})).forEach((ticker) => TICKER_CHOICES.push({ name: ticker._id, value: ticker._id }));
         const commands = [
             { name: 'join', description: 'Become a trader' },
-            { name: 'position', description: 'View your portfolio' },
             {
                 name: 'orders',
                 description: 'View your orders',
@@ -258,6 +257,22 @@ module.exports = {
                     }
                 ]
             },
+            {
+                name: 'trader',
+                description: 'View account info',
+                options: [
+                    {
+                        type: 1,
+                        name: 'info',
+                        description: 'View general account info'
+                    },
+                    {
+                        type: 1,
+                        name: 'position',
+                        description: 'View your positions'
+                    }
+                ]
+            }
             // new SlashCommandBuilder()
             // .setName('halt')
             // .setDescription('Suspends trading')
