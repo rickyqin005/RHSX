@@ -1,12 +1,25 @@
+require('dotenv').config();
+// MongoDB
+const { MongoClient, ServerApiVersion } = require('mongodb');
+global.mongoClient = new MongoClient(process.env['MONGO_URI'], { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+// Discord
 const { Client, Intents } = require('discord.js');
-const { Ticker, Price, Tools } = require('../rhsx');
+global.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+global.discordClient.on('debug', console.log);
 
-const discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+const { Ticker, Price, Tools } = require('./rhsx');
 let message;
-const REFRESH_RATE = 2000;
+const REFRESH_RATE = 6000;
+global.current = {
+    mongoSession: null
+};
 
 async function update() {
+    const startTime = new Date();
+    global.current.mongoSession = global.mongoClient.startSession();
     await message.edit(await displayBoardString());
+    await global.current.mongoSession.endSession();
+    console.log(`updated display board at ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
     setTimeout(update, REFRESH_RATE);
 }
 
@@ -42,12 +55,13 @@ async function displayBoardString() {
     return str;
 }
 
-module.exports = {
-    start: async function () {
-        await discordClient.login(process.env['DISPLAY_BOARD_BOT_TOKEN']);
-        console.log(`${discordClient.user.tag} is logged in`);
-        const channel = await discordClient.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
-        message = await channel.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
-        setTimeout(update, REFRESH_RATE);
-    }
-};
+async function run() {
+    await global.mongoClient.connect();
+    console.log('Connected to MongoDB');
+    await global.discordClient.login(process.env['DISPLAY_BOARD_BOT_TOKEN']);
+    console.log(`${global.discordClient.user.tag} is logged in`);
+    const channel = await global.discordClient.channels.fetch(process.env['DISPLAY_BOARD_CHANNEL_ID']);
+    message = await channel.messages.fetch(process.env['DISPLAY_BOARD_MESSAGE_ID']);
+    setTimeout(update, REFRESH_RATE);
+}
+run();

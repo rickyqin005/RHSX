@@ -19,7 +19,9 @@ module.exports = {
         if(ticker != null) query.ticker = ticker;
         if(status != null) query.status = status;
         const embed = await trader.templateEmbed();
-        (await Order.queryOrders(query, { timestamp: -1 })).forEach(order => embed.addFields(order.toOrderQueryEmbedFields()));
+        const orders = await Order.queryOrders(query, { timestamp: -1 });
+        orders.forEach(order => embed.addFields(order.toOrderQueryEmbedFields()));
+        embed.setTitle(`${orders.length} Order(s) Found`);
         interaction.editReply({ embeds: [embed] });
 	}
 };
