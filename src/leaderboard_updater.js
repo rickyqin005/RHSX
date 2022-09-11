@@ -19,6 +19,7 @@ async function update() {
     global.current.mongoSession = global.mongoClient.startSession();
     await message.edit(await leaderBoardString());
     await global.current.mongoSession.endSession();
+    Trader.cache.clear();
     console.log(`updated leaderboard at ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
     setTimeout(update, REFRESH_RATE);
 }

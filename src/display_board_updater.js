@@ -19,6 +19,7 @@ async function update() {
     global.current.mongoSession = global.mongoClient.startSession();
     await message.edit(await displayBoardString());
     await global.current.mongoSession.endSession();
+    Ticker.cache.clear();
     console.log(`updated display board at ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
     setTimeout(update, REFRESH_RATE);
 }
