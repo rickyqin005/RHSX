@@ -1,16 +1,31 @@
 const Order = require('./orders/Order');
+const { Collection } = require('discord.js');
 
 module.exports = class Ticker {
     static collection = global.mongoClient.db('RHSX').collection('Tickers');
+    static cache = new Collection();
 
     static async getTicker(_id) {
-        let res = await this.collection.findOne({ _id: _id }, global.current.mongoSession);
-        if(res != null) res = new Ticker(res);
+        let res = this.cache.get(_id);
+        if(res == undefined) {
+            res = await this.collection.findOne({ _id: _id });
+            if(res != null) {
+                res = new Ticker(res);
+                this.cache.set(_id, res);
+            }
+        }
         return res;
     }
     static async queryTickers(query, sort) {
-        let res = await this.collection.find(query, global.current.mongoSession).sort(sort).toArray();
-        for(let i = 0; i < res.length; i++) res[i] = new Ticker(res[i]);
+        let res = await this.collection.find(query).sort(sort).toArray();
+        for(let i = 0; i < res.length; i++) {
+            const resOrig = res[i];
+            res[i] = this.cache.get(resOrig._id);
+            if(res[i] == undefined) {
+                res[i] = new Ticker(resOrig);
+                this.cache.set(res[i]._id, res[i]);
+            }
+        }
         return res;
     }
 
@@ -45,7 +60,8 @@ module.exports = class Ticker {
     }
 
     async increaseVolume(quantity) {
-        await Ticker.collection.updateOne({ _id: this._id }, { $inc: { volume: quantity } }, global.current.mongoSession);
+        const session = global.current.mongoSession;
+        await Ticker.collection.updateOne({ _id: this._id }, { $inc: { volume: quantity } }, { session });
         this.volume += quantity;
     }
 
@@ -53,7 +69,8 @@ module.exports = class Ticker {
         if(this.lastTradedPrice == newPrice) return;
         const currPrice = this.lastTradedPrice;
 
-        await Ticker.collection.updateOne({ _id: this._id }, { $set: { lastTradedPrice: newPrice } }, global.current.mongoSession);
+        const session = global.current.mongoSession;
+        await Ticker.collection.updateOne({ _id: this._id }, { $set: { lastTradedPrice: newPrice } }, { session });
         this.lastTradedPrice = newPrice;
 
         let tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);

@@ -1,19 +1,34 @@
 const Price = require('../utils/Price');
 const Tools = require('../utils/Tools');
+const { Collection } = require('discord.js');
 
 module.exports = class Trader {
     static DEFAULT_POSITION_LIMIT = 100000;
     static collection = global.mongoClient.db('RHSX').collection('Traders');
+    static cache = new Collection();
 
     static async getTrader(_id) {
-        let res = await this.collection.findOne({ _id: _id }, global.current.mongoSession);
-        if(res != null) res = new Trader(res);
+        let res = this.cache.get(_id);
+        if(res == undefined) {
+            res = await this.collection.findOne({ _id: _id });
+            if(res != null) {
+                res = new Trader(res);
+                this.cache.set(_id, res);
+            }
+        }
         return res;
     }
 
     static async queryTraders(query, sort) {
-        let res = await this.collection.find(query, global.current.mongoSession).sort(sort).toArray();
-        for(let i = 0; i < res.length; i++) res[i] = new Trader(res[i]);
+        let res = await this.collection.find(query).sort(sort).toArray();
+        for(let i = 0; i < res.length; i++) {
+            const resOrig = res[i];
+            res[i] = this.cache.get(resOrig._id);
+            if(res[i] == undefined) {
+                res[i] = new Trader(resOrig);
+                this.cache.set(res[i]._id, res[i]);
+            }
+        }
         return res;
     }
 
@@ -90,7 +105,7 @@ module.exports = class Trader {
 
     async addPosition(pos) {
         let currPos = this.positions[pos.ticker];
-        if(currPos == undefined) currPos = pos;
+        if(currPos == undefined) this.positions[pos.ticker] = pos;
         else {
             if(Math.sign(currPos.quantity) == Math.sign(pos.quantity) || currPos.quantity == 0) {// increase size of current position
                 currPos.quantity += pos.quantity;
@@ -105,7 +120,8 @@ module.exports = class Trader {
             }
         }
         this.balance -= pos.costBasis;
-        await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, global.current.mongoSession);
+        const session = global.current.mongoSession;
+        await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, { session });
     }
 
     async calculateOpenPnL(position) {

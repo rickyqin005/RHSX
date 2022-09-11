@@ -18,7 +18,7 @@ module.exports = {
             quantityFilled: 0,
             price: Price.toPrice(interaction.options.getNumber('limit_price'))
         });
-        global.current.order = order._id;
         await order.submit();
+        interaction.editReply(order.statusString());
 	}
 };

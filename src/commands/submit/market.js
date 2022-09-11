@@ -17,7 +17,7 @@ module.exports = {
             quantity: interaction.options.getInteger('quantity'),
             quantityFilled: 0
         });
-        global.current.order = order._id;
         await order.submit();
+        interaction.editReply(order.statusString());
 	}
 };

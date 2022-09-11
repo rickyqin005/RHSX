@@ -11,7 +11,7 @@ module.exports = {
             user: interaction.user.id
         });
         if(order == null) throw new Error('Invalid id');
-        global.current.order = order._id;
         await order.cancel();
+        await interaction.editReply(order.statusString());
 	}
 };

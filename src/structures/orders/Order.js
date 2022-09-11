@@ -1,4 +1,5 @@
 const Tools = require('../../utils/Tools');
+const { Collection } = require('discord.js');
 
 module.exports = class Order {
     static BUY = 'BUY';
@@ -13,6 +14,7 @@ module.exports = class Order {
     static VIOLATES_POSITION_LIMITS = 1;
 
     static collection = global.mongoClient.db('RHSX').collection('Orders');
+    static cache = new Collection();
 
     static async assignOrderType(order) {
         const LimitOrder = require('./LimitOrder');
@@ -24,19 +26,19 @@ module.exports = class Order {
     }
 
     static async getOrder(_id) {
-        let res = await this.collection.findOne({ _id: _id }, global.current.mongoSession);
+        let res = await this.collection.findOne({ _id: _id });
         if(res != null) res = await this.assignOrderType(res);
         return res;
     }
 
     static async queryOrder(query) {
-        let res = await this.collection.findOne(query, global.current.mongoSession);
+        let res = await this.collection.findOne(query);
         if(res != null) res = await this.assignOrderType(res);
         return res;
     }
 
     static async queryOrders(query, sort) {
-        let res = await this.collection.find(query, global.current.mongoSession).sort(sort).toArray();
+        let res = await this.collection.find(query).sort(sort).toArray();
         for(let i = 0; i < res.length; i++) res[i] = await this.assignOrderType(res[i]);
         return res;
     }
@@ -49,6 +51,7 @@ module.exports = class Order {
         this.direction = args.direction;
         this.ticker = args.ticker;
         this.status = args.status;
+        this.statusReason = args.statusReason;
     }
 
     async resolve() {
@@ -97,8 +100,8 @@ module.exports = class Order {
         return `Your ${this.label}: \`${this.toInfoString()}\` is submitted.`;
     }
 
-    orderCancelledString(reason) {
-        switch(reason) {
+    orderCancelledString() {
+        switch(this.statusReason) {
             case Order.UNFULFILLABLE:
                 return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
             case Order.VIOLATES_POSITION_LIMITS:
@@ -108,16 +111,19 @@ module.exports = class Order {
         }
     }
 
+    statusString() {
+        if(this.status == Order.IN_QUEUE) return this.orderSubmittedString();
+        else if(this.status == Order.CANCELLED) return this.orderCancelledString();
+        else return this.orderSubmittedString();// default message for now
+    }
+
     async setStatus(newStatus, reason) {
         if(!(Order.CANCELLED <= newStatus && newStatus <= Order.COMPLETELY_FILLED)) throw new Error('Invalid status');
         if(newStatus == this.status) return;
-
         this.status = newStatus;
-        await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus } }, global.current.mongoSession);
-        if(global.current.order.equals(this._id)) {
-            if(newStatus == Order.IN_QUEUE) global.current.interaction.editReply(this.orderSubmittedString());
-            else if(newStatus == Order.CANCELLED) global.global.current.interaction.editReply(this.orderCancelledString(reason));
-        }
+        this.statusReason = reason;
+        const session = global.current.mongoSession;
+        await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus, statusReason: reason } }, { session });
     }
 
     async addToDB() {
@@ -125,7 +131,8 @@ module.exports = class Order {
         const ticker = this.ticker;
         this.user = this.user._id;
         this.ticker = this.ticker._id;
-        await Order.collection.insertOne(this, global.current.mongoSession);
+        const session = global.current.mongoSession;
+        await Order.collection.insertOne(this, { session });
         this.user = trader;
         this.ticker = ticker;
     }

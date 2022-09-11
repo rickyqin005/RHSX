@@ -43,7 +43,8 @@ module.exports = class StopOrder extends Order {
         this.ticker = this.ticker._id;
         this.executedOrder.user = this.executedOrder.user._id;
         this.executedOrder.ticker = this.executedOrder.ticker._id;
-        await Order.collection.insertOne(this, global.current.mongoSession);
+        const session = global.current.mongoSession;
+        await Order.collection.insertOne(this, { session });
         this.user = trader;
         this.ticker = ticker;
         this.executedOrder.user = trader;

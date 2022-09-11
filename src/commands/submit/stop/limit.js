@@ -30,7 +30,7 @@ module.exports = {
         });
         if(order.executedOrder.direction == Order.BUY && !(order.ticker.lastTradedPrice < order.triggerPrice)) throw new Error('Trigger price must be greater than the current price');
         if(order.executedOrder.direction == Order.SELL && !(order.triggerPrice < order.ticker.lastTradedPrice)) throw new Error('Trigger price must be less than the current price');
-        global.current.order = order._id;
         await order.submit();
+        interaction.editReply(order.statusString());
 	}
 };

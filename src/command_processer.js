@@ -9,25 +9,20 @@ global.discordClient.on('debug', console.log);
 
 const { Tools } = require('./rhsx');
 global.current = {
-    interaction: null,
-    order: null,
     mongoSession: null
 };
 const interactionList = [];
 const interactionHandler = async function () {
-    if(interactionList.length > 0) {
+    while(interactionList.length > 0) {
         const startTime = new Date();
-        const interaction = interactionList[0];
-        interactionList.splice(0, 1);
+        const interaction = interactionList.splice(0, 1)[0];
         global.current = {
-            interaction: interaction,
-            order: null,
             mongoSession: global.mongoClient.startSession()
         }
         let path = `./commands/${interaction.commandName}`;
         if(interaction.options.getSubcommandGroup(false) != null) path += `/${interaction.options.getSubcommandGroup()}`;
         if(interaction.options.getSubcommand(false) != null) path += `/${interaction.options.getSubcommand()}`;
-        await global.current.mongoSession.withTransaction(async session => {
+        await global.current.mongoSession.withTransaction(async () => {
             try {
                 await require(path).execute(interaction);
             } catch(error) {
@@ -38,11 +33,9 @@ const interactionHandler = async function () {
         });
         await global.current.mongoSession.endSession();
         global.current = {
-            interaction: null,
-            order: null,
             mongoSession: null
         };
-        console.log(`finished processing command ${path} at ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
+        console.log(`processed ${path} at ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
     }
     setTimeout(interactionHandler, 200);
 }
