@@ -5,7 +5,6 @@ global.mongoClient = new MongoClient(process.env['MONGO_URI'], { useNewUrlParser
 // Discord
 const { Client, Intents } = require('discord.js');
 global.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
-global.discordClient.on('debug', console.log);
 
 const { Trader, Price, Tools } = require('./rhsx');
 let message;

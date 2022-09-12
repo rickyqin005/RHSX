@@ -5,7 +5,6 @@ global.mongoClient = new MongoClient(process.env['MONGO_URI'], { useNewUrlParser
 // Discord
 const { Client, Intents } = require('discord.js');
 global.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
-global.discordClient.on('debug', console.log);
 
 const { Tools } = require('./rhsx');
 global.current = {
@@ -52,6 +51,7 @@ async function run() {
     await global.discordClient.login(process.env['BOT_TOKEN']);
     console.log(`${global.discordClient.user.tag} is logged in`);
     await require('./actions/deploy_commands').run();
+    await require('./actions/deploy_api').run();
     interactionHandler();
 }
 run();
