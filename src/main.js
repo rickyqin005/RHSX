@@ -7,34 +7,26 @@ const { Client, Intents } = require('discord.js');
 global.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
 const { Tools } = require('./rhsx');
-global.current = {
-    mongoSession: null
-};
 const interactionList = [];
 const interactionHandler = async function () {
     while(interactionList.length > 0) {
         const startTime = new Date();
         const interaction = interactionList.splice(0, 1)[0];
-        global.current = {
-            mongoSession: global.mongoClient.startSession()
-        }
+        const mongoSession = global.mongoClient.startSession();
         let path = `./commands/${interaction.commandName}`;
         if(interaction.options.getSubcommandGroup(false) != null) path += `/${interaction.options.getSubcommandGroup()}`;
         if(interaction.options.getSubcommand(false) != null) path += `/${interaction.options.getSubcommand()}`;
-        await global.current.mongoSession.withTransaction(async () => {
+        await mongoSession.withTransaction(async () => {
             try {
-                await require(path).execute(interaction);
+                await require(path).execute(interaction, mongoSession);
             } catch(error) {
                 console.log(error);
                 interaction.editReply(`Error: ${error.message}`);
-                await global.current.mongoSession.abortTransaction();
+                await mongoSession.abortTransaction();
             }
         });
-        await global.current.mongoSession.endSession();
-        global.current = {
-            mongoSession: null
-        };
-        console.log(`processed ${path} at ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
+        await mongoSession.endSession();
+        console.log(`${path}, ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
     }
     setTimeout(interactionHandler, 200);
 }

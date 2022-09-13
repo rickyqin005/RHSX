@@ -1,6 +1,8 @@
 // Express
 const express = require('express');
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 const port = 3000;
 
 const fs = require('fs');
@@ -17,10 +19,10 @@ async function deployAPI(currDir, currEndpoint) {
             const newEndpoint = `${currEndpoint}${file.substring(0, file.length-3)}`;
             app.get(newEndpoint, async (req, res) => {
                 const startTime = new Date();
-                global.current.mongoSession = global.mongoClient.startSession();
-                res.json(await require(newDir).getJSON());
-                await global.current.mongoSession.endSession();
-                console.log(`processed ${newEndpoint} at ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
+                const mongoSession = global.mongoClient.startSession();
+                res.json(await require(newDir).getJSON(mongoSession));
+                await mongoSession.endSession();
+                console.log(`${newEndpoint}, ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
             });
         }
     }

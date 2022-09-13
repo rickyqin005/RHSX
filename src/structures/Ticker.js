@@ -59,18 +59,16 @@ module.exports = class Ticker {
         }, { price: 1, timestamp: 1 });
     }
 
-    async increaseVolume(quantity) {
-        const session = global.current.mongoSession;
-        await Ticker.collection.updateOne({ _id: this._id }, { $inc: { volume: quantity } }, { session });
+    async increaseVolume(quantity, mongoSession) {
+        await Ticker.collection.updateOne({ _id: this._id }, { $inc: { volume: quantity } }, { session: mongoSession });
         this.volume += quantity;
     }
 
-    async setLastTradedPrice(newPrice) {
+    async setLastTradedPrice(newPrice, mongoSession) {
         if(this.lastTradedPrice == newPrice) return;
         const currPrice = this.lastTradedPrice;
 
-        const session = global.current.mongoSession;
-        await Ticker.collection.updateOne({ _id: this._id }, { $set: { lastTradedPrice: newPrice } }, { session });
+        await Ticker.collection.updateOne({ _id: this._id }, { $set: { lastTradedPrice: newPrice } }, { session: mongoSession });
         this.lastTradedPrice = newPrice;
 
         let tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);
@@ -83,8 +81,8 @@ module.exports = class Ticker {
             status: Order.NOT_FILLED
         }, { timestamp: 1 });
         for(const stop of triggeredStops) {
-            await stop.setStatus(Order.COMPLETELY_FILLED);
-            await stop.executedOrder.submit();
+            await stop.setStatus(Order.COMPLETELY_FILLED, mongoSession);
+            await stop.executedOrder.submit(mongoSession);
         }
     }
 };

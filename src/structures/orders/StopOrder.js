@@ -36,15 +36,14 @@ module.exports = class StopOrder extends Order {
         return fields;
     }
 
-    async addToDB() {
+    async addToDB(mongoSession) {
         const trader = this.user;
         const ticker = this.ticker;
         this.user = this.user._id;
         this.ticker = this.ticker._id;
         this.executedOrder.user = this.executedOrder.user._id;
         this.executedOrder.ticker = this.executedOrder.ticker._id;
-        const session = global.current.mongoSession;
-        await Order.collection.insertOne(this, { session });
+        await Order.collection.insertOne(this, { session: mongoSession });
         this.user = trader;
         this.ticker = ticker;
         this.executedOrder.user = trader;

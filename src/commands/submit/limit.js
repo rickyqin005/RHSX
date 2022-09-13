@@ -3,7 +3,7 @@ const { Trader, Order, LimitOrder, Price } = require('../../rhsx');
 const { ObjectId } = require('mongodb');
 
 module.exports = {
-	execute: async function (interaction) {
+	execute: async function (interaction, mongoSession) {
         const trader = await Trader.getTrader(interaction.user.id);
         if(trader == null) throw new Error('Not a trader');
         const order = await Order.assignOrderType({
@@ -18,7 +18,7 @@ module.exports = {
             quantityFilled: 0,
             price: Price.toPrice(interaction.options.getNumber('limit_price'))
         });
-        await order.submit();
+        await order.submit(mongoSession);
         interaction.editReply(order.statusString());
 	}
 };

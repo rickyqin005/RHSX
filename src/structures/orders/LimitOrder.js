@@ -31,22 +31,22 @@ module.exports = class LimitOrder extends NormalOrder {
         return fields;
     }
 
-    async fill() {
-        await super.fill();
+    async fill(mongoSession) {
+        await super.fill(mongoSession);
         let newLastTradedPrice = this.ticker.lastTradedPrice;
         if(this.direction == Order.BUY) {
             const asks = await this.ticker.getAsks();
             for(const bestAsk of asks) {
                 if(this.status == Order.COMPLETELY_FILLED || this.price < bestAsk.price) break;
-                newLastTradedPrice = (await this.match(bestAsk)).price;
+                newLastTradedPrice = (await this.match(bestAsk, mongoSession)).price;
             }
         } else if(this.direction == Order.SELL) {
             const bids = await this.ticker.getBids();
             for(const bestBid of bids) {
                 if(this.status == Order.COMPLETELY_FILLED || bestBid.price < this.price) break;
-                newLastTradedPrice = (await this.match(bestBid)).price;
+                newLastTradedPrice = (await this.match(bestBid, mongoSession)).price;
             }
         }
-        await this.ticker.setLastTradedPrice(newLastTradedPrice);
+        await this.ticker.setLastTradedPrice(newLastTradedPrice, mongoSession);
     }
 };

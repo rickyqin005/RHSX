@@ -12,6 +12,7 @@ module.exports = class Order {
     static COMPLETELY_FILLED = 4;
     static UNFULFILLABLE = 0;
     static VIOLATES_POSITION_LIMITS = 1;
+    static CANCELLED_BY_TRADER = 2;
 
     static collection = global.mongoClient.db('RHSX').collection('Orders');
     static cache = new Collection();
@@ -117,47 +118,44 @@ module.exports = class Order {
         else return this.orderSubmittedString();// default message for now
     }
 
-    async setStatus(newStatus, reason) {
+    async setStatus(newStatus, mongoSession, reason) {
         if(!(Order.CANCELLED <= newStatus && newStatus <= Order.COMPLETELY_FILLED)) throw new Error('Invalid status');
         if(newStatus == this.status) return;
         this.status = newStatus;
         this.statusReason = reason;
-        const session = global.current.mongoSession;
-        await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus, statusReason: reason } }, { session });
+        await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus, statusReason: reason } }, { session: mongoSession });
     }
 
-    async addToDB() {
+    async addToDB(mongoSession) {
         const trader = this.user;
         const ticker = this.ticker;
         this.user = this.user._id;
         this.ticker = this.ticker._id;
-        const session = global.current.mongoSession;
-        await Order.collection.insertOne(this, { session });
+        await Order.collection.insertOne(this, { session: mongoSession });
         this.user = trader;
         this.ticker = ticker;
     }
 
-    async checkPositionLimits() {
+    async checkPositionLimits(mongoSession) {
         return this.status;
     }
 
-    async submit() {
+    async submit(mongoSession) {
         this.timestamp = new Date();
-        await this.addToDB();
-        console.log('Submitted order:');
+        await this.addToDB(mongoSession);
         console.log(this);
-        if((await this.checkPositionLimits()) == Order.CANCELLED) return;
-        await this.setStatus(Order.IN_QUEUE);
-        await this.fill();
+        if((await this.checkPositionLimits(mongoSession)) == Order.CANCELLED) return;
+        await this.setStatus(Order.IN_QUEUE, mongoSession);
+        await this.fill(mongoSession);
     }
 
-    async fill() {
-        await this.setStatus(Order.NOT_FILLED);
+    async fill(mongoSession) {
+        await this.setStatus(Order.NOT_FILLED, mongoSession);
     }
 
-    async cancel(reason) {
+    async cancel(reason, mongoSession) {
         if(this.status == Order.CANCELLED) throw new Error('Order is already cancelled');
         if(this.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled');
-        await this.setStatus(Order.CANCELLED, reason);
+        await this.setStatus(Order.CANCELLED, mongoSession, reason);
     }
 };

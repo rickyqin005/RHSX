@@ -103,7 +103,7 @@ module.exports = class Trader {
         }, { timestamp: -1 });
     }
 
-    async addPosition(pos) {
+    async addPosition(pos, mongoSession) {
         let currPos = this.positions[pos.ticker];
         if(currPos == undefined) this.positions[pos.ticker] = pos;
         else {
@@ -120,8 +120,7 @@ module.exports = class Trader {
             }
         }
         this.balance -= pos.costBasis;
-        const session = global.current.mongoSession;
-        await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, { session });
+        await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, { session: mongoSession });
     }
 
     async calculateOpenPnL(position) {
