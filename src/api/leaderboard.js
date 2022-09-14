@@ -1,4 +1,4 @@
-const { Trader, Price } = require('../rhsx');
+const { Trader } = require('../rhsx');
 
 module.exports = {
     getJSON: async function () {
@@ -10,7 +10,7 @@ module.exports = {
         for(const trader of traders) {
             res.traders.push({
                 username: (await trader.getDiscordUser()).tag,
-                accountValue: Price.format(await trader.getAccountValue())
+                accountValue: await trader.getAccountValue()
             });
         }
         return res;

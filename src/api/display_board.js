@@ -1,4 +1,4 @@
-const { Order, LimitOrder, Ticker, Price } = require('../rhsx');
+const { Order, LimitOrder, Ticker } = require('../rhsx');
 
 module.exports = {
     getJSON: async function () {
@@ -9,8 +9,7 @@ module.exports = {
         const tickers = await Ticker.queryTickers({});
         for(const ticker of tickers) {
             res.tickers[ticker._id] = {
-                _id: ticker._id,
-                lastTradedPrice: Price.format(ticker.lastTradedPrice),
+                lastTradedPrice: ticker.lastTradedPrice,
                 volume: ticker.volume,
                 bids: null,
                 asks: null
@@ -25,16 +24,22 @@ module.exports = {
             { $group: {
                 _id: '$ticker',
                 bids: {
-                    $push: { $cond: [ { $eq: ['$direction', Order.BUY ] }, '$$ROOT', '$$REMOVE' ] }
+                    $push: { $cond: [ { $eq: ['$direction', Order.BUY ] }, {
+                        price: '$price',
+                        quantity: { $subtract: ['$quantity', '$quantityFilled'] }
+                    }, '$$REMOVE' ] }
                 },
                 asks: {
-                    $push: { $cond: [ { $eq: ['$direction', Order.SELL ] }, '$$ROOT', '$$REMOVE' ] }
+                    $push: { $cond: [ { $eq: ['$direction', Order.SELL ] }, {
+                        price: '$price',
+                        quantity: { $subtract: ['$quantity', '$quantityFilled'] }
+                    }, '$$REMOVE' ] }
                 }
             } },
             { $sort: { _id: 1 } }
         ]).toArray()).forEach(element => {
-            element.bids.sort((a, b) => (a.price == b.price ? a.timestamp < b.timestamp : a.price > b.price));
-            element.asks.sort((a, b) => (a.price == b.price ? a.timestamp < b.timestamp : a.price < b.price));
+            element.bids.sort((a, b) => ((a.price == b.price) ? (a.timestamp - b.timestamp) : (b.price - a.price)));
+            element.asks.sort((a, b) => ((a.price == b.price) ? (a.timestamp - b.timestamp) : (a.price - b.price)));
             res.tickers[element._id].bids = element.bids;
             res.tickers[element._id].asks = element.asks;
         });
