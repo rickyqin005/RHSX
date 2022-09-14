@@ -6,6 +6,7 @@ module.exports = class Ticker {
     static cache = new Collection();
 
     static async getTicker(_id) {
+        const startTime = new Date();
         let res = this.cache.get(_id);
         if(res == undefined) {
             res = await this.collection.findOne({ _id: _id });
@@ -14,9 +15,11 @@ module.exports = class Ticker {
                 this.cache.set(_id, res);
             }
         }
+        console.log(`Ticker.getTicker(${_id}), took ${new Date()-startTime}ms`);
         return res;
     }
     static async queryTickers(query, sort) {
+        const startTime = new Date();
         let res = await this.collection.find(query).sort(sort).toArray();
         for(let i = 0; i < res.length; i++) {
             const resOrig = res[i];
@@ -26,6 +29,7 @@ module.exports = class Ticker {
                 this.cache.set(res[i]._id, res[i]);
             }
         }
+        console.log(`Ticker.queryTickers(${String(JSON.stringify(query)).replace(/\n/g, " ")}, ${String(JSON.stringify(sort)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
         return res;
     }
 

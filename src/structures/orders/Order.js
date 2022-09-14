@@ -27,20 +27,44 @@ module.exports = class Order {
     }
 
     static async getOrder(_id) {
-        let res = await this.collection.findOne({ _id: _id });
-        if(res != null) res = await this.assignOrderType(res);
+        const startTime = new Date();
+        let res = this.cache.get(_id);
+        if(res == undefined) {
+            res = await this.collection.findOne({ _id: _id });
+            if(res != null) {
+                res = res = await this.assignOrderType(res);
+                this.cache.set(_id, res);
+            }
+        }
+        console.log(`Order.getOrder(${_id}), took ${new Date()-startTime}ms`);
         return res;
     }
 
     static async queryOrder(query) {
+        const startTime = new Date();
         let res = await this.collection.findOne(query);
-        if(res != null) res = await this.assignOrderType(res);
+        const resOrig = res;
+        res = this.cache.get(resOrig._id);
+        if(res == undefined) {
+            res = await this.assignOrderType(resOrig);
+            this.cache.set(res._id, res);
+        }
+        console.log(`Order.queryOrder(${String(JSON.stringify(query)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
         return res;
     }
 
     static async queryOrders(query, sort) {
+        const startTime = new Date();
         let res = await this.collection.find(query).sort(sort).toArray();
-        for(let i = 0; i < res.length; i++) res[i] = await this.assignOrderType(res[i]);
+        for(let i = 0; i < res.length; i++) {
+            const resOrig = res[i];
+            res[i] = this.cache.get(resOrig._id);
+            if(res[i] == undefined) {
+                res[i] = await this.assignOrderType(resOrig);
+                this.cache.set(res[i]._id, res[i]);
+            }
+        }
+        console.log(`Order.queryOrders(${String(JSON.stringify(query)).replace(/\n/g, " ")}, ${String(JSON.stringify(sort)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
         return res;
     }
 

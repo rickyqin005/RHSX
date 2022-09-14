@@ -1,4 +1,4 @@
-const { Ticker, Price } = require('../rhsx');
+const { Order, LimitOrder, Ticker, Price } = require('../rhsx');
 
 module.exports = {
     getJSON: async function () {
@@ -12,14 +12,33 @@ module.exports = {
                 _id: ticker._id,
                 lastTradedPrice: Price.format(ticker.lastTradedPrice),
                 volume: ticker.volume,
-                bids: [],
-                asks: []
+                bids: null,
+                asks: null
             };
-            const bids = await ticker.getBids();
-            const asks = await ticker.getAsks();
-            bids.forEach((bid) => res.tickers[ticker._id].bids.push(bid.toDisplayBoardString()));
-            asks.forEach((ask) => res.tickers[ticker._id].asks.push(ask.toDisplayBoardString()));
         }
+        const startTime = new Date();
+        (await Order.collection.aggregate([
+            { $match: {
+                type: LimitOrder.TYPE,
+                status: { $in: [2, 3] }
+            } },
+            { $group: {
+                _id: '$ticker',
+                bids: {
+                    $push: { $cond: [ { $eq: ['$direction', Order.BUY ] }, '$$ROOT', '$$REMOVE' ] }
+                },
+                asks: {
+                    $push: { $cond: [ { $eq: ['$direction', Order.SELL ] }, '$$ROOT', '$$REMOVE' ] }
+                }
+            } },
+            { $sort: { _id: 1 } }
+        ]).toArray()).forEach(element => {
+            element.bids.sort((a, b) => (a.price == b.price ? a.timestamp < b.timestamp : a.price > b.price));
+            element.asks.sort((a, b) => (a.price == b.price ? a.timestamp < b.timestamp : a.price < b.price));
+            res.tickers[element._id].bids = element.bids;
+            res.tickers[element._id].asks = element.asks;
+        });
+        console.log(`aggregation, took ${new Date()-startTime}ms`);
         return res;
     }
 };
