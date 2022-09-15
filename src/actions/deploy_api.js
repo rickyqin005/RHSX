@@ -22,7 +22,7 @@ async function deployAPI(currDir, currEndpoint) {
                 const mongoSession = global.mongoClient.startSession();
                 res.json(await require(newDir).getJSON(mongoSession));
                 await mongoSession.endSession();
-                console.log(`${newEndpoint}, ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
+                // console.log(`${newEndpoint}, ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
             });
         }
     }

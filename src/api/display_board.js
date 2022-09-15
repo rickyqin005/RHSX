@@ -43,7 +43,7 @@ module.exports = {
             res.tickers[element._id].bids = element.bids;
             res.tickers[element._id].asks = element.asks;
         });
-        console.log(`aggregation, took ${new Date()-startTime}ms`);
+        // console.log(`aggregation, took ${new Date()-startTime}ms`);
         return res;
     }
 };

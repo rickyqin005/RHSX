@@ -27,7 +27,7 @@ module.exports = class Order {
     }
 
     static async getOrder(_id) {
-        const startTime = new Date();
+        // const startTime = new Date();
         let res = this.cache.get(_id);
         if(res == undefined) {
             res = await this.collection.findOne({ _id: _id });
@@ -36,12 +36,12 @@ module.exports = class Order {
                 this.cache.set(_id, res);
             }
         }
-        console.log(`Order.getOrder(${_id}), took ${new Date()-startTime}ms`);
+        // console.log(`Order.getOrder(${_id}), took ${new Date()-startTime}ms`);
         return res;
     }
 
     static async queryOrder(query) {
-        const startTime = new Date();
+        // const startTime = new Date();
         let res = await this.collection.findOne(query);
         const resOrig = res;
         res = this.cache.get(resOrig._id);
@@ -49,12 +49,12 @@ module.exports = class Order {
             res = await this.assignOrderType(resOrig);
             this.cache.set(res._id, res);
         }
-        console.log(`Order.queryOrder(${String(JSON.stringify(query)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
+        // console.log(`Order.queryOrder(${String(JSON.stringify(query)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
         return res;
     }
 
     static async queryOrders(query, sort) {
-        const startTime = new Date();
+        // const startTime = new Date();
         let res = await this.collection.find(query).sort(sort).toArray();
         for(let i = 0; i < res.length; i++) {
             const resOrig = res[i];
@@ -64,7 +64,7 @@ module.exports = class Order {
                 this.cache.set(res[i]._id, res[i]);
             }
         }
-        console.log(`Order.queryOrders(${String(JSON.stringify(query)).replace(/\n/g, " ")}, ${String(JSON.stringify(sort)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
+        // console.log(`Order.queryOrders(${String(JSON.stringify(query)).replace(/\n/g, " ")}, ${String(JSON.stringify(sort)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
         return res;
     }
 
