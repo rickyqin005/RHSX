@@ -18,7 +18,7 @@ async function deployAPI(currDir, currEndpoint) {
         } else {
             const newEndpoint = `${currEndpoint}${file.substring(0, file.length-3)}`;
             app.get(newEndpoint, async (req, res) => {
-                const startTime = new Date();
+                // const startTime = new Date();
                 const mongoSession = global.mongoClient.startSession();
                 res.json(await require(newDir).getJSON(mongoSession));
                 await mongoSession.endSession();
