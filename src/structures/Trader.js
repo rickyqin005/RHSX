@@ -108,7 +108,7 @@ module.exports = class Trader {
 
     async addPosition(pos, mongoSession) {
         let currPos = this.positions[pos.ticker];
-        if(currPos == undefined) this.positions[pos.ticker] = pos;
+        if(currPos == undefined) currPos = pos;
         else {
             if(Math.sign(currPos.quantity) == Math.sign(pos.quantity) || currPos.quantity == 0) {// increase size of current position
                 currPos.quantity += pos.quantity;
