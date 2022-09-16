@@ -122,9 +122,9 @@ module.exports = class Trader {
                 currPos.costBasis = currPos.quantity*posPrice;
             }
         }
-        if(currPos.quantity == 0) await Trader.collection.updateOne({ _id: this._id }, { $unset: { [`positions.${pos.ticker}`]: '' }, $set: { balance: this.balance } }, { session: mongoSession });
-        else await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, { session: mongoSession });
-        this.balance -= pos.costBasis;
+        this.balance -= currPos.costBasis;
+        if(currPos.quantity == 0) await Trader.collection.updateOne({ _id: this._id }, { $unset: { [`positions.${pos.ticker}`]: '' }, $inc: { balance: -currPos.costBasis } }, { session: mongoSession });
+        else await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos}, $inc: { balance: -currPos.costBasis } }, { session: mongoSession });
     }
 
     async calculateOpenPnL(position) {
