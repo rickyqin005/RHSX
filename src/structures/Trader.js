@@ -69,7 +69,6 @@ module.exports = class Trader {
             const position = this.positions[pos];
             const Ticker = require('./Ticker');
             const price = Ticker.getTicker(pos).lastTradedPrice;
-            if(position.quantity == 0) continue;
             embed.addFields(
                 { name: position.ticker, value: Price.format(price), inline: true },
                 { name: Price.format(price*position.quantity), value: `**${position.quantity}**`, inline: true },
@@ -123,8 +122,9 @@ module.exports = class Trader {
                 currPos.costBasis = currPos.quantity*posPrice;
             }
         }
+        if(currPos.quantity == 0) await Trader.collection.updateOne({ _id: this._id }, { $unset: { [`positions.${pos.ticker}`]: '' }, $set: { balance: this.balance } }, { session: mongoSession });
+        else await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, { session: mongoSession });
         this.balance -= pos.costBasis;
-        await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos, balance: this.balance } }, { session: mongoSession });
     }
 
     async calculateOpenPnL(position) {

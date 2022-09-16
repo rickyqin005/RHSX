@@ -10,7 +10,8 @@ module.exports = {
         for(const trader of traders) {
             res.traders.push({
                 username: (await trader.getDiscordUser()).tag,
-                accountValue: await trader.getAccountValue()
+                accountValue: await trader.getAccountValue(),
+                positions: trader.positions
             });
         }
         return res;
