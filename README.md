@@ -1,10 +1,17 @@
-# rhsx-bot
-rhsx-bot is an interactive Discord bot where users can trade fictitious stocks.
+# RHSX
+RHSX is a trading platform used by RHHS's Finance Club. It features a discord bot which users can interact with to trade fictitious stocks and an API to fetch information.
 
-## Commands
+## Discord Slash Commands
+Optional parameters are *italicized*.
 
 ### /join
-Adds a user to the trader list, granting access to the trading platform.
+Adds a user to the trader list, granting access to the platform.
+
+### /trader info
+Displays general account information.
+
+### /trader position
+Displays the users current positions.
 
 ### /submit limit [ticker] [direction] [quantity] [limit_price]
 Submits a limit order.
