@@ -107,9 +107,9 @@ module.exports = class Trader {
     }
 
     async addPosition(pos, mongoSession) {
-        let currPos = this.positions[pos.ticker];
-        if(currPos == undefined) currPos = pos;
+        if(this.positions[pos.ticker] == undefined) this.positions[pos.ticker] = pos;
         else {
+            const currPos = this.positions[pos.ticker];
             if(Math.sign(currPos.quantity) == Math.sign(pos.quantity) || currPos.quantity == 0) {// increase size of current position
                 currPos.quantity += pos.quantity;
                 currPos.costBasis += pos.costBasis;
@@ -122,9 +122,10 @@ module.exports = class Trader {
                 currPos.costBasis = currPos.quantity*posPrice;
             }
         }
-        this.balance -= currPos.costBasis;
-        if(currPos.quantity == 0) await Trader.collection.updateOne({ _id: this._id }, { $unset: { [`positions.${pos.ticker}`]: '' }, $inc: { balance: -currPos.costBasis } }, { session: mongoSession });
-        else await Trader.collection.updateOne({ _id: this._id }, { $set: { [`positions.${pos.ticker}`]: currPos}, $inc: { balance: -currPos.costBasis } }, { session: mongoSession });
+        this.balance -= pos.costBasis;
+        if(this.positions[pos.ticker].quantity == 0) delete this.positions[pos.ticker];
+        console.log(this.positions);
+        await Trader.collection.replaceOne({ _id: this._id }, this);
     }
 
     async calculateOpenPnL(position) {
