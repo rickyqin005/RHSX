@@ -1,11 +1,19 @@
-const { Trader } = require('../rhsx');
+const { Ticker, Trader } = require('../rhsx');
 
 module.exports = {
     getJSON: async function () {
         const res = {
             timestamp: new Date(),
+            tickers: {},
             traders: []
         };
+        const tickers = Ticker.getTickers();
+        for(const ticker of tickers) {
+            res.tickers[ticker._id] = {
+                lastTradedPrice: ticker.lastTradedPrice,
+                volume: ticker.volume
+            };
+        }
         const traders = await Trader.queryTraders({}, {});
         for(const trader of traders) {
             res.traders.push({
