@@ -4,7 +4,7 @@ const { ObjectId } = require('mongodb');
 
 module.exports = {
 	execute: async function (interaction, mongoSession) {
-        const trader = await Trader.getTrader(interaction.user.id);
+        const trader = Trader.getTrader(interaction.user.id);
         if(trader == null) throw new Error('Not a trader');
         const order = await Order.assignOrderType({
             _id: ObjectId(),
@@ -16,7 +16,7 @@ module.exports = {
             status: Order.UNSUBMITTED,
             quantity: interaction.options.getInteger('quantity'),
             quantityFilled: 0
-        });
+        }).resolve();
         await order.submit(mongoSession);
         interaction.editReply(order.statusString());
 	}

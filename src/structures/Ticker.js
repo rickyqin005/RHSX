@@ -5,32 +5,21 @@ module.exports = class Ticker {
     static collection = global.mongoClient.db('RHSX').collection('Tickers');
     static cache = new Collection();
 
-    static async getTicker(_id) {
-        // const startTime = new Date();
-        let res = this.cache.get(_id);
-        if(res == undefined) {
-            res = await this.collection.findOne({ _id: _id });
-            if(res != null) {
-                res = new Ticker(res);
-                this.cache.set(_id, res);
-            }
-        }
-        // console.log(`Ticker.getTicker(${_id}), took ${new Date()-startTime}ms`);
-        return res;
+    static async loadCache() {
+        const startTime = new Date();
+        this.cache.clear();
+        (await this.collection.find({}).toArray()).forEach(ticker => {
+            this.cache.set(ticker._id, new Ticker(ticker));
+        });
+        console.log(`Cached ${this.cache.size} Ticker(s), took ${new Date()-startTime}ms`);
     }
-    static async queryTickers(query, sort) {
-        // const startTime = new Date();
-        let res = await this.collection.find(query).sort(sort).toArray();
-        for(let i = 0; i < res.length; i++) {
-            const resOrig = res[i];
-            res[i] = this.cache.get(resOrig._id);
-            if(res[i] == undefined) {
-                res[i] = new Ticker(resOrig);
-                this.cache.set(res[i]._id, res[i]);
-            }
-        }
-        // console.log(`Ticker.queryTickers(${String(JSON.stringify(query)).replace(/\n/g, " ")}, ${String(JSON.stringify(sort)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
-        return res;
+
+    static getTicker(_id) {
+        return (this.cache.get(_id) ?? null);
+    }
+
+    static getTickers(query, sort) {
+        return Array.from(this.cache.values());
     }
 
     constructor(args) {

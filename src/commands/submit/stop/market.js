@@ -4,7 +4,7 @@ const { ObjectId } = require('mongodb');
 
 module.exports = {
 	execute: async function (interaction, mongoSession) {
-        const trader = await Trader.getTrader(interaction.user.id);
+        const trader = Trader.getTrader(interaction.user.id);
         if(trader == null) throw new Error('Not a trader');
         const order = await Order.assignOrderType({
             _id: ObjectId(),
@@ -26,7 +26,7 @@ module.exports = {
                 quantity: interaction.options.getInteger('quantity'),
                 quantityFilled: 0
             }
-        });
+        }).resolve();
         if(order.executedOrder.direction == Order.BUY && !(order.ticker.lastTradedPrice < order.triggerPrice)) throw new Error('Trigger price must be greater than the current price');
         if(order.executedOrder.direction == Order.SELL && !(order.triggerPrice < order.ticker.lastTradedPrice)) throw new Error('Trigger price must be less than the current price');
         await order.submit(mongoSession);

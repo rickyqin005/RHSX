@@ -4,21 +4,21 @@ const { Collection } = require('discord.js');
 
 module.exports = class Trader {
     static DEFAULT_POSITION_LIMIT = 100000;
+
     static collection = global.mongoClient.db('RHSX').collection('Traders');
     static cache = new Collection();
 
-    static async getTrader(_id) {
-        // const startTime = new Date();
-        let res = this.cache.get(_id);
-        if(res == undefined) {
-            res = await this.collection.findOne({ _id: _id });
-            if(res != null) {
-                res = new Trader(res);
-                this.cache.set(_id, res);
-            }
-        }
-        // console.log(`Trader.getTrader(${_id}), took ${new Date()-startTime}ms`);
-        return res;
+    static async loadCache() {
+        const startTime = new Date();
+        this.cache.clear();
+        (await this.collection.find({}).toArray()).forEach(trader => {
+            this.cache.set(trader._id, new Trader(trader));
+        });
+        console.log(`Cached ${this.cache.size} Trader(s), took ${new Date()-startTime}ms`);
+    }
+
+    static getTrader(_id) {
+        return (this.cache.get(_id) ?? null);
     }
 
     static async queryTraders(query, sort) {
@@ -68,7 +68,7 @@ module.exports = class Trader {
         for(const pos in this.positions) {
             const position = this.positions[pos];
             const Ticker = require('./Ticker');
-            const price = (await Ticker.getTicker(pos)).lastTradedPrice;
+            const price = Ticker.getTicker(pos).lastTradedPrice;
             if(position.quantity == 0) continue;
             embed.addFields(
                 { name: position.ticker, value: Price.format(price), inline: true },
@@ -94,7 +94,7 @@ module.exports = class Trader {
         const Ticker = require('./Ticker');
         let accountValue = this.balance;
         for(const pos in this.positions) {
-            accountValue += this.positions[pos].quantity*((await Ticker.getTicker(pos)).lastTradedPrice);
+            accountValue += this.positions[pos].quantity*(Ticker.getTicker(pos).lastTradedPrice);
         }
         return accountValue;
     }
@@ -129,6 +129,6 @@ module.exports = class Trader {
 
     async calculateOpenPnL(position) {
         const Ticker = require('./Ticker');
-        return (await Ticker.getTicker(position.ticker)).lastTradedPrice*position.quantity - position.costBasis;
+        return Ticker.getTicker(position.ticker).lastTradedPrice*position.quantity - position.costBasis;
     }
 };

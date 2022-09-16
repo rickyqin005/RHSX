@@ -3,7 +3,7 @@ const { Trader, Order } = require('../../rhsx');
 
 module.exports = {
 	execute: async function (interaction) {
-        const trader = await Trader.getTrader(interaction.user.id);
+        const trader = Trader.getTrader(interaction.user.id);
         if(trader == null) throw new Error('Not a trader');
         const type = interaction.options.getString('type');
         const direction = interaction.options.getString('direction');

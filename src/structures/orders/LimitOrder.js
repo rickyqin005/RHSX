@@ -13,10 +13,6 @@ module.exports = class LimitOrder extends NormalOrder {
         this.label = LimitOrder.LABEL;
     }
 
-    toDisplayBoardString() {
-        return `@${Price.format(this.price)} x${this.getQuantityUnfilled()}`;
-    }
-
     toInfoString() {
         return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`;
     }

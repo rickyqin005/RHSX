@@ -11,10 +11,6 @@ module.exports = class MarketOrder extends NormalOrder {
         this.label = MarketOrder.LABEL;
     }
 
-    toDisplayBoardString() {
-        return `x${this.quantity}`;
-    }
-
     toInfoString() {
         return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker}`;
     }

@@ -17,13 +17,22 @@ module.exports = class Order {
     static collection = global.mongoClient.db('RHSX').collection('Orders');
     static cache = new Collection();
 
-    static async assignOrderType(order) {
+    static async loadCache() {
+        const startTime = new Date();
+        this.cache.clear();
+        const orders = await this.collection.find({}).limit(50000).toArray();
+        for(const order of orders) this.cache.set(order._id, this.assignOrderType(order));
+        for(const [id, order] of this.cache) await order.resolve();
+        console.log(`Cached ${this.cache.size} Order(s), took ${new Date()-startTime}ms`);
+    }
+
+    static assignOrderType(order) {
         const LimitOrder = require('./LimitOrder');
         const MarketOrder = require('./MarketOrder');
         const StopOrder = require('./StopOrder');
-        if(order.type == LimitOrder.TYPE) return await new LimitOrder(order).resolve();
-        else if(order.type == MarketOrder.TYPE) return await new MarketOrder(order).resolve();
-        else if(order.type == StopOrder.TYPE) return await new StopOrder(order).resolve();
+        if(order.type == LimitOrder.TYPE) return new LimitOrder(order);
+        else if(order.type == MarketOrder.TYPE) return new MarketOrder(order);
+        else if(order.type == StopOrder.TYPE) return new StopOrder(order);
     }
 
     static async getOrder(_id) {
@@ -32,7 +41,7 @@ module.exports = class Order {
         if(res == undefined) {
             res = await this.collection.findOne({ _id: _id });
             if(res != null) {
-                res = res = await this.assignOrderType(res);
+                res = await this.assignOrderType(res).resolve();
                 this.cache.set(_id, res);
             }
         }
@@ -46,7 +55,7 @@ module.exports = class Order {
         const resOrig = res;
         res = this.cache.get(resOrig._id);
         if(res == undefined) {
-            res = await this.assignOrderType(resOrig);
+            res = await this.assignOrderType(resOrig).resolve();
             this.cache.set(res._id, res);
         }
         // console.log(`Order.queryOrder(${String(JSON.stringify(query)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
@@ -60,7 +69,7 @@ module.exports = class Order {
             const resOrig = res[i];
             res[i] = this.cache.get(resOrig._id);
             if(res[i] == undefined) {
-                res[i] = await this.assignOrderType(resOrig);
+                res[i] = await this.assignOrderType(resOrig).resolve();
                 this.cache.set(res[i]._id, res[i]);
             }
         }
@@ -82,8 +91,8 @@ module.exports = class Order {
     async resolve() {
         const Trader = require('../Trader');
         const Ticker = require('../Ticker');
-        this.user = await Trader.getTrader(this.user);
-        this.ticker = await Ticker.getTicker(this.ticker);
+        this.user = Trader.getTrader(this.user);
+        this.ticker = Ticker.getTicker(this.ticker);
         return this;
     }
 
@@ -95,8 +104,6 @@ module.exports = class Order {
         else if(this.status == Order.PARTIALLY_FILLED) return 'Pending';
         else if(this.status == Order.COMPLETELY_FILLED) return 'Completed';
     }
-
-    toDisplayBoardString() {}
 
     toInfoString() {}
 

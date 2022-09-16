@@ -6,7 +6,7 @@ module.exports = {
             timestamp: new Date(),
             tickers: {}
         };
-        const tickers = await Ticker.queryTickers({});
+        const tickers = Ticker.getTickers();
         for(const ticker of tickers) {
             res.tickers[ticker._id] = {
                 lastTradedPrice: ticker.lastTradedPrice,
@@ -19,7 +19,7 @@ module.exports = {
         (await Order.collection.aggregate([
             { $match: {
                 type: LimitOrder.TYPE,
-                status: { $in: [2, 3] }
+                status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
             } },
             { $group: {
                 _id: '$ticker',
@@ -43,7 +43,7 @@ module.exports = {
             res.tickers[element._id].bids = element.bids;
             res.tickers[element._id].asks = element.asks;
         });
-        // console.log(`aggregation, took ${new Date()-startTime}ms`);
+        // console.log(`Order.collection.aggregate, took ${new Date()-startTime}ms`);
         return res;
     }
 };

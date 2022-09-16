@@ -14,7 +14,7 @@ module.exports = {
             { name: 'SELL', value: 'SELL' }
         ];
         const TICKER_CHOICES = [];
-        (await Ticker.queryTickers({})).forEach((ticker) => TICKER_CHOICES.push({ name: ticker._id, value: ticker._id }));
+        Ticker.getTickers().forEach((ticker) => TICKER_CHOICES.push({ name: ticker._id, value: ticker._id }));
         const commands = [
             { name: 'join', description: 'Become a trader' },
             {

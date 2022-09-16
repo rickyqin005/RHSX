@@ -15,15 +15,8 @@ module.exports = class StopOrder extends Order {
 
     async resolve() {
         await super.resolve();
-        const LimitOrder = require('./LimitOrder');
-        const MarketOrder = require('./MarketOrder');
-        if(this.executedOrder.type == LimitOrder.TYPE) this.executedOrder = await new LimitOrder(this.executedOrder).resolve();
-        else if(this.executedOrder.type == MarketOrder.TYPE) this.executedOrder = await new MarketOrder(this.executedOrder).resolve();
+        this.executedOrder = (Order.cache.get(this.executedOrder._id) ?? (await Order.assignOrderType(this.executedOrder).resolve()));
         return this;
-    }
-
-    toDisplayBoardString() {
-        return `@${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
     }
 
     toInfoString() {

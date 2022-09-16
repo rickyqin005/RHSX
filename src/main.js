@@ -6,7 +6,7 @@ global.mongoClient = new MongoClient(process.env['MONGO_URI'], { useNewUrlParser
 const { Client, Intents } = require('discord.js');
 global.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
-const { Tools } = require('./rhsx');
+const { Order, Ticker, Trader, Tools } = require('./rhsx');
 const interactionList = [];
 const interactionHandler = async function () {
     while(interactionList.length > 0) {
@@ -42,8 +42,12 @@ async function run() {
     console.log('Connected to MongoDB');
     await global.discordClient.login(process.env['BOT_TOKEN']);
     console.log(`${global.discordClient.user.tag} is logged in`);
+    await Ticker.loadCache();
+    await Trader.loadCache();
+    await Order.loadCache();
     await require('./actions/deploy_commands').run();
     await require('./actions/deploy_api').run();
-    interactionHandler();
+    setTimeout(interactionHandler, 0);
+    console.log('RHSX is ready');
 }
 run();
