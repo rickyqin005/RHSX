@@ -11,11 +11,11 @@ module.exports = {
             res.tickers[ticker._id] = {
                 lastTradedPrice: ticker.lastTradedPrice,
                 volume: ticker.volume,
-                bids: null,
-                asks: null
+                bids: [],
+                asks: []
             };
         }
-        const startTime = new Date();
+        // const startTime = new Date();
         (await Order.collection.aggregate([
             { $match: {
                 type: LimitOrder.TYPE,
@@ -37,11 +37,29 @@ module.exports = {
                 }
             } },
             { $sort: { _id: 1 } }
-        ]).toArray()).forEach(element => {
-            element.bids.sort((a, b) => ((a.price == b.price) ? (a.timestamp - b.timestamp) : (b.price - a.price)));
-            element.asks.sort((a, b) => ((a.price == b.price) ? (a.timestamp - b.timestamp) : (a.price - b.price)));
-            res.tickers[element._id].bids = element.bids;
-            res.tickers[element._id].asks = element.asks;
+        ]).toArray()).forEach(ticker => {
+            ticker.bids.sort((a, b) => ((a.price == b.price) ? (a.timestamp - b.timestamp) : (b.price - a.price)));
+            ticker.asks.sort((a, b) => ((a.price == b.price) ? (a.timestamp - b.timestamp) : (a.price - b.price)));
+            let prevPrice = Number.MAX_SAFE_INTEGER;
+            for(const bid of ticker.bids) {
+                if(bid.price != prevPrice) {
+                    res.tickers[ticker._id].bids.push({ price: bid.price, quantity: bid.quantity });
+                    prevPrice = bid.price;
+                } else {
+                    const lastBid = res.tickers[ticker._id].bids[res.tickers[ticker._id].bids.length-1];
+                    lastBid.quantity += bid.quantity;
+                }
+            }
+            prevPrice = Number.MAX_SAFE_INTEGER;
+            for(const ask of ticker.asks) {
+                if(ask.price != prevPrice) {
+                    res.tickers[ticker._id].asks.push({ price: ask.price, quantity: ask.quantity });
+                    prevPrice = ask.price;
+                } else {
+                    const lastAsk = res.tickers[ticker._id].asks[res.tickers[ticker._id].asks.length-1];
+                    lastAsk.quantity += ask.quantity;
+                }
+            }
         });
         // console.log(`Order.collection.aggregate, took ${new Date()-startTime}ms`);
         return res;
