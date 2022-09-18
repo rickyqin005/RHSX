@@ -128,25 +128,29 @@ module.exports = class Order {
         ];
     }
 
-    orderSubmittedString() {
-        return `Your ${this.label}: \`${this.toInfoString()}\` is submitted.`;
-    }
-
     orderCancelledString() {
         switch(this.statusReason) {
             case Order.UNFULFILLABLE:
-                return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled.`;
+                return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled`;
             case Order.VIOLATES_POSITION_LIMITS:
-                return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled because it violates your position limits.`;
+                return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled because it violates your position limits`;
             default:
-                return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled.`;
+                return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled`;
         }
     }
 
+    orderSubmittedString() {
+        return `Your ${this.label}: \`${this.toInfoString()}\` is submitted`;
+    }
+
+    orderCompletelyFilledString() {
+        return `Your ${this.label}: \`${this.toInfoString()}\` is completed`;
+    }
+
     statusString() {
-        if(this.status == Order.IN_QUEUE) return this.orderSubmittedString();
-        else if(this.status == Order.CANCELLED) return this.orderCancelledString();
-        else return this.orderSubmittedString();// default message for now
+        if(this.status == Order.CANCELLED) return this.orderCancelledString();
+        else if(this.status == Order.COMPLETELY_FILLED) return this.orderCompletelyFilledString();
+        else return this.orderSubmittedString();
     }
 
     async setStatus(newStatus, mongoSession, reason) {
@@ -165,6 +169,7 @@ module.exports = class Order {
         await Order.collection.insertOne(this, { session: mongoSession });
         this.user = trader;
         this.ticker = ticker;
+        Order.cache.set(this._id, this);
     }
 
     async checkPositionLimits(mongoSession) {

@@ -5,6 +5,8 @@ const Price = require('../../utils/Price');
 module.exports = class LimitOrder extends NormalOrder {
     static TYPE = 'limit';
     static LABEL = 'limit order';
+    static MIN_PRICE = Price.toPrice(0);
+    static MAX_PRICE = Price.toPrice(1000000);
 
     constructor(args) {
         super(args);

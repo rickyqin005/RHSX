@@ -3,8 +3,11 @@ const Tools = require('../utils/Tools');
 const { Collection } = require('discord.js');
 
 module.exports = class Trader {
-    static DEFAULT_POSITION_LIMIT = 100000;
-
+    static DEFAULT_POSITION_LIMIT = 10000;
+    static ERROR = {
+        NOT_A_TRADER: new Error('Not a trader'),
+        ALREADY_A_TRADER: new Error('Already a trader')
+    };
     static collection = global.mongoClient.db('RHSX').collection('Traders');
     static cache = new Collection();
 
@@ -18,7 +21,9 @@ module.exports = class Trader {
     }
 
     static getTrader(_id) {
-        return (this.cache.get(_id) ?? null);
+        const res = this.cache.get(_id);
+        if(res == undefined) throw this.ERROR.NOT_A_TRADER;
+        return res;
     }
 
     static async queryTraders(query, sort) {
@@ -52,7 +57,8 @@ module.exports = class Trader {
             .addFields(
                 { name: 'Account Value', value: Price.format(await this.getAccountValue()), inline: true },
                 { name: 'Cash Balance', value: Price.format(this.balance), inline: true },
-                { name: 'Joined', value: Tools.dateStr(this.joined), inline: false },
+                { name: 'Position Limit', value: `${this.positionLimit}`, inline: false },
+                { name: 'Joined', value: Tools.dateStr(this.joined), inline: false }
             );
         return { embeds: [embed] };
     }
@@ -86,7 +92,7 @@ module.exports = class Trader {
     }
 
     async getDiscordUser() {
-        return await global.discordClient.users.fetch(this._id);// only reference of global.discordClient
+        return await global.discordClient.users.fetch(this._id);// only reference of global.discordClient outside main.js
     }
 
     async getAccountValue() {
@@ -104,6 +110,11 @@ module.exports = class Trader {
             user: this._id,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { timestamp: -1 });
+    }
+
+    async addToDB(mongoSession) {
+        await Trader.collection.insertOne(this, { session: mongoSession });
+        Trader.cache.set(this._id, this);
     }
 
     async addPosition(pos, mongoSession) {
@@ -124,9 +135,9 @@ module.exports = class Trader {
         }
         this.balance -= pos.costBasis;
         if(this.positions[pos.ticker].quantity == 0) delete this.positions[pos.ticker];
-        console.log(`${this._id} positions:`);
+        console.log(`${this._id}'s positions:`);
         console.log(this.positions);
-        await Trader.collection.replaceOne({ _id: this._id }, this);
+        await Trader.collection.replaceOne({ _id: this._id }, this, { session: mongoSession });
     }
 
     async calculateOpenPnL(position) {

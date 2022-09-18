@@ -4,6 +4,8 @@ const Price = require('../../utils/Price');
 module.exports = class StopOrder extends Order {
     static TYPE = 'stop';
     static LABEL = 'stop order';
+    static MIN_TRIGGER_PRICE = Price.toPrice(0);
+    static MAX_TRIGGER_PRICE = Price.toPrice(1000000);
 
     constructor(args) {
         super(args);
@@ -41,5 +43,6 @@ module.exports = class StopOrder extends Order {
         this.ticker = ticker;
         this.executedOrder.user = trader;
         this.executedOrder.ticker = ticker;
+        Order.cache.set(this._id, this);
     }
 };

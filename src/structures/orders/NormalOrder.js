@@ -2,6 +2,9 @@ const Order = require('./Order');
 const Position = require('../Position');
 
 module.exports = class NormalOrder extends Order {
+    static MIN_QUANTITY = 1;
+    static MAX_QUANTITY = 1000000;
+
     constructor(args) {
         super(args);
         this.quantity = args.quantity;

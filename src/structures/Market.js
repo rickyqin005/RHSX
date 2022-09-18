@@ -9,15 +9,15 @@ module.exports = class Market {
         return this;
     }
 
-    async open() {
+    async open(mongoSession) {
         if(this.isOpen) throw new Error('Market is already open');
-        await Market.collection.updateOne({}, { $set: { isOpen: true } });
+        await Market.collection.updateOne({}, { $set: { isOpen: true } }, { session: mongoSession });
         this.isOpen = true;
     }
 
-    async close() {
+    async close(mongoSession) {
         if(!this.isOpen) throw new Error('Market is already closed');
-        await Market.collection.updateOne({}, { $set: { isOpen: false } });
+        await Market.collection.updateOne({}, { $set: { isOpen: false } }, { session: mongoSession });
         this.isOpen = false;
     }
 };

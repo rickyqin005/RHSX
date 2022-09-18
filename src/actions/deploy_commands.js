@@ -3,9 +3,7 @@ require('dotenv').config();
 const { REST } = require('@discordjs/rest');
 const rest = new REST({ version: '9' }).setToken(process.env['BOT_TOKEN']);
 const { Routes } = require('discord-api-types/v9');
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits } = require('discord-api-types/v10');
-const { Ticker } = require('../rhsx');
+const { Ticker, NormalOrder, LimitOrder, StopOrder } = require('../rhsx');
 
 module.exports = {
     run: async function () {
@@ -124,16 +122,16 @@ module.exports = {
                                 type: 4,
                                 name: 'quantity',
                                 description: 'quantity',
-                                min_value: 1,
-                                max_value: 1000000
+                                min_value: NormalOrder.MIN_QUANTITY,
+                                max_value: NormalOrder.MAX_QUANTITY
                             },
                             {
                                 required: true,
                                 type: 10,
                                 name: 'limit_price',
                                 description: 'limit price',
-                                min_value: 0,
-                                max_value: 100000000
+                                min_value: LimitOrder.MIN_PRICE,
+                                max_value: LimitOrder.MIN_PRICE
                             }
                         ]
                     },
@@ -161,8 +159,8 @@ module.exports = {
                                 type: 4,
                                 name: 'quantity',
                                 description: 'quantity',
-                                min_value: 1,
-                                max_value: 1000000
+                                min_value: NormalOrder.MIN_QUANTITY,
+                                max_value: NormalOrder.MAX_QUANTITY
                             }
                         ]
                     },
@@ -188,8 +186,8 @@ module.exports = {
                                         type: 10,
                                         name: 'trigger_price',
                                         description: 'trigger price',
-                                        min_value: 0,
-                                        max_value: 100000000
+                                        min_value: StopOrder.MIN_TRIGGER_PRICE,
+                                        max_value: StopOrder.MAX_TRIGGER_PRICE
                                     },
                                     {
                                         required: true,
@@ -203,16 +201,16 @@ module.exports = {
                                         type: 4,
                                         name: 'quantity',
                                         description: 'quantity',
-                                        min_value: 1,
-                                        max_value: 1000000
+                                        min_value: NormalOrder.MIN_QUANTITY,
+                                        max_value: NormalOrder.MAX_QUANTITY
                                     },
                                     {
                                         required: true,
                                         type: 10,
                                         name: 'limit_price',
                                         description: 'limit price',
-                                        min_value: 0,
-                                        max_value: 100000000
+                                        min_value: LimitOrder.MIN_PRICE,
+                                        max_value: LimitOrder.MAX_PRICE
                                     }
                                 ]
                             },
@@ -233,8 +231,8 @@ module.exports = {
                                         type: 10,
                                         name: 'trigger_price',
                                         description: 'trigger price',
-                                        min_value: 0,
-                                        max_value: 100000000
+                                        min_value: StopOrder.MIN_TRIGGER_PRICE,
+                                        max_value: StopOrder.MAX_TRIGGER_PRICE
                                     },
                                     {
                                         required: true,
@@ -248,8 +246,8 @@ module.exports = {
                                         type: 4,
                                         name: 'quantity',
                                         description: 'quantity',
-                                        min_value: 1,
-                                        max_value: 1000000
+                                        min_value: NormalOrder.MIN_QUANTITY,
+                                        max_value: NormalOrder.MAX_QUANTITY
                                     }
                                 ]
                             }
@@ -275,31 +273,25 @@ module.exports = {
             },
             {
                 name: 'market',
-                description: 'Manage the market (Admin only)',
+                description: 'Manage the market (Execs only)',
                 options: [
                     {
                         type: 1,
                         name: 'open',
-                        description: 'Opens the market'
+                        description: 'Opens the market (Execs only)'
                     },
                     {
                         type: 1,
                         name: 'close',
-                        description: 'Closes the market'
+                        description: 'Closes the market (Execs only)'
                     }
                 ],
                 default_member_permissions: '8'
             }
         ];
-
-        await rest.put(
-            Routes.applicationGuildCommands(process.env['BOT_ID'], process.env['FINANCE_CLUB_GUILD_ID']),
-            { body: commands },
-        );
-        await rest.put(
-            Routes.applicationGuildCommands(process.env['BOT_ID'], process.env['SANDBOX_GUILD_ID']),
-            { body: commands },
-        );
-        console.log('Deployed slash commands');
+        for(const [guildId, guild] of global.discordClient.guilds.cache) {
+            await rest.put(Routes.applicationGuildCommands(process.env['BOT_ID'], guildId), { body: commands });
+            console.log(`Deployed slash commands to ${guild.name}`);
+        }
     }
 };

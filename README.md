@@ -1,5 +1,5 @@
 # RHSX
-RHSX is a trading platform used by RHHS's Finance Club. It features a discord bot which users can interact with to trade fictitious stocks and an API to fetch information.
+RHSX is a trading platform used by RHHS's Finance Club. It features a discord bot which users can interact with to trade fictitious stocks and an API to fetch data.
 
 ## Discord Slash Commands
 Optional parameters are *italicized*.
