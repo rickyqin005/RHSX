@@ -131,7 +131,7 @@ module.exports = {
                                 name: 'limit_price',
                                 description: 'limit price',
                                 min_value: LimitOrder.MIN_PRICE,
-                                max_value: LimitOrder.MIN_PRICE
+                                max_value: LimitOrder.MAX_PRICE
                             }
                         ]
                     },
