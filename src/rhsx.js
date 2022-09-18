@@ -1,3 +1,4 @@
+const Market = require('./structures/Market');
 const Trader = require('./structures/Trader');
 const Position = require('./structures/Position');
 const Order = require('./structures/orders/Order');
@@ -9,4 +10,4 @@ const Ticker = require('./structures/Ticker');
 const Price = require('./utils/Price');
 const Tools = require('./utils/Tools');
 
-module.exports = { Trader: Trader, Position: Position, Order: Order, NormalOrder: NormalOrder, LimitOrder: LimitOrder, MarketOrder: MarketOrder, StopOrder: StopOrder, Ticker: Ticker, Price: Price, Tools: Tools };
+module.exports = { Market: Market, Trader: Trader, Position: Position, Order: Order, NormalOrder: NormalOrder, LimitOrder: LimitOrder, MarketOrder: MarketOrder, StopOrder: StopOrder, Ticker: Ticker, Price: Price, Tools: Tools };

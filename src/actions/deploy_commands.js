@@ -133,7 +133,7 @@ module.exports = {
                                 name: 'limit_price',
                                 description: 'limit price',
                                 min_value: 0,
-                                max_value: 1000000000
+                                max_value: 100000000
                             }
                         ]
                     },
@@ -189,7 +189,7 @@ module.exports = {
                                         name: 'trigger_price',
                                         description: 'trigger price',
                                         min_value: 0,
-                                        max_value: 1000000000
+                                        max_value: 100000000
                                     },
                                     {
                                         required: true,
@@ -212,7 +212,7 @@ module.exports = {
                                         name: 'limit_price',
                                         description: 'limit price',
                                         min_value: 0,
-                                        max_value: 1000000000
+                                        max_value: 100000000
                                     }
                                 ]
                             },
@@ -234,7 +234,7 @@ module.exports = {
                                         name: 'trigger_price',
                                         description: 'trigger price',
                                         min_value: 0,
-                                        max_value: 1000000000
+                                        max_value: 100000000
                                     },
                                     {
                                         required: true,
@@ -272,12 +272,24 @@ module.exports = {
                         description: 'View your positions'
                     }
                 ]
+            },
+            {
+                name: 'market',
+                description: 'Manage the market (Admin only)',
+                options: [
+                    {
+                        type: 1,
+                        name: 'open',
+                        description: 'Opens the market'
+                    },
+                    {
+                        type: 1,
+                        name: 'close',
+                        description: 'Closes the market'
+                    }
+                ],
+                default_member_permissions: '8'
             }
-            // new SlashCommandBuilder()
-            // .setName('halt')
-            // .setDescription('Suspends trading')
-            // .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-            // .toJSON()
         ];
 
         await rest.put(

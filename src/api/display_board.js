@@ -4,6 +4,7 @@ module.exports = {
     getJSON: async function () {
         const res = {
             timestamp: new Date(),
+            marketIsOpen: global.market.isOpen,
             tickers: {}
         };
         const tickers = Ticker.getTickers();
