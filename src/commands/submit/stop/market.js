@@ -3,7 +3,7 @@ const { ObjectId } = require('mongodb');
 
 module.exports = {
 	execute: async function (interaction, mongoSession) {
-        if(!global.market.isOpen) throw new Error('Market is closed');
+        if(!global.market.isOpen) throw Market.ERROR.MARKET_CLOSED;
         const trader = Trader.getTrader(interaction.user.id);
         const order = await Order.assignOrderType({
             _id: ObjectId(),
@@ -26,8 +26,6 @@ module.exports = {
                 quantityFilled: 0
             }
         }).resolve();
-        if(order.executedOrder.direction == Order.BUY && !(order.ticker.lastTradedPrice < order.triggerPrice)) throw new Error('Trigger price must be greater than the current price');
-        if(order.executedOrder.direction == Order.SELL && !(order.triggerPrice < order.ticker.lastTradedPrice)) throw new Error('Trigger price must be less than the current price');
         await order.submit(mongoSession);
         interaction.editReply(order.statusString());
 	}

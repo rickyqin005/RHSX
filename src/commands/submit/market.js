@@ -3,7 +3,7 @@ const { ObjectId } = require('mongodb');
 
 module.exports = {
 	execute: async function (interaction, mongoSession) {
-        if(!global.market.isOpen) throw new Error('Market is closed');
+        if(!global.market.isOpen) throw Market.ERROR.MARKET_CLOSED;
         const trader = Trader.getTrader(interaction.user.id);
         const order = await Order.assignOrderType({
             _id: ObjectId(),

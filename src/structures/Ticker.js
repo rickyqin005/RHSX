@@ -2,6 +2,9 @@ const Order = require('./orders/Order');
 const { Collection } = require('discord.js');
 
 module.exports = class Ticker {
+    static ERROR = {
+        INVALID_TICKER: new Error('Invalid ticker')
+    };
     static collection = global.mongoClient.db('RHSX').collection('Tickers');
     static cache = new Collection();
 
@@ -15,7 +18,9 @@ module.exports = class Ticker {
     }
 
     static getTicker(_id) {
-        return (this.cache.get(_id) ?? null);
+        const res = this.cache.get(_id);
+        if(res == undefined) throw this.ERROR.INVALID_TICKER;
+        return res;
     }
 
     static getTickers(query, sort) {

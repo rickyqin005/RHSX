@@ -8,7 +8,7 @@ module.exports = {
             _id: new ObjectId(interaction.options.getString('order_id')),
             user: interaction.user.id
         });
-        if(order == null) throw new Error('Invalid id');
+        if(order == null) throw Order.ORDER_NOT_FOUND;
         interaction.editReply({ embeds: [await order.toEmbed()] });
 	}
 };

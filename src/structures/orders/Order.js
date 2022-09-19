@@ -13,7 +13,9 @@ module.exports = class Order {
     static UNFULFILLABLE = 0;
     static VIOLATES_POSITION_LIMITS = 1;
     static CANCELLED_BY_TRADER = 2;
-
+    static ERROR = {
+        ORDER_NOT_FOUND: new Error('Order not found')
+    };
     static collection = global.mongoClient.db('RHSX').collection('Orders');
     static cache = new Collection();
 
@@ -161,6 +163,10 @@ module.exports = class Order {
         await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus, statusReason: reason } }, { session: mongoSession });
     }
 
+    validate() {
+        this.timestamp = new Date();
+    }
+
     async addToDB(mongoSession) {
         const trader = this.user;
         const ticker = this.ticker;
@@ -177,7 +183,7 @@ module.exports = class Order {
     }
 
     async submit(mongoSession) {
-        this.timestamp = new Date();
+        this.validate();
         await this.addToDB(mongoSession);
         console.log(this);
         if((await this.checkPositionLimits(mongoSession)) == Order.CANCELLED) return;

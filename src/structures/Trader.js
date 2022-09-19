@@ -135,7 +135,6 @@ module.exports = class Trader {
         }
         this.balance -= pos.costBasis;
         if(this.positions[pos.ticker].quantity == 0) delete this.positions[pos.ticker];
-        console.log(`${this._id}'s positions:`);
         console.log(this.positions);
         await Trader.collection.replaceOne({ _id: this._id }, this, { session: mongoSession });
     }
