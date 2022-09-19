@@ -1,5 +1,6 @@
 const Tools = require('../../utils/Tools');
 const { Collection } = require('discord.js');
+const { SlashCommandStringOption } = require('@discordjs/builders');
 
 module.exports = class Order {
     static BUY = 'BUY';
@@ -13,19 +14,55 @@ module.exports = class Order {
     static UNFULFILLABLE = 0;
     static VIOLATES_POSITION_LIMITS = 1;
     static CANCELLED_BY_TRADER = 2;
+    static OPTION = {
+        ID: new SlashCommandStringOption()
+            .setName('order_id')
+            .setDescription('order id')
+            .setMinLength(24)
+            .setMaxLength(24),
+        TYPE: new SlashCommandStringOption()
+            .setName('type')
+            .setDescription('type')
+            .addChoices([
+                { name: 'Limit Order', value: 'limit' },
+                { name: 'Market Order', value: 'market' },
+                { name: 'Stop Order', value: 'stop' }
+            ]),
+        DIRECTION: new SlashCommandStringOption()
+            .setName('direction')
+            .setDescription('buy or sell')
+            .addChoices([
+                { name: Order.BUY, value: Order.BUY },
+                { name: Order.SELL, value: Order.SELL }
+            ]),
+        TICKER: new SlashCommandStringOption()
+            .setName('ticker')
+            .setDescription('ticker')
+            .addChoices([]),
+        STATUS: new SlashCommandStringOption()
+            .setName('status')
+            .setDescription('status')
+            .addChoices([
+                { name: 'Pending', value: 'pending' },
+                { name: 'Completed', value: 'completed' },
+                { name: 'Cancelled', value: 'cancelled' }
+            ])
+    };
     static ERROR = {
         ORDER_NOT_FOUND: new Error('Order not found')
     };
     static collection = global.mongoClient.db('RHSX').collection('Orders');
     static cache = new Collection();
 
-    static async loadCache() {
+    static async load() {
         const startTime = new Date();
         this.cache.clear();
         const orders = await this.collection.find({}).limit(50000).toArray();
         for(const order of orders) this.cache.set(order._id, this.assignOrderType(order));
         for(const [id, order] of this.cache) await order.resolve();
         console.log(`Cached ${this.cache.size} Order(s), took ${new Date()-startTime}ms`);
+        const Ticker = require('../Ticker');
+        Ticker.getTickers().forEach((ticker) => this.OPTION.TICKER.addChoices([{ name: ticker._id, value: ticker._id }]));
     }
 
     static assignOrderType(order) {

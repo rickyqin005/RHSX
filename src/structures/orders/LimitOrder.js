@@ -1,12 +1,20 @@
 const NormalOrder = require('./NormalOrder');
 const Order = require('./Order');
 const Price = require('../../utils/Price');
+const { SlashCommandNumberOption } = require('@discordjs/builders');
 
 module.exports = class LimitOrder extends NormalOrder {
     static TYPE = 'limit';
     static LABEL = 'limit order';
     static MIN_PRICE = Price.toPrice(0);
     static MAX_PRICE = Price.toPrice(1000000);
+    static OPTION = {
+        PRICE: new SlashCommandNumberOption()
+            .setName('limit_price')
+            .setDescription('limit price')
+            .setMinValue(Price.toNumber(LimitOrder.MIN_PRICE))
+            .setMaxValue(Price.toNumber(LimitOrder.MAX_PRICE))
+    };
 
     constructor(args) {
         super(args);

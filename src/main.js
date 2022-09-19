@@ -44,9 +44,9 @@ async function run() {
     console.log(`${global.discordClient.user.tag} is logged in`);
     global.market = await new Market().initialize();
     console.log(global.market);
-    await Ticker.loadCache();
-    await Trader.loadCache();
-    await Order.loadCache();
+    await Ticker.load();
+    await Trader.load();
+    await Order.load();
     await require('./actions/deploy_commands').run();
     await require('./actions/deploy_api').run();
     setTimeout(interactionHandler, 0);

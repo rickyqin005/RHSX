@@ -1,9 +1,17 @@
 const Order = require('./Order');
 const Position = require('../Position');
+const { SlashCommandIntegerOption } = require('@discordjs/builders');
 
 module.exports = class NormalOrder extends Order {
     static MIN_QUANTITY = 1;
     static MAX_QUANTITY = 1000000;
+    static OPTION = {
+        QUANTITY: new SlashCommandIntegerOption()
+            .setName('quantity')
+            .setDescription('quantity')
+            .setMinValue(NormalOrder.MIN_QUANTITY)
+            .setMaxValue(NormalOrder.MAX_QUANTITY)
+    };
 
     constructor(args) {
         super(args);

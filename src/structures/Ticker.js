@@ -8,7 +8,7 @@ module.exports = class Ticker {
     static collection = global.mongoClient.db('RHSX').collection('Tickers');
     static cache = new Collection();
 
-    static async loadCache() {
+    static async load() {
         const startTime = new Date();
         this.cache.clear();
         (await this.collection.find({}).toArray()).forEach(ticker => {

@@ -1,11 +1,19 @@
 const Order = require('./Order');
 const Price = require('../../utils/Price');
+const { SlashCommandNumberOption } = require('@discordjs/builders');
 
 module.exports = class StopOrder extends Order {
     static TYPE = 'stop';
     static LABEL = 'stop order';
     static MIN_TRIGGER_PRICE = Price.toPrice(0);
     static MAX_TRIGGER_PRICE = Price.toPrice(1000000);
+    static OPTION = {
+        TRIGGER_PRICE: new SlashCommandNumberOption()
+            .setName('trigger_price')
+            .setDescription('trigger price')
+            .setMinValue(Price.toNumber(StopOrder.MIN_TRIGGER_PRICE))
+            .setMaxValue(Price.toNumber(StopOrder.MAX_TRIGGER_PRICE))
+    };
     static ERROR = {
         TRIGGER_PRICE_TOO_LOW: new Error('Trigger price must be greater than the current price'),
         TRIGGER_PRICE_TOO_HIGH: new Error('Trigger price must be less than the current price')
