@@ -8,11 +8,13 @@ module.exports = class StopOrder extends Order {
     static MIN_TRIGGER_PRICE = Price.toPrice(0);
     static MAX_TRIGGER_PRICE = Price.toPrice(1000000);
     static OPTION = {
-        TRIGGER_PRICE: new SlashCommandNumberOption()
-            .setName('trigger_price')
-            .setDescription('trigger price')
-            .setMinValue(Price.toNumber(StopOrder.MIN_TRIGGER_PRICE))
-            .setMaxValue(Price.toNumber(StopOrder.MAX_TRIGGER_PRICE))
+        TRIGGER_PRICE: function () {
+                return new SlashCommandNumberOption()
+                    .setName('trigger_price')
+                    .setDescription('trigger price')
+                    .setMinValue(Price.toNumber(StopOrder.MIN_TRIGGER_PRICE))
+                    .setMaxValue(Price.toNumber(StopOrder.MAX_TRIGGER_PRICE));
+            }
     };
     static ERROR = {
         TRIGGER_PRICE_TOO_LOW: new Error('Trigger price must be greater than the current price'),

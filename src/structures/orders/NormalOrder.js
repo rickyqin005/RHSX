@@ -6,11 +6,13 @@ module.exports = class NormalOrder extends Order {
     static MIN_QUANTITY = 1;
     static MAX_QUANTITY = 1000000;
     static OPTION = {
-        QUANTITY: new SlashCommandIntegerOption()
-            .setName('quantity')
-            .setDescription('quantity')
-            .setMinValue(NormalOrder.MIN_QUANTITY)
-            .setMaxValue(NormalOrder.MAX_QUANTITY)
+        QUANTITY: function () {
+                return new SlashCommandIntegerOption()
+                    .setName('quantity')
+                    .setDescription('quantity')
+                    .setMinValue(NormalOrder.MIN_QUANTITY)
+                    .setMaxValue(NormalOrder.MAX_QUANTITY);
+            }
     };
 
     constructor(args) {

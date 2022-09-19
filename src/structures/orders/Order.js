@@ -14,39 +14,52 @@ module.exports = class Order {
     static UNFULFILLABLE = 0;
     static VIOLATES_POSITION_LIMITS = 1;
     static CANCELLED_BY_TRADER = 2;
+    static TICKER_CHOICES = [];
     static OPTION = {
-        ID: new SlashCommandStringOption()
-            .setName('order_id')
-            .setDescription('order id')
-            .setMinLength(24)
-            .setMaxLength(24),
-        TYPE: new SlashCommandStringOption()
-            .setName('type')
-            .setDescription('type')
-            .addChoices([
-                { name: 'Limit Order', value: 'limit' },
-                { name: 'Market Order', value: 'market' },
-                { name: 'Stop Order', value: 'stop' }
-            ]),
-        DIRECTION: new SlashCommandStringOption()
-            .setName('direction')
-            .setDescription('buy or sell')
-            .addChoices([
-                { name: Order.BUY, value: Order.BUY },
-                { name: Order.SELL, value: Order.SELL }
-            ]),
-        TICKER: new SlashCommandStringOption()
-            .setName('ticker')
-            .setDescription('ticker')
-            .addChoices([]),
-        STATUS: new SlashCommandStringOption()
-            .setName('status')
-            .setDescription('status')
-            .addChoices([
-                { name: 'Pending', value: 'pending' },
-                { name: 'Completed', value: 'completed' },
-                { name: 'Cancelled', value: 'cancelled' }
-            ])
+        ID: function () {
+                return new SlashCommandStringOption()
+                    .setName('order_id')
+                    .setDescription('order id')
+                    .setMinLength(24)
+                    .setMaxLength(24);
+            },
+        TYPE: function () {
+                return new SlashCommandStringOption()
+                    .setName('type')
+                    .setDescription('type')
+                    .addChoices(
+                        { name: 'Limit Order', value: 'limit' },
+                        { name: 'Market Order', value: 'market' },
+                        { name: 'Stop Order', value: 'stop' }
+                    );
+            },
+        DIRECTION: function () {
+                return new SlashCommandStringOption()
+                    .setName('direction')
+                    .setDescription('buy or sell')
+                    .addChoices(
+                        { name: Order.BUY, value: Order.BUY },
+                        { name: Order.SELL, value: Order.SELL }
+                    );
+            },
+        TICKER: function () {
+                const res = new SlashCommandStringOption()
+                    .setName('ticker')
+                    .setDescription('ticker');
+                Order.TICKER_CHOICES.forEach(ticker => res.addChoices(ticker));
+                return res;
+            },
+
+        STATUS: function () {
+                return new SlashCommandStringOption()
+                    .setName('status')
+                    .setDescription('status')
+                    .addChoices(
+                        { name: 'Pending', value: 'pending' },
+                        { name: 'Completed', value: 'completed' },
+                        { name: 'Cancelled', value: 'cancelled' }
+                    );
+            }
     };
     static ERROR = {
         ORDER_NOT_FOUND: new Error('Order not found')
@@ -62,7 +75,7 @@ module.exports = class Order {
         for(const [id, order] of this.cache) await order.resolve();
         console.log(`Cached ${this.cache.size} Order(s), took ${new Date()-startTime}ms`);
         const Ticker = require('../Ticker');
-        Ticker.getTickers().forEach((ticker) => this.OPTION.TICKER.addChoices([{ name: ticker._id, value: ticker._id }]));
+        Ticker.getTickers().forEach(ticker => this.TICKER_CHOICES.push({ name: ticker._id, value: ticker._id }));
     }
 
     static assignOrderType(order) {
