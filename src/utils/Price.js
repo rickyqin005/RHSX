@@ -2,6 +2,9 @@ module.exports = class Price {
     static toPrice(price) {
         return Math.round(price*100);
     }
+    static toNumber(price) {
+        return price/100;
+    }
     static format(price) {
         if(price == null || price == undefined) return '-';
         price = price/100;

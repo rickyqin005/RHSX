@@ -3,7 +3,7 @@ require('dotenv').config();
 const { REST } = require('@discordjs/rest');
 const rest = new REST({ version: '9' }).setToken(process.env['BOT_TOKEN']);
 const { Routes } = require('discord-api-types/v9');
-const { Ticker, NormalOrder, LimitOrder, StopOrder } = require('../rhsx');
+const { Ticker, NormalOrder, LimitOrder, MarketOrder, StopOrder, Price } = require('../rhsx');
 
 module.exports = {
     run: async function () {
@@ -45,9 +45,9 @@ module.exports = {
                                 name: 'type',
                                 description: 'type',
                                 choices: [
-                                    { name: 'Limit Order', value: 'limit' },
-                                    { name: 'Market Order', value: 'market' },
-                                    { name: 'Stop Order', value: 'stop' }
+                                    { name: 'Limit Order', value: LimitOrder.TYPE },
+                                    { name: 'Market Order', value: MarketOrder.TYPE },
+                                    { name: 'Stop Order', value: StopOrder.TYPE }
                                 ]
                             },
                             {
@@ -130,8 +130,8 @@ module.exports = {
                                 type: 10,
                                 name: 'limit_price',
                                 description: 'limit price',
-                                min_value: LimitOrder.MIN_PRICE,
-                                max_value: LimitOrder.MAX_PRICE
+                                min_value: Price.toNumber(LimitOrder.MIN_PRICE),
+                                max_value: Price.toNumber(LimitOrder.MAX_PRICE)
                             }
                         ]
                     },
@@ -186,8 +186,8 @@ module.exports = {
                                         type: 10,
                                         name: 'trigger_price',
                                         description: 'trigger price',
-                                        min_value: StopOrder.MIN_TRIGGER_PRICE,
-                                        max_value: StopOrder.MAX_TRIGGER_PRICE
+                                        min_value: Price.toNumber(StopOrder.MIN_TRIGGER_PRICE),
+                                        max_value: Price.toNumber(StopOrder.MAX_TRIGGER_PRICE)
                                     },
                                     {
                                         required: true,
@@ -209,8 +209,8 @@ module.exports = {
                                         type: 10,
                                         name: 'limit_price',
                                         description: 'limit price',
-                                        min_value: LimitOrder.MIN_PRICE,
-                                        max_value: LimitOrder.MAX_PRICE
+                                        min_value: Price.toNumber(LimitOrder.MIN_PRICE),
+                                        max_value: Price.toNumber(LimitOrder.MAX_PRICE)
                                     }
                                 ]
                             },
@@ -231,8 +231,8 @@ module.exports = {
                                         type: 10,
                                         name: 'trigger_price',
                                         description: 'trigger price',
-                                        min_value: StopOrder.MIN_TRIGGER_PRICE,
-                                        max_value: StopOrder.MAX_TRIGGER_PRICE
+                                        min_value: Price.toNumber(StopOrder.MIN_TRIGGER_PRICE),
+                                        max_value: Price.toNumber(StopOrder.MAX_TRIGGER_PRICE)
                                     },
                                     {
                                         required: true,
@@ -290,7 +290,7 @@ module.exports = {
             }
         ];
         for(const [guildId, guild] of global.discordClient.guilds.cache) {
-            await rest.put(Routes.applicationGuildCommands(process.env['BOT_ID'], guildId), { body: commands });
+            await rest.put(Routes.applicationGuildCommands(global.discordClient.user.id, guildId), { body: commands });
             console.log(`Deployed slash commands to ${guild.name}`);
         }
     }

@@ -1,5 +1,5 @@
 # RHSX
-RHSX is a trading platform used by RHHS's Finance Club. It features a discord bot which users can interact with to trade fictitious stocks and an API to fetch data.
+RHSX is a trading platform used by Richmond Hill High School's Finance Club. It includes a discord bot where users can interact with to trade fictitious stocks and an API to fetch data.
 
 ## Discord Slash Commands
 Optional parameters are *italicized*.
@@ -8,10 +8,10 @@ Optional parameters are *italicized*.
 Adds a user to the trader list, granting access to the platform.
 
 ### /trader info
-Displays general account information.
+Displays the user's general account information.
 
 ### /trader position
-Displays the users current positions.
+Displays the user's current positions.
 
 ### /submit limit [ticker] [direction] [quantity] [limit_price]
 Submits a limit order.
