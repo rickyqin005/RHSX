@@ -1,11 +1,11 @@
 # RHSX
-RHSX is a trading platform used by Richmond Hill High School's Finance Club. It includes a discord bot where users can interact with to trade fictitious stocks and an API to fetch data.
+RHSX is an order-driven trading platform used by Richmond Hill High School's Finance Club. It includes a discord bot which users can interact with and an API to fetch data.
 
 ## Discord Slash Commands
 Optional parameters are *italicized*.
 
 ### /join
-Adds a user to the trader list, granting access to the platform.
+Adds a user to the trading platform, allowing them to trade.
 
 ### /trader info
 Displays the user's general account information.
@@ -29,7 +29,13 @@ Submits a stop order that when triggered, submits a market order.
 Finds an order with the specified id.
 
 ### /orders query [*type*] [*direction*] [*ticker*] [*status*]
-Querys orders given the specified parameters.
+Queries the user's orders given the specified filters.
 
 ### /orders cancel [order_id]
 Cancels the order with the specified id.
+
+### /market open
+Opens the market, allowing orders the be submitted and processed. Only users with `Administrator` permissions can use this command.
+
+### /market close
+Closes the market. When the market is closed, no orders can be submitted. However, previously submitted orders can still be cancelled. Only users with `Administrator` permissions can use this command.
