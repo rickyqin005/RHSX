@@ -26,6 +26,10 @@ module.exports = class Trader {
         return res;
     }
 
+    static getTraders() {
+        return Array.from(this.cache.values());
+    }
+
     static async queryTraders(query, sort) {
         // const startTime = new Date();
         let res = await this.collection.find(query).sort(sort).toArray();

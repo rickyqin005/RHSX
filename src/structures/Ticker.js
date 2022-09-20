@@ -23,7 +23,7 @@ module.exports = class Ticker {
         return res;
     }
 
-    static getTickers(query, sort) {
+    static getTickers() {
         return Array.from(this.cache.values());
     }
 

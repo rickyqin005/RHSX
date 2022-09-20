@@ -1,0 +1,187 @@
+{
+    "timestamp": "2022-09-20T23:01:56.721Z",
+    "market": {
+        "isOpen": true
+    },
+    "tickers": {
+        "CRZY": {
+            "lastTradedPrice": 1000,
+            "volume": 12280
+        },
+        "TAME": {
+            "lastTradedPrice": 2000,
+            "volume": 1170
+        }
+    },
+    "traders": [
+        {
+            "username": "AADevelops#3289",
+            "accountValue": 805800,
+            "positions": {
+                "CRZY": {
+                    "ticker": "CRZY",
+                    "quantity": 3720,
+                    "costBasis": 3024200
+                },
+                "TAME": {
+                    "ticker": "TAME",
+                    "quantity": -1000,
+                    "costBasis": -2000000
+                }
+            },
+            "rank": 1
+        },
+        {
+            "username": "0k frag#9062",
+            "accountValue": 90000,
+            "positions": {
+                "TAME": {
+                    "ticker": "TAME",
+                    "quantity": 1090,
+                    "costBasis": 2090000
+                }
+            },
+            "rank": 2
+        },
+        {
+            "username": "Stephanieeeee#7019",
+            "accountValue": 63000,
+            "positions": {
+                "CRZY": {
+                    "ticker": "CRZY",
+                    "quantity": 60,
+                    "costBasis": 18000
+                },
+                "TAME": {
+                    "ticker": "TAME",
+                    "quantity": -40,
+                    "costBasis": -80000
+                }
+            },
+            "rank": 3
+        },
+        {
+            "username": "Wither_FTW#8410",
+            "accountValue": 19000,
+            "positions": {
+                "CRZY": {
+                    "ticker": "CRZY",
+                    "quantity": 200,
+                    "costBasis": 201000
+                },
+                "TAME": {
+                    "ticker": "TAME",
+                    "quantity": 30,
+                    "costBasis": 60000
+                }
+            },
+            "rank": 4
+        },
+        {
+            "username": "Shawn#2474",
+            "accountValue": 10000,
+            "positions": {
+                "CRZY": {
+                    "ticker": "CRZY",
+                    "quantity": -10,
+                    "costBasis": -20000
+                }
+            },
+            "rank": 5
+        },
+        {
+            "username": "PrakharTheGod#0484",
+            "accountValue": 10000,
+            "positions": {},
+            "rank": 5
+        },
+        {
+            "username": "rickyqin005#1454",
+            "accountValue": 0,
+            "positions": {},
+            "rank": 7
+        },
+        {
+            "username": "sherwinnnnnn#3126",
+            "accountValue": 0,
+            "positions": {},
+            "rank": 7
+        },
+        {
+            "username": "Master AA#1100",
+            "accountValue": 0,
+            "positions": {},
+            "rank": 7
+        },
+        {
+            "username": "keiraaa#6813",
+            "accountValue": 0,
+            "positions": {},
+            "rank": 7
+        },
+        {
+            "username": "赤海#0010",
+            "accountValue": 0,
+            "positions": {},
+            "rank": 7
+        },
+        {
+            "username": "Erin#4224",
+            "accountValue": -40000,
+            "positions": {
+                "CRZY": {
+                    "ticker": "CRZY",
+                    "quantity": 30,
+                    "costBasis": 50000
+                },
+                "TAME": {
+                    "ticker": "TAME",
+                    "quantity": 20,
+                    "costBasis": 60000
+                }
+            },
+            "rank": 12
+        },
+        {
+            "username": "Thane#5714",
+            "accountValue": -100000,
+            "positions": {
+                "TAME": {
+                    "ticker": "TAME",
+                    "quantity": -100,
+                    "costBasis": -100000
+                },
+                "CRZY": {
+                    "ticker": "CRZY",
+                    "quantity": 100,
+                    "costBasis": 100000
+                }
+            },
+            "rank": 13
+        },
+        {
+            "username": "Kyber#7049",
+            "accountValue": -100000,
+            "positions": {
+                "CRZY": {
+                    "ticker": "CRZY",
+                    "quantity": 100,
+                    "costBasis": 200000
+                }
+            },
+            "rank": 13
+        },
+        {
+            "username": "fish#9265",
+            "accountValue": -757800,
+            "positions": {
+                "CRZY": {
+                    "ticker": "CRZY",
+                    "quantity": -4200,
+                    "costBasis": -1342200
+                }
+            },
+            "rank": 15
+        }
+    ]
+}
