@@ -9,16 +9,12 @@ module.exports = class StopOrder extends Order {
     static MAX_TRIGGER_PRICE = Price.toPrice(1000000);
     static OPTION = {
         TRIGGER_PRICE: function () {
-                return new SlashCommandNumberOption()
-                    .setName('trigger_price')
-                    .setDescription('trigger price')
-                    .setMinValue(Price.toNumber(StopOrder.MIN_TRIGGER_PRICE))
-                    .setMaxValue(Price.toNumber(StopOrder.MAX_TRIGGER_PRICE));
-            }
-    };
-    static ERROR = {
-        TRIGGER_PRICE_TOO_LOW: new Error('Trigger price must be greater than the current price'),
-        TRIGGER_PRICE_TOO_HIGH: new Error('Trigger price must be less than the current price')
+            return new SlashCommandNumberOption()
+                .setName('trigger_price')
+                .setDescription('trigger price')
+                .setMinValue(Price.toNumber(StopOrder.MIN_TRIGGER_PRICE))
+                .setMaxValue(Price.toNumber(StopOrder.MAX_TRIGGER_PRICE));
+        }
     };
 
     constructor(args) {
@@ -47,8 +43,8 @@ module.exports = class StopOrder extends Order {
 
     validate() {
         super.validate();
-        if(this.executedOrder.direction == Order.BUY && !(this.ticker.lastTradedPrice < this.triggerPrice)) throw StopOrder.ERROR.TRIGGER_PRICE_TOO_LOW;
-        if(this.executedOrder.direction == Order.SELL && !(this.triggerPrice < this.ticker.lastTradedPrice)) throw StopOrder.ERROR.TRIGGER_PRICE_TOO_HIGH;
+        if(this.executedOrder.direction == Order.BUY && !(this.ticker.lastTradedPrice < this.triggerPrice)) throw new Error('Trigger price must be greater than the current price');
+        if(this.executedOrder.direction == Order.SELL && !(this.triggerPrice < this.ticker.lastTradedPrice)) throw new Error('Trigger price must be less than the current price');
     }
 
     async addToDB(mongoSession) {

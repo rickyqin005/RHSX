@@ -14,7 +14,7 @@ module.exports = class Trader {
     static async load() {
         const startTime = new Date();
         this.cache.clear();
-        (await this.collection.find({}).toArray()).forEach(trader => {
+        (await this.collection.find().toArray()).forEach(trader => {
             this.cache.set(trader._id, new Trader(trader));
         });
         console.log(`Cached ${this.cache.size} Trader(s), took ${new Date()-startTime}ms`);

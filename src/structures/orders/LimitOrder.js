@@ -10,12 +10,12 @@ module.exports = class LimitOrder extends NormalOrder {
     static MAX_PRICE = Price.toPrice(1000000);
     static OPTION = {
         PRICE: function () {
-                return new SlashCommandNumberOption()
-                    .setName('limit_price')
-                    .setDescription('limit price')
-                    .setMinValue(Price.toNumber(LimitOrder.MIN_PRICE))
-                    .setMaxValue(Price.toNumber(LimitOrder.MAX_PRICE));
-            }
+            return new SlashCommandNumberOption()
+                .setName('limit_price')
+                .setDescription('limit price')
+                .setMinValue(Price.toNumber(LimitOrder.MIN_PRICE))
+                .setMaxValue(Price.toNumber(LimitOrder.MAX_PRICE));
+        }
     };
 
     constructor(args) {

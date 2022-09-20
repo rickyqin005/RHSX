@@ -11,7 +11,7 @@ module.exports = class Ticker {
     static async load() {
         const startTime = new Date();
         this.cache.clear();
-        (await this.collection.find({}).toArray()).forEach(ticker => {
+        (await this.collection.find().toArray()).forEach(ticker => {
             this.cache.set(ticker._id, new Ticker(ticker));
         });
         console.log(`Cached ${this.cache.size} Ticker(s), took ${new Date()-startTime}ms`);
@@ -69,9 +69,9 @@ module.exports = class Ticker {
         await Ticker.collection.updateOne({ _id: this._id }, { $set: { lastTradedPrice: newPrice } }, { session: mongoSession });
         this.lastTradedPrice = newPrice;
 
-        let tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);
+        const tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);
         const StopOrder = require('./orders/StopOrder');
-        let triggeredStops = await Order.queryOrders({
+        const triggeredStops = await Order.queryOrders({
             direction: tickDirection,
             ticker: this._id,
             type: StopOrder.TYPE,

@@ -17,49 +17,48 @@ module.exports = class Order {
     static TICKER_CHOICES = [];
     static OPTION = {
         ID: function () {
-                return new SlashCommandStringOption()
-                    .setName('order_id')
-                    .setDescription('order id')
-                    .setMinLength(24)
-                    .setMaxLength(24);
-            },
+            return new SlashCommandStringOption()
+                .setName('order_id')
+                .setDescription('order id')
+                .setMinLength(24)
+                .setMaxLength(24);
+        },
         TYPE: function () {
-                return new SlashCommandStringOption()
-                    .setName('type')
-                    .setDescription('type')
-                    .addChoices(
-                        { name: 'Limit Order', value: 'limit' },
-                        { name: 'Market Order', value: 'market' },
-                        { name: 'Stop Order', value: 'stop' }
-                    );
-            },
+            return new SlashCommandStringOption()
+                .setName('type')
+                .setDescription('type')
+                .addChoices(
+                    { name: 'Limit Order', value: 'limit' },
+                    { name: 'Market Order', value: 'market' },
+                    { name: 'Stop Order', value: 'stop' }
+                );
+        },
         DIRECTION: function () {
-                return new SlashCommandStringOption()
-                    .setName('direction')
-                    .setDescription('buy or sell')
-                    .addChoices(
-                        { name: Order.BUY, value: Order.BUY },
-                        { name: Order.SELL, value: Order.SELL }
-                    );
-            },
+            return new SlashCommandStringOption()
+                .setName('direction')
+                .setDescription('buy or sell')
+                .addChoices(
+                    { name: Order.BUY, value: Order.BUY },
+                    { name: Order.SELL, value: Order.SELL }
+                );
+        },
         TICKER: function () {
-                const res = new SlashCommandStringOption()
-                    .setName('ticker')
-                    .setDescription('ticker');
-                Order.TICKER_CHOICES.forEach(ticker => res.addChoices(ticker));
-                return res;
-            },
-
+            const res = new SlashCommandStringOption()
+                .setName('ticker')
+                .setDescription('ticker');
+            Order.TICKER_CHOICES.forEach(ticker => res.addChoices(ticker));
+            return res;
+        },
         STATUS: function () {
-                return new SlashCommandStringOption()
-                    .setName('status')
-                    .setDescription('status')
-                    .addChoices(
-                        { name: 'Pending', value: 'pending' },
-                        { name: 'Completed', value: 'completed' },
-                        { name: 'Cancelled', value: 'cancelled' }
-                    );
-            }
+            return new SlashCommandStringOption()
+                .setName('status')
+                .setDescription('status')
+                .addChoices(
+                    { name: 'Pending', value: 'pending' },
+                    { name: 'Completed', value: 'completed' },
+                    { name: 'Cancelled', value: 'cancelled' }
+                );
+        }
     };
     static ERROR = {
         ORDER_NOT_FOUND: new Error('Order not found')
@@ -70,7 +69,7 @@ module.exports = class Order {
     static async load() {
         const startTime = new Date();
         this.cache.clear();
-        const orders = await this.collection.find({}).limit(50000).toArray();
+        const orders = await this.collection.find().limit(50000).toArray();
         for(const order of orders) this.cache.set(order._id, this.assignOrderType(order));
         for(const [id, order] of this.cache) await order.resolve();
         console.log(`Cached ${this.cache.size} Order(s), took ${new Date()-startTime}ms`);
