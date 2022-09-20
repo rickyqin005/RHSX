@@ -30,6 +30,6 @@ async function deployAPI(currDir, currEndpoint) {
 module.exports = {
     run: async function () {
         await deployAPI(path.join(__dirname, '../api/'), '/api/');
-        app.listen(port, () => console.log(`Listening at port ${port}`));
+        app.listen(port, () => console.log(`Deployed API, listening at port ${port}`));
     }
 };

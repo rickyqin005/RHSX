@@ -1,8 +1,6 @@
 module.exports = class Market {
     static ERROR = {
-        MARKET_CLOSED: new Error('Market is closed'),
-        MARKET_ALREADY_OPEN: new Error('Market is already open'),
-        MARKET_ALREADY_CLOSED: new Error('Market is already closed')
+        MARKET_CLOSED: new Error('Market is closed')
     };
     static collection = global.mongoClient.db('RHSX').collection('Market');
 
@@ -15,13 +13,13 @@ module.exports = class Market {
     }
 
     async open(mongoSession) {
-        if(this.isOpen) throw Market.ERROR.MARKET_ALREADY_OPEN;
+        if(this.isOpen) throw new Error('Market is already open');
         await Market.collection.updateOne({}, { $set: { isOpen: true } }, { session: mongoSession });
         this.isOpen = true;
     }
 
     async close(mongoSession) {
-        if(!this.isOpen) throw Market.ERROR.MARKET_ALREADY_CLOSED;
+        if(!this.isOpen) throw new Error('Market is already closed');
         await Market.collection.updateOne({}, { $set: { isOpen: false } }, { session: mongoSession });
         this.isOpen = false;
     }

@@ -50,6 +50,5 @@ async function run() {
     await require('./actions/deploy_commands').run();
     await require('./actions/deploy_api').run();
     setTimeout(interactionHandler, 0);
-    console.log('RHSX is ready');
 }
 run();
