@@ -2,7 +2,8 @@ const { Trader, Order, MarketOrder, StopOrder, Price } = require('../../../rhsx'
 const { ObjectId } = require('mongodb');
 
 module.exports = {
-	execute: async function (interaction, mongoSession) {
+    ephemeral: false,
+    execute: async function (interaction, mongoSession) {
         if(!global.market.isOpen) throw Market.ERROR.MARKET_CLOSED;
         const trader = Trader.getTrader(interaction.user.id);
         const order = await Order.assignOrderType({
@@ -27,6 +28,6 @@ module.exports = {
             }
         }).resolve();
         await order.submit(mongoSession);
-        interaction.editReply(order.statusString());
-	}
+        return { content: order.statusString() };
+    }
 };

@@ -8,17 +8,23 @@ global.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAG
 
 const { Market, Order, Ticker, Trader, Tools } = require('./rhsx');
 const interactionList = [];
+
+function getCommandPath(interaction) {
+    let path = `./commands/${interaction.commandName}`;
+    if(interaction.options.getSubcommandGroup(false) != null) path += `/${interaction.options.getSubcommandGroup()}`;
+    if(interaction.options.getSubcommand(false) != null) path += `/${interaction.options.getSubcommand()}`;
+    return path;
+}
+
 const interactionHandler = async function () {
     while(interactionList.length > 0) {
         const startTime = new Date();
         const interaction = interactionList.splice(0, 1)[0];
         const mongoSession = global.mongoClient.startSession();
-        let path = `./commands/${interaction.commandName}`;
-        if(interaction.options.getSubcommandGroup(false) != null) path += `/${interaction.options.getSubcommandGroup()}`;
-        if(interaction.options.getSubcommand(false) != null) path += `/${interaction.options.getSubcommand()}`;
+        const path = getCommandPath(interaction);
         await mongoSession.withTransaction(async () => {
             try {
-                await require(path).execute(interaction, mongoSession);
+                interaction.editReply(await require(path).execute(interaction, mongoSession));
             } catch(error) {
                 console.log(error);
                 interaction.editReply(`Error: ${error.message}`);
@@ -33,7 +39,8 @@ const interactionHandler = async function () {
 
 global.discordClient.on('interactionCreate', async interaction => {
     if(!interaction.isCommand()) return;
-    await interaction.deferReply();
+    const command = require(getCommandPath(interaction));
+    await interaction.deferReply({ ephemeral: command.ephemeral });
     interactionList.push(interaction);
 });
 

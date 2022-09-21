@@ -1,7 +1,8 @@
 const { Trader } = require('../rhsx');
 
 module.exports = {
-	execute: async function (interaction, mongoSession) {
+    ephemeral: false,
+    execute: async function (interaction, mongoSession) {
         try {
             const trader = Trader.getTrader(interaction.user.id);
             if(trader != null) throw Trader.ERROR.ALREADY_A_TRADER;
@@ -14,8 +15,8 @@ module.exports = {
                     balance: 0,
                     positions: {}
                 }).addToDB(mongoSession);
-                interaction.editReply(`You're now a trader.`);
+                return { content: 'You\'re now a trader.' };
             } else throw error;
         }
-	}
+    }
 };

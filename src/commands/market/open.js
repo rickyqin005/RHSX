@@ -1,6 +1,7 @@
 module.exports = {
-	execute: async function (interaction, mongoSession) {
+    ephemeral: false,
+    execute: async function (interaction, mongoSession) {
         await global.market.open(mongoSession);
-        interaction.editReply('Market is now open');
-	}
+        return { content: 'Market is now open' };
+    }
 };

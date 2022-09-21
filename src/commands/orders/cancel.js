@@ -2,7 +2,8 @@ const { Trader, Order } = require('../../rhsx');
 const { ObjectId } = require('mongodb');
 
 module.exports = {
-	execute: async function (interaction, mongoSession) {
+    ephemeral: false,
+    execute: async function (interaction, mongoSession) {
         const trader = Trader.getTrader(interaction.user.id);
         const order = await Order.queryOrder({
             _id: new ObjectId(interaction.options.getString('order_id')),
@@ -10,6 +11,6 @@ module.exports = {
         });
         if(order == null) throw Order.ORDER_NOT_FOUND;
         await order.cancel(Order.CANCELLED_BY_TRADER, mongoSession);
-        interaction.editReply(order.statusString());
-	}
+        return { content: order.statusString() };
+    }
 };

@@ -1,7 +1,8 @@
 const { Trader, Order } = require('../../rhsx');
 
 module.exports = {
-	execute: async function (interaction) {
+    ephemeral: true,
+    execute: async function (interaction) {
         const trader = Trader.getTrader(interaction.user.id);
         const type = interaction.options.getString('type');
         const direction = interaction.options.getString('direction');
@@ -20,6 +21,6 @@ module.exports = {
         const orders = await Order.queryOrders(query, { timestamp: -1 });
         orders.forEach(order => embed.addFields(order.toOrderQueryEmbedFields()));
         embed.setTitle(`${orders.length} Order(s) Found`);
-        interaction.editReply({ embeds: [embed] });
-	}
+        return { embeds: [embed] };
+    }
 };
