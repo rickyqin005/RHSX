@@ -38,10 +38,11 @@ global.discordClient.on('interactionCreate', async interaction => {
 });
 
 async function run() {
+    console.log(`Starting up at ${Tools.dateStr(new Date())}`);
     await global.mongoClient.connect();
     console.log('Connected to MongoDB');
     await global.discordClient.login(process.env['BOT_TOKEN']);
-    console.log(`${global.discordClient.user.tag} is logged in`);
+    console.log(`Connected to Discord as ${global.discordClient.user.tag}`);
     global.market = await new Market().initialize();
     console.log(global.market);
     await Ticker.load();
