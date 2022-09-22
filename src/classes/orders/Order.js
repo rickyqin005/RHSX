@@ -234,7 +234,6 @@ module.exports = class Order {
     async submit(mongoSession) {
         this.validate();
         await this.addToDB(mongoSession);
-        console.log(this);
         if((await this.checkPositionLimits(mongoSession)) == Order.CANCELLED) return;
         await this.setStatus(Order.IN_QUEUE, mongoSession);
         await this.fill(mongoSession);

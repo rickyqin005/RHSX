@@ -18,7 +18,6 @@ module.exports = {
                 asks: []
             };
         }
-        // const startTime = new Date();
         (await Order.collection.aggregate([
             { $match: {
                 type: LimitOrder.TYPE,
@@ -64,7 +63,6 @@ module.exports = {
                 }
             }
         });
-        // console.log(`Order.collection.aggregate, took ${new Date()-startTime}ms`);
         return res;
     }
 };

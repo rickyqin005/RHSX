@@ -64,7 +64,7 @@ module.exports = class Trader {
                 { name: 'Position Limit', value: `${this.positionLimit}`, inline: false },
                 { name: 'Joined', value: Tools.dateStr(this.joined), inline: false }
             );
-        return { embeds: [embed] };
+        return embed;
     }
 
     async positionEmbed() {
@@ -85,7 +85,7 @@ module.exports = class Trader {
                 { name: Price.format(await this.calculateOpenPnL(position)), value: '\u200B', inline: true },
             );
         }
-        return { embeds: [embed] };
+        return embed;
     }
 
     async templateEmbed() {
@@ -139,7 +139,6 @@ module.exports = class Trader {
         }
         this.balance -= pos.costBasis;
         if(this.positions[pos.ticker].quantity == 0) delete this.positions[pos.ticker];
-        console.log(this.positions);
         await Trader.collection.replaceOne({ _id: this._id }, this, { session: mongoSession });
     }
 
