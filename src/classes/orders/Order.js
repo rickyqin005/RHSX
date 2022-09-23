@@ -86,28 +86,16 @@ module.exports = class Order {
         else if(order.type == StopOrder.TYPE) return new StopOrder(order);
     }
 
-    static async getOrder(_id) {
-        // const startTime = new Date();
-        let res = this.cache.get(_id);
-        if(res == undefined) {
-            res = await this.collection.findOne({ _id: _id });
-            if(res != null) {
-                res = await this.assignOrderType(res).resolve();
-                this.cache.set(_id, res);
-            }
-        }
-        // console.log(`Order.getOrder(${_id}), took ${new Date()-startTime}ms`);
-        return res;
-    }
-
     static async queryOrder(query) {
         // const startTime = new Date();
-        let res = await this.collection.findOne(query);
-        const resOrig = res;
-        res = this.cache.get(resOrig._id);
-        if(res == undefined) {
-            res = await this.assignOrderType(resOrig).resolve();
-            this.cache.set(res._id, res);
+        let res = ((await this.collection.findOne(query)) ?? undefined);
+        if(res != undefined) {
+            const resOrig = res;
+            res = this.cache.get(resOrig._id);
+            if(res == undefined) {
+                res = await this.assignOrderType(resOrig).resolve();
+                this.cache.set(res._id, res);
+            }
         }
         // console.log(`Order.queryOrder(${String(JSON.stringify(query)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
         return res;

@@ -5,7 +5,7 @@ module.exports = {
     execute: async function (interaction, mongoSession) {
         try {
             const trader = Trader.getTrader(interaction.user.id);
-            if(trader != null) throw Trader.ERROR.ALREADY_A_TRADER;
+            throw Trader.ERROR.ALREADY_A_TRADER;
         } catch(error) {
             if(error == Trader.ERROR.NOT_A_TRADER) {
                 await new Trader({

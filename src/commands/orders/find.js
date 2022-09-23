@@ -9,7 +9,7 @@ module.exports = {
             _id: new ObjectId(interaction.options.getString('order_id')),
             user: interaction.user.id
         });
-        if(order == null) throw Order.ORDER_NOT_FOUND;
+        if(order == undefined) throw Order.ERROR.ORDER_NOT_FOUND;
         return { embeds: [await order.toEmbed()] };
     }
 };

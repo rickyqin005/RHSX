@@ -30,21 +30,6 @@ module.exports = class Trader {
         return Array.from(this.cache.values());
     }
 
-    static async queryTraders(query, sort) {
-        // const startTime = new Date();
-        let res = await this.collection.find(query).sort(sort).toArray();
-        for(let i = 0; i < res.length; i++) {
-            const resOrig = res[i];
-            res[i] = this.cache.get(resOrig._id);
-            if(res[i] == undefined) {
-                res[i] = new Trader(resOrig);
-                this.cache.set(res[i]._id, res[i]);
-            }
-        }
-        // console.log(`Trader.queryTraders(${String(JSON.stringify(query)).replace(/\n/g, " ")}, ${String(JSON.stringify(sort)).replace(/\n/g, " ")}), took ${new Date()-startTime}ms`);
-        return res;
-    }
-
     constructor(args) {
         this._id = args._id;
         this.joined = args.joined;
