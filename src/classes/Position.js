@@ -4,4 +4,9 @@ module.exports = class Position {
         this.quantity = args.quantity;
         this.costBasis = args.costBasis;
     }
+
+    async calculateOpenPnL() {
+        const Ticker = require('./Ticker');
+        return Ticker.getTicker(this.ticker).lastTradedPrice*this.quantity - this.costBasis;
+    }
 };

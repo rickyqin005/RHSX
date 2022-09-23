@@ -167,29 +167,15 @@ module.exports = class Order {
         ];
     }
 
-    orderCancelledString() {
-        switch(this.statusReason) {
-            case Order.UNFULFILLABLE:
-                return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled because it cannot be fulfilled`;
-            case Order.VIOLATES_POSITION_LIMITS:
-                return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled because it violates your position limits`;
-            default:
-                return `Your ${this.label}: \`${this.toInfoString()}\` is cancelled`;
-        }
-    }
-
-    orderSubmittedString() {
-        return `Your ${this.label}: \`${this.toInfoString()}\` is submitted`;
-    }
-
-    orderCompletelyFilledString() {
-        return `Your ${this.label}: \`${this.toInfoString()}\` is completed`;
-    }
-
     statusString() {
-        if(this.status == Order.CANCELLED) return this.orderCancelledString();
-        else if(this.status == Order.COMPLETELY_FILLED) return this.orderCompletelyFilledString();
-        else return this.orderSubmittedString();
+        let str = `Your ${this.label}: \`${this.toInfoString()}\` is `;
+        if(this.status == Order.CANCELLED) {
+            if(this.statusReason == Order.UNFULFILLABLE) str += 'cancelled because it cannot be fulfilled';
+            else if(this.statusReason == Order.VIOLATES_POSITION_LIMITS) str += 'cancelled because it violates your position limits'
+            else str += 'cancelled';
+        } else if(this.status == Order.COMPLETELY_FILLED) str += 'completed';
+        else str += 'submitted';
+        return str;
     }
 
     async setStatus(newStatus, mongoSession, reason) {
@@ -223,7 +209,6 @@ module.exports = class Order {
         this.validate();
         await this.addToDB(mongoSession);
         if((await this.checkPositionLimits(mongoSession)) == Order.CANCELLED) return;
-        await this.setStatus(Order.IN_QUEUE, mongoSession);
         await this.fill(mongoSession);
     }
 

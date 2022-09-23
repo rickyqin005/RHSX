@@ -67,7 +67,7 @@ module.exports = class Trader {
             embed.addFields(
                 { name: position.ticker, value: Price.format(price), inline: true },
                 { name: Price.format(price*position.quantity), value: `**${position.quantity}**`, inline: true },
-                { name: Price.format(await this.calculateOpenPnL(position)), value: '\u200B', inline: true },
+                { name: Price.format(await position.calculateOpenPnL()), value: '\u200B', inline: true },
             );
         }
         return embed;
@@ -125,10 +125,5 @@ module.exports = class Trader {
         this.balance -= pos.costBasis;
         if(this.positions[pos.ticker].quantity == 0) delete this.positions[pos.ticker];
         await Trader.collection.replaceOne({ _id: this._id }, this, { session: mongoSession });
-    }
-
-    async calculateOpenPnL(position) {
-        const Ticker = require('./Ticker');
-        return Ticker.getTicker(position.ticker).lastTradedPrice*position.quantity - position.costBasis;
     }
 };
