@@ -55,15 +55,24 @@ module.exports = class NormalOrder extends Order {
         return { quantity: quantity, price: price };
     }
 
-    async checkPositionLimits(mongoSession) {
+    async violatesPositionLimits(mongoSession) {
+        const LimitOrder = require('./LimitOrder');
         const currPosition = this.user.positions[this.ticker._id];
+        const positionLimit = (this.direction == Order.BUY ? this.user.maxPositionLimit : this.user.minPositionLimit);
         let extremePosition = (currPosition == undefined ? 0 : currPosition.quantity) + this.getQuantityUnfilled()*this.netPositionChangeSign();
-        (await this.user.getPendingOrders()).forEach(pendingOrder => {
-            if(pendingOrder instanceof NormalOrder) {
-                if(this.netPositionChangeSign() == pendingOrder.netPositionChangeSign()) extremePosition += pendingOrder.getQuantityUnfilled()*pendingOrder.netPositionChangeSign();
-            }
-        });
-        if(Math.abs(extremePosition) > this.user.positionLimit) await this.cancel(Order.VIOLATES_POSITION_LIMITS, mongoSession);
-        return this.status;
+        if(Math.abs(extremePosition) > Math.abs(positionLimit)) return true;
+        const pendingOrders = await Order.queryOrders({
+            type: LimitOrder.TYPE,
+            user: this.user._id,
+            direction: this.direction,
+            ticker: this.ticker._id,
+            status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
+        }, {});
+        for(const order of pendingOrders) {
+            console.log(order);
+            extremePosition += order.getQuantityUnfilled()*order.netPositionChangeSign();
+            if(Math.abs(extremePosition) > Math.abs(positionLimit)) return true;
+        }
+        return false;
     }
 };

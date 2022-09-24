@@ -4,7 +4,8 @@ const { Collection } = require('discord.js');
 const { ObjectId } = require('mongodb');
 
 module.exports = class Trader {
-    static DEFAULT_POSITION_LIMIT = 10000;
+    static DEFAULT_MIN_POSITION_LIMIT = 0;
+    static DEFAULT_MAX_POSITION_LIMIT = 10000;
     static ERROR = {
         NOT_A_TRADER: new Error('Not a trader'),
         ALREADY_A_TRADER: new Error('Already a trader')
@@ -34,11 +35,12 @@ module.exports = class Trader {
     constructor(args) {
         this._id = args._id;
         this.joined = args.joined ?? new Date();
-        this.positionLimit = args.positionLimit ?? Trader.DEFAULT_POSITION_LIMIT;
+        this.minPositionLimit = args.minPositionLimit ?? Trader.DEFAULT_MIN_POSITION_LIMIT;
+        this.maxPositionLimit = args.maxPositionLimit ?? Trader.DEFAULT_MAX_POSITION_LIMIT;
         this.balance = args.balance ?? 0;
-        this.positions = {};
         const Position = require('./Position');
-        for(const pos in args.positions) this.positions[pos] = new Position(args.positions[pos]);
+        this.positions = args.positions ?? {};
+        for(const pos in this.positions) this.positions[pos] = new Position(this.positions[pos]);
     }
 
     async infoEmbed() {
@@ -47,7 +49,9 @@ module.exports = class Trader {
             .addFields(
                 { name: 'Account Value', value: Price.format(await this.getAccountValue()), inline: true },
                 { name: 'Cash Balance', value: Price.format(this.balance), inline: true },
-                { name: 'Position Limit', value: `${this.positionLimit}`, inline: false },
+                { name: '\u200b', value: '\u200b', inline: true },
+                { name: 'Lower Position Limit', value: `${this.minPositionLimit}`, inline: true },
+                { name: 'Upper Position Limit', value: `${this.maxPositionLimit}`, inline: true },
                 { name: 'Joined', value: Tools.dateStr(this.joined), inline: false }
             );
         return embed;
@@ -92,14 +96,6 @@ module.exports = class Trader {
             accountValue += this.positions[pos].quantity*(Ticker.getTicker(pos).lastTradedPrice);
         }
         return accountValue;
-    }
-
-    async getPendingOrders(/*add optional parameter for order type*/) {
-        const Order = require('./orders/Order');
-        return await Order.queryOrders({
-            user: this._id,
-            status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
-        }, { timestamp: -1 });
     }
 
     async addToDB(mongoSession) {

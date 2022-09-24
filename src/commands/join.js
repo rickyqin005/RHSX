@@ -9,11 +9,7 @@ module.exports = {
         } catch(error) {
             if(error == Trader.ERROR.NOT_A_TRADER) {
                 await new Trader({
-                    _id: interaction.user.id,
-                    joined: new Date(),
-                    positionLimit: Trader.DEFAULT_POSITION_LIMIT,
-                    balance: 0,
-                    positions: {}
+                    _id: interaction.user.id
                 }).addToDB(mongoSession);
                 return { content: 'You\'re now a trader.' };
             } else throw error;

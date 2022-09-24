@@ -202,14 +202,16 @@ module.exports = class Order {
         Order.cache.set(this._id, this);
     }
 
-    async checkPositionLimits(mongoSession) {
-        return this.status;
+    async violatesPositionLimits(mongoSession) {
+        return false;
     }
 
     async submit(mongoSession) {
         this.validate();
         await this.addToDB(mongoSession);
-        if((await this.checkPositionLimits(mongoSession)) == Order.CANCELLED) return;
+        if(await this.violatesPositionLimits(mongoSession)) {
+            this.cancel(Order.VIOLATES_POSITION_LIMITS, mongoSession); return;
+        }
         await this.fill(mongoSession);
     }
 
