@@ -7,8 +7,10 @@ module.exports = class MarketOrder extends NormalOrder {
 
     constructor(args) {
         super(args);
-        this.type = MarketOrder.TYPE;
-        this.label = MarketOrder.LABEL;
+    }
+
+    label() {
+        return MarketOrder.LABEL;
     }
 
     toInfoString() {

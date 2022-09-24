@@ -1,6 +1,7 @@
 const Price = require('../utils/Price');
 const Tools = require('../utils/Tools');
 const { Collection } = require('discord.js');
+const { ObjectId } = require('mongodb');
 
 module.exports = class Trader {
     static DEFAULT_POSITION_LIMIT = 10000;
@@ -32,9 +33,9 @@ module.exports = class Trader {
 
     constructor(args) {
         this._id = args._id;
-        this.joined = args.joined;
-        this.positionLimit = args.positionLimit;
-        this.balance = args.balance;
+        this.joined = args.joined ?? new Date();
+        this.positionLimit = args.positionLimit ?? Trader.DEFAULT_POSITION_LIMIT;
+        this.balance = args.balance ?? 0;
         this.positions = {};
         const Position = require('./Position');
         for(const pos in args.positions) this.positions[pos] = new Position(args.positions[pos]);

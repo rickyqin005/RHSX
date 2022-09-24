@@ -18,14 +18,17 @@ module.exports = class NormalOrder extends Order {
     constructor(args) {
         super(args);
         this.quantity = args.quantity;
-        this.quantityFilled = args.quantityFilled;
-        this.netPositionChangeSign = ((this.direction == Order.BUY) ? 1 : -1);
+        this.quantityFilled = args.quantityFilled ?? 0;
     }
 
     toStopString() {}
 
     getQuantityUnfilled() {
         return this.quantity - this.quantityFilled;
+    }
+
+    netPositionChangeSign() {
+        return ((this.direction == Order.BUY) ? 1 : -1);
     }
 
     async increaseQuantityFilled(amount, price, mongoSession) {
@@ -37,8 +40,8 @@ module.exports = class NormalOrder extends Order {
         else if(this.quantityFilled == this.quantity) await this.setStatus(Order.COMPLETELY_FILLED, mongoSession);
         await this.user.addPosition(new Position({
             ticker: this.ticker._id,
-            quantity: amount*this.netPositionChangeSign,
-            costBasis: amount*this.netPositionChangeSign*price
+            quantity: amount*this.netPositionChangeSign(),
+            costBasis: amount*this.netPositionChangeSign()*price
         }), mongoSession);
     }
 
@@ -54,10 +57,10 @@ module.exports = class NormalOrder extends Order {
 
     async checkPositionLimits(mongoSession) {
         const currPosition = this.user.positions[this.ticker._id];
-        let extremePosition = (currPosition == undefined ? 0 : currPosition.quantity) + this.getQuantityUnfilled()*this.netPositionChangeSign;
+        let extremePosition = (currPosition == undefined ? 0 : currPosition.quantity) + this.getQuantityUnfilled()*this.netPositionChangeSign();
         (await this.user.getPendingOrders()).forEach(pendingOrder => {
             if(pendingOrder instanceof NormalOrder) {
-                if(this.netPositionChangeSign == pendingOrder.netPositionChangeSign) extremePosition += pendingOrder.getQuantityUnfilled()*pendingOrder.netPositionChangeSign;
+                if(this.netPositionChangeSign() == pendingOrder.netPositionChangeSign()) extremePosition += pendingOrder.getQuantityUnfilled()*pendingOrder.netPositionChangeSign();
             }
         });
         if(Math.abs(extremePosition) > this.user.positionLimit) await this.cancel(Order.VIOLATES_POSITION_LIMITS, mongoSession);

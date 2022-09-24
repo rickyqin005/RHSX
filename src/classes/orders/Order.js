@@ -1,6 +1,7 @@
 const Tools = require('../../utils/Tools');
 const { Collection } = require('discord.js');
 const { SlashCommandStringOption } = require('@discordjs/builders');
+const { ObjectId } = require('mongodb');
 
 module.exports = class Order {
     static BUY = 'BUY';
@@ -117,14 +118,14 @@ module.exports = class Order {
     }
 
     constructor(args) {
-        this._id = args._id;
+        this._id = args._id ?? ObjectId();
         this.type = args.type;
-        this.timestamp = args.timestamp;
+        this.timestamp = args.timestamp ?? new Date();
         this.user = args.user;
         this.direction = args.direction;
         this.ticker = args.ticker;
-        this.status = args.status;
-        this.statusReason = args.statusReason;
+        this.status = args.status ?? Order.UNSUBMITTED;
+        this.cancelledReason = args.cancelledReason ?? undefined;
     }
 
     async resolve() {
@@ -154,7 +155,7 @@ module.exports = class Order {
             .setTitle('Order Info')
             .setDescription(`**${this.toInfoString()}**`)
             .addFields(
-                { name: 'Type', value: this.label, inline: true },
+                { name: 'Type', value: this.label(), inline: true },
                 { name: 'Status', value: this.statusLabel(), inline: true },
                 { name: 'Submitted', value: Tools.dateStr(this.timestamp), inline: false }
             );
@@ -168,22 +169,22 @@ module.exports = class Order {
     }
 
     statusString() {
-        let str = `Your ${this.label}: \`${this.toInfoString()}\` is `;
+        let str = `Your ${this.label()}: \`${this.toInfoString()}\` is `;
         if(this.status == Order.CANCELLED) {
-            if(this.statusReason == Order.UNFULFILLABLE) str += 'cancelled because it cannot be fulfilled';
-            else if(this.statusReason == Order.VIOLATES_POSITION_LIMITS) str += 'cancelled because it violates your position limits'
+            if(this.cancelledReason == Order.UNFULFILLABLE) str += 'cancelled because it cannot be fulfilled';
+            else if(this.cancelledReason == Order.VIOLATES_POSITION_LIMITS) str += 'cancelled because it violates your position limits'
             else str += 'cancelled';
         } else if(this.status == Order.COMPLETELY_FILLED) str += 'completed';
         else str += 'submitted';
         return str;
     }
 
-    async setStatus(newStatus, mongoSession, reason) {
+    async setStatus(newStatus, mongoSession, cancelledReason) {
         if(!(Order.CANCELLED <= newStatus && newStatus <= Order.COMPLETELY_FILLED)) throw new Error('Invalid status');
         if(newStatus == this.status) return;
         this.status = newStatus;
-        this.statusReason = reason;
-        await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus, statusReason: reason } }, { session: mongoSession });
+        this.cancelledReason = cancelledReason;
+        await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus, cancelledReason: cancelledReason } }, { session: mongoSession });
     }
 
     validate() {
@@ -208,6 +209,7 @@ module.exports = class Order {
     async submit(mongoSession) {
         this.validate();
         await this.addToDB(mongoSession);
+        console.log(this);
         if((await this.checkPositionLimits(mongoSession)) == Order.CANCELLED) return;
         await this.fill(mongoSession);
     }
@@ -216,9 +218,9 @@ module.exports = class Order {
         await this.setStatus(Order.NOT_FILLED, mongoSession);
     }
 
-    async cancel(reason, mongoSession) {
+    async cancel(cancelledReason, mongoSession) {
         if(this.status == Order.CANCELLED) throw new Error('Order is already cancelled');
         if(this.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled');
-        await this.setStatus(Order.CANCELLED, mongoSession, reason);
+        await this.setStatus(Order.CANCELLED, mongoSession, cancelledReason);
     }
 };

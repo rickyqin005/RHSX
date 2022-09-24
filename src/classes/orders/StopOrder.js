@@ -21,8 +21,10 @@ module.exports = class StopOrder extends Order {
         super(args);
         this.triggerPrice = args.triggerPrice;
         this.executedOrder = args.executedOrder;
-        this.type = StopOrder.TYPE;
-        this.label = StopOrder.LABEL;
+    }
+
+    label() {
+        return StopOrder.LABEL;
     }
 
     async resolve() {

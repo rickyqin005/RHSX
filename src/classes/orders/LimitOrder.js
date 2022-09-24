@@ -21,8 +21,10 @@ module.exports = class LimitOrder extends NormalOrder {
     constructor(args) {
         super(args);
         this.price = args.price;
-        this.type = LimitOrder.TYPE;
-        this.label = LimitOrder.LABEL;
+    }
+
+    label() {
+        return LimitOrder.LABEL;
     }
 
     toInfoString() {

@@ -1,5 +1,6 @@
 const Order = require('./orders/Order');
 const { Collection } = require('discord.js');
+const { ObjectId } = require('mongodb');
 
 module.exports = class Ticker {
     static ERROR = {
@@ -28,9 +29,9 @@ module.exports = class Ticker {
     }
 
     constructor(args) {
-        this._id = args._id;
+        this._id = args._id ?? ObjectId();
         this.lastTradedPrice = args.lastTradedPrice;
-        this.volume = args.volume;
+        this.volume = args.volume ?? 0;
     }
 
     toString() {

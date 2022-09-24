@@ -1,3 +1,4 @@
+const startUpTime = new Date();
 require('dotenv').config();
 // MongoDB
 const { MongoClient, ServerApiVersion } = require('mongodb');
@@ -45,7 +46,7 @@ global.discordClient.on('interactionCreate', async interaction => {
 });
 
 async function run() {
-    console.log(`Starting up at ${Tools.dateStr(new Date())}`);
+    console.log(`Starting up at ${Tools.dateStr(startUpTime)}`);
     await global.mongoClient.connect();
     console.log('Connected to MongoDB');
     await global.discordClient.login(process.env['BOT_TOKEN']);
