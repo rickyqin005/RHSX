@@ -73,9 +73,9 @@ module.exports = class Order {
         const orders = await this.collection.find().limit(50000).toArray();
         for(const order of orders) this.cache.set(order._id, this.assignOrderType(order));
         for(const [id, order] of this.cache) await order.resolve();
-        console.log(`Cached ${this.cache.size} Order(s), took ${new Date()-startTime}ms`);
         const Ticker = require('../Ticker');
         Ticker.getTickers().forEach(ticker => this.TICKER_CHOICES.push({ name: ticker._id, value: ticker._id }));
+        console.log(`Cached ${this.cache.size} Order(s), took ${new Date()-startTime}ms`);
     }
 
     static assignOrderType(order) {
@@ -209,7 +209,6 @@ module.exports = class Order {
     async submit(mongoSession) {
         this.validate();
         await this.addToDB(mongoSession);
-        console.log(this);
         if((await this.checkPositionLimits(mongoSession)) == Order.CANCELLED) return;
         await this.fill(mongoSession);
     }

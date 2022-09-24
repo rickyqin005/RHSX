@@ -19,21 +19,21 @@ function getCommandPath(interaction) {
 
 const interactionHandler = async function () {
     while(interactionList.length > 0) {
-        const startTime = new Date();
         const interaction = interactionList.splice(0, 1)[0];
         const mongoSession = global.mongoClient.startSession();
         const path = getCommandPath(interaction);
+        console.time(path);
         await mongoSession.withTransaction(async () => {
             try {
                 interaction.editReply(await require(path).execute(interaction, mongoSession));
             } catch(error) {
-                console.log(error);
+                console.error(error);
                 interaction.editReply(`Error: ${error.message}`);
                 await mongoSession.abortTransaction();
             }
         });
         await mongoSession.endSession();
-        console.log(`${path}, ${Tools.dateStr(new Date())}, took ${new Date()-startTime}ms`);
+        console.timeEnd(path);
     }
     setTimeout(interactionHandler, 200);
 }
