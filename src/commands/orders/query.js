@@ -1,6 +1,14 @@
+const { SlashCommandSubcommandBuilder } = require('@discordjs/builders');
 const { Trader, Order } = require('../../rhsx');
 
 module.exports = {
+    data: new SlashCommandSubcommandBuilder()
+        .setName('query')
+        .setDescription('Query your orders')
+        .addStringOption(Order.OPTION.TYPE())
+        .addStringOption(Order.OPTION.DIRECTION())
+        .addStringOption(Order.OPTION.TICKER())
+        .addStringOption(Order.OPTION.STATUS()),
     ephemeral: true,
     execute: async function (interaction) {
         const trader = Trader.getTrader(interaction.user.id);

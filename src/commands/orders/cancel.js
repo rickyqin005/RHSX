@@ -1,7 +1,12 @@
-const { Trader, Order } = require('../../rhsx');
+const { SlashCommandSubcommandBuilder } = require('@discordjs/builders');
 const { ObjectId } = require('mongodb');
+const { Trader, Order } = require('../../rhsx');
 
 module.exports = {
+    data: new SlashCommandSubcommandBuilder()
+        .setName('cancel')
+        .setDescription('Cancel an order')
+        .addStringOption(Order.OPTION.ID().setRequired(true)),
     ephemeral: false,
     execute: async function (interaction, mongoSession) {
         const trader = Trader.getTrader(interaction.user.id);

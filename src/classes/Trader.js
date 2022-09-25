@@ -4,7 +4,7 @@ const { Collection } = require('discord.js');
 const { ObjectId } = require('mongodb');
 
 module.exports = class Trader {
-    static DEFAULT_MIN_POSITION_LIMIT = 0;
+    static DEFAULT_MIN_POSITION_LIMIT = -10000;
     static DEFAULT_MAX_POSITION_LIMIT = 10000;
     static ERROR = {
         NOT_A_TRADER: new Error('Not a trader'),

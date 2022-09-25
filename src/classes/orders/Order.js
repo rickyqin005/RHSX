@@ -70,7 +70,7 @@ module.exports = class Order {
     static async load() {
         const startTime = new Date();
         this.cache.clear();
-        const orders = await this.collection.find().limit(50000).toArray();
+        const orders = await this.collection.find().limit(100000).toArray();
         for(const order of orders) this.cache.set(order._id, this.assignOrderType(order));
         for(const [id, order] of this.cache) await order.resolve();
         const Ticker = require('../Ticker');

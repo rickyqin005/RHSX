@@ -69,7 +69,6 @@ module.exports = class NormalOrder extends Order {
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, {});
         for(const order of pendingOrders) {
-            console.log(order);
             extremePosition += order.getQuantityUnfilled()*order.netPositionChangeSign();
             if(Math.abs(extremePosition) > Math.abs(positionLimit)) return true;
         }

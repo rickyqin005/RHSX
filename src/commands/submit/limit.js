@@ -1,6 +1,14 @@
-const { Market, Trader, Order, LimitOrder, Price } = require('../../rhsx');
+const { SlashCommandSubcommandBuilder } = require('@discordjs/builders');
+const { Market, Trader, Order, NormalOrder, LimitOrder, Price } = require('../../rhsx');
 
 module.exports = {
+    data: new SlashCommandSubcommandBuilder()
+        .setName('limit')
+        .setDescription('Submit a limit order')
+        .addStringOption(Order.OPTION.TICKER().setRequired(true))
+        .addStringOption(Order.OPTION.DIRECTION().setRequired(true))
+        .addIntegerOption(NormalOrder.OPTION.QUANTITY().setRequired(true))
+        .addNumberOption(LimitOrder.OPTION.PRICE().setRequired(true)),
     ephemeral: false,
     execute: async function (interaction, mongoSession) {
         if(!global.market.isOpen) throw Market.ERROR.MARKET_CLOSED;

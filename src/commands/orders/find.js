@@ -1,7 +1,12 @@
-const { Trader, Order } = require('../../rhsx');
+const { SlashCommandSubcommandBuilder } = require('@discordjs/builders');
 const { ObjectId } = require('mongodb');
+const { Trader, Order } = require('../../rhsx');
 
 module.exports = {
+    data: new SlashCommandSubcommandBuilder()
+        .setName('find')
+        .setDescription('Find a specific order')
+        .addStringOption(Order.OPTION.ID().setRequired(true)),
     ephemeral: true,
     execute: async function (interaction) {
         const trader = Trader.getTrader(interaction.user.id);

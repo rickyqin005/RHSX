@@ -1,114 +1,49 @@
-require('dotenv').config();
-
 const { REST } = require('@discordjs/rest');
 const rest = new REST({ version: '9' }).setToken(process.env['BOT_TOKEN']);
 const { Routes } = require('discord-api-types/v9');
 const { SlashCommandBuilder, SlashCommandSubcommandGroupBuilder, SlashCommandSubcommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits } = require('discord-api-types/v10');
+
+const fs = require('fs');
+const path = require('path');
+
 const { Order, NormalOrder, LimitOrder, StopOrder } = require('../rhsx');
+
+function deployCommands(dir) {
+    const commands = [];
+    const NO_DESCRIPTION = '.';
+    for(const file of fs.readdirSync(dir)) {
+        const subDir = path.join(dir, file);
+        if(fs.lstatSync(subDir).isDirectory()) {
+            const command = new SlashCommandBuilder()
+                .setName(file)
+                .setDescription(NO_DESCRIPTION);
+            for(const subFile of fs.readdirSync(subDir)) {
+                const subSubDir = path.join(subDir, subFile);
+                if(fs.lstatSync(subSubDir).isDirectory()) {
+                    const subCommandGroup = new SlashCommandSubcommandGroupBuilder()
+                        .setName(subFile)
+                        .setDescription(NO_DESCRIPTION);
+                    for(const subSubFile of fs.readdirSync(subSubDir)) {
+                        const subSubSubDir = path.join(subSubDir, subSubFile);
+                        subCommandGroup.addSubcommand(require(subSubSubDir).data);
+                    }
+                    command.addSubcommandGroup(subCommandGroup);
+                } else {
+                    command.addSubcommand(require(subSubDir).data);
+                }
+            }
+            commands.push(command);
+        } else {
+            commands.push(require(subDir).data);
+        }
+    }
+    return commands;
+}
 
 module.exports = {
     run: async function () {
-        const commands = [
-            new SlashCommandBuilder()
-                .setName('join')
-                .setDescription('Become a trader'),
-            new SlashCommandBuilder()
-                .setName('orders')
-                .setDescription('View your orders')
-                .addSubcommand(
-                    new SlashCommandSubcommandBuilder()
-                        .setName('find')
-                        .setDescription('Find a specific order')
-                        .addStringOption(Order.OPTION.ID().setRequired(true))
-                )
-                .addSubcommand(
-                    new SlashCommandSubcommandBuilder()
-                        .setName('query')
-                        .setDescription('Query your orders')
-                        .addStringOption(Order.OPTION.TYPE())
-                        .addStringOption(Order.OPTION.DIRECTION())
-                        .addStringOption(Order.OPTION.TICKER())
-                        .addStringOption(Order.OPTION.STATUS())
-                )
-                .addSubcommand(
-                    new SlashCommandSubcommandBuilder()
-                        .setName('cancel')
-                        .setDescription('Cancel an order')
-                        .addStringOption(Order.OPTION.ID().setRequired(true))
-                ),
-            new SlashCommandBuilder()
-                .setName('submit')
-                .setDescription('Submit an order')
-                .addSubcommand(
-                    new SlashCommandSubcommandBuilder()
-                        .setName('limit')
-                        .setDescription('Submit a limit order')
-                        .addStringOption(Order.OPTION.TICKER().setRequired(true))
-                        .addStringOption(Order.OPTION.DIRECTION().setRequired(true))
-                        .addIntegerOption(NormalOrder.OPTION.QUANTITY().setRequired(true))
-                        .addNumberOption(LimitOrder.OPTION.PRICE().setRequired(true))
-                )
-                .addSubcommand(
-                    new SlashCommandSubcommandBuilder()
-                        .setName('market')
-                        .setDescription('Submit a market order')
-                        .addStringOption(Order.OPTION.TICKER().setRequired(true))
-                        .addStringOption(Order.OPTION.DIRECTION().setRequired(true))
-                        .addIntegerOption(NormalOrder.OPTION.QUANTITY().setRequired(true))
-                )
-                .addSubcommandGroup(
-                    new SlashCommandSubcommandGroupBuilder()
-                        .setName('stop')
-                        .setDescription('Submit a stop order')
-                        .addSubcommand(
-                            new SlashCommandSubcommandBuilder()
-                                .setName('limit')
-                                .setDescription('Submit a stop order that triggers a limit order')
-                                .addStringOption(Order.OPTION.TICKER().setRequired(true))
-                                .addNumberOption(StopOrder.OPTION.TRIGGER_PRICE().setRequired(true))
-                                .addStringOption(Order.OPTION.DIRECTION().setRequired(true))
-                                .addIntegerOption(NormalOrder.OPTION.QUANTITY().setRequired(true))
-                                .addNumberOption(LimitOrder.OPTION.PRICE().setRequired(true))
-                        )
-                        .addSubcommand(
-                            new SlashCommandSubcommandBuilder()
-                                .setName('market')
-                                .setDescription('Submit a stop order that triggers a market order')
-                                .addStringOption(Order.OPTION.TICKER().setRequired(true))
-                                .addNumberOption(StopOrder.OPTION.TRIGGER_PRICE().setRequired(true))
-                                .addStringOption(Order.OPTION.DIRECTION().setRequired(true))
-                                .addIntegerOption(NormalOrder.OPTION.QUANTITY().setRequired(true))
-                        )
-                ),
-            new SlashCommandBuilder()
-                .setName('trader')
-                .setDescription('View account info')
-                .addSubcommand(
-                    new SlashCommandSubcommandBuilder()
-                        .setName('info')
-                        .setDescription('View general account info')
-                )
-                .addSubcommand(
-                    new SlashCommandSubcommandBuilder()
-                        .setName('position')
-                        .setDescription('View your positions')
-                ),
-            new SlashCommandBuilder()
-                .setName('market')
-                .setDescription('Manage the market (Execs only)')
-                .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-                .addSubcommand(
-                    new SlashCommandSubcommandBuilder()
-                        .setName('open')
-                        .setDescription('Opens the market (Execs only)')
-                )
-                .addSubcommand(
-                    new SlashCommandSubcommandBuilder()
-                        .setName('close')
-                        .setDescription('Closes the market (Execs only)')
-                )
-        ];
+        const commands = deployCommands(path.join(__dirname, '../', 'commands'));
         commands.forEach(command => command = command.toJSON());
         for(const [guildId, guild] of global.discordClient.guilds.cache) {
             await rest.put(Routes.applicationGuildCommands(global.discordClient.user.id, guildId), { body: commands });

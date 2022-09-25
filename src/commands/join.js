@@ -1,6 +1,10 @@
+const { SlashCommandBuilder } = require('@discordjs/builders');
 const { Trader } = require('../rhsx');
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('join')
+        .setDescription('Become a trader'),
     ephemeral: false,
     execute: async function (interaction, mongoSession) {
         try {
