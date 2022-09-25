@@ -12,9 +12,9 @@ module.exports = {
             throw Trader.ERROR.ALREADY_A_TRADER;
         } catch(error) {
             if(error == Trader.ERROR.NOT_A_TRADER) {
-                await new Trader({
-                    _id: interaction.user.id
-                }).addToDB(mongoSession);
+                const newTrader = new Trader({ _id: interaction.user.id });
+                Trader.changedDocuments.add(newTrader);
+                Trader.cache.set(newTrader._id, newTrader);
                 return { content: 'You\'re now a trader.' };
             } else throw error;
         }

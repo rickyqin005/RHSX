@@ -65,6 +65,7 @@ module.exports = class Order {
         ORDER_NOT_FOUND: new Error('Order not found')
     };
     static collection = global.mongoClient.db('RHSX').collection('Orders');
+    static changedDocuments = new Set();
     static cache = new Collection();
 
     static async load() {
@@ -184,22 +185,18 @@ module.exports = class Order {
         if(newStatus == this.status) return;
         this.status = newStatus;
         this.cancelledReason = cancelledReason;
-        await Order.collection.updateOne({ _id: this._id }, { $set: { status: newStatus, cancelledReason: cancelledReason } }, { session: mongoSession });
+        Order.changedDocuments.add(this);
     }
 
     validate() {
         this.timestamp = new Date();
     }
 
-    async addToDB(mongoSession) {
-        const trader = this.user;
-        const ticker = this.ticker;
-        this.user = this.user._id;
-        this.ticker = this.ticker._id;
-        await Order.collection.insertOne(this, { session: mongoSession });
-        this.user = trader;
-        this.ticker = ticker;
-        Order.cache.set(this._id, this);
+    toDBObject() {
+        const obj = Order.assignOrderType(this);
+        obj.user = obj.user._id;
+        obj.ticker = obj.ticker._id;
+        return obj;
     }
 
     async violatesPositionLimits(mongoSession) {
@@ -208,7 +205,8 @@ module.exports = class Order {
 
     async submit(orderSubmissionFee, mongoSession) {
         this.validate();
-        await this.addToDB(mongoSession);
+        Order.changedDocuments.add(this);
+        Order.cache.set(this._id, this);
         if(orderSubmissionFee) await this.user.increaseBalance(-this.user.costPerOrderSubmitted, mongoSession);
         if(await this.violatesPositionLimits(mongoSession)) {
             this.cancel(Order.VIOLATES_POSITION_LIMITS, mongoSession); return;

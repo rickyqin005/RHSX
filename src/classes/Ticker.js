@@ -7,6 +7,7 @@ module.exports = class Ticker {
         INVALID_TICKER: new Error('Invalid ticker')
     };
     static collection = global.mongoClient.db('RHSX').collection('Tickers');
+    static changedDocuments = new Set();
     static cache = new Collection();
 
     static async load() {
@@ -58,17 +59,21 @@ module.exports = class Ticker {
         }, { price: 1, timestamp: 1 });
     }
 
+    toDBObject() {
+        const obj = new Ticker(this);
+        return obj;
+    }
+
     async increaseVolume(quantity, mongoSession) {
-        await Ticker.collection.updateOne({ _id: this._id }, { $inc: { volume: quantity } }, { session: mongoSession });
         this.volume += quantity;
+        Ticker.changedDocuments.add(this);
     }
 
     async setLastTradedPrice(newPrice, mongoSession) {
         if(this.lastTradedPrice == newPrice) return;
         const currPrice = this.lastTradedPrice;
-
-        await Ticker.collection.updateOne({ _id: this._id }, { $set: { lastTradedPrice: newPrice } }, { session: mongoSession });
         this.lastTradedPrice = newPrice;
+        Ticker.changedDocuments.add(this);
 
         const tickDirection = ((currPrice < newPrice) ? Order.BUY : Order.SELL);
         const StopOrder = require('./orders/StopOrder');

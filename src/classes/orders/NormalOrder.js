@@ -33,8 +33,7 @@ module.exports = class NormalOrder extends Order {
 
     async increaseQuantityFilled(amount, price, mongoSession) {
         this.quantityFilled += amount;
-        await Order.collection.updateOne({ _id: this._id }, { $inc: { quantityFilled: amount } }, { session: mongoSession });
-
+        Order.changedDocuments.add(this);
         if(this.quantityFilled == 0) await this.setStatus(Order.NOT_FILLED, mongoSession);
         else if(this.quantityFilled < this.quantity) await this.setStatus(Order.PARTIALLY_FILLED, mongoSession);
         else if(this.quantityFilled == this.quantity) await this.setStatus(Order.COMPLETELY_FILLED, mongoSession);

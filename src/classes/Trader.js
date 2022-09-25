@@ -14,6 +14,7 @@ module.exports = class Trader {
         ALREADY_A_TRADER: new Error('Already a trader')
     };
     static collection = global.mongoClient.db('RHSX').collection('Traders');
+    static changedDocuments = new Set();
     static cache = new Collection();
 
     static async load() {
@@ -103,14 +104,14 @@ module.exports = class Trader {
         return accountValue;
     }
 
-    async addToDB(mongoSession) {
-        await Trader.collection.insertOne(this, { session: mongoSession });
-        Trader.cache.set(this._id, this);
+    toDBObject() {
+        const obj = new Trader(this);
+        return obj;
     }
 
     async increaseBalance(amount, mongoSession) {
         this.balance += amount;
-        await Trader.collection.updateOne({ _id: this._id }, { $inc: { balance: amount } }, { session: mongoSession });
+        Trader.changedDocuments.add(this);
     }
 
     async addPosition(pos, mongoSession) {
@@ -132,6 +133,6 @@ module.exports = class Trader {
         this.balance -= pos.costBasis;
         this.balance -= Math.abs(pos.quantity)*this.costPerShareTraded;
         if(this.positions[pos.ticker].quantity == 0) delete this.positions[pos.ticker];
-        await Trader.collection.replaceOne({ _id: this._id }, this, { session: mongoSession });
+        Trader.changedDocuments.add(this);
     }
 };

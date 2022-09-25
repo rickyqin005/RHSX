@@ -49,18 +49,12 @@ module.exports = class StopOrder extends Order {
         if(this.executedOrder.direction == Order.SELL && !(this.triggerPrice < this.ticker.lastTradedPrice)) throw new Error('Trigger price must be less than the current price');
     }
 
-    async addToDB(mongoSession) {
-        const trader = this.user;
-        const ticker = this.ticker;
-        this.user = this.user._id;
-        this.ticker = this.ticker._id;
-        this.executedOrder.user = this.executedOrder.user._id;
-        this.executedOrder.ticker = this.executedOrder.ticker._id;
-        await Order.collection.insertOne(this, { session: mongoSession });
-        this.user = trader;
-        this.ticker = ticker;
-        this.executedOrder.user = trader;
-        this.executedOrder.ticker = ticker;
-        Order.cache.set(this._id, this);
+    toDBObject() {
+        const obj = Order.assignOrderType(this);
+        obj.user = obj.user._id;
+        obj.ticker = obj.ticker._id;
+        obj.executedOrder.user = obj.executedOrder.user._id;
+        obj.executedOrder.ticker = obj.executedOrder.ticker._id;
+        return obj;
     }
 };

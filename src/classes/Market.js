@@ -3,24 +3,33 @@ module.exports = class Market {
         MARKET_CLOSED: new Error('Market is closed')
     };
     static collection = global.mongoClient.db('RHSX').collection('Market');
+    static changedDocuments = new Set();
 
-    isOpen;
+    constructor(args) {
+        this._id = args._id;
+        this.isOpen = args.isOpen ?? undefined;
+    }
 
-    async initialize() {
-        const args = await Market.collection.findOne();
+    async resolve() {
+        const args = await Market.collection.findOne({ _id: this._id });
         this.isOpen = args.isOpen;
         return this;
     }
 
+    toDBObject() {
+        const obj = new Market(this);
+        return obj;
+    }
+
     async open(mongoSession) {
         if(this.isOpen) throw new Error('Market is already open');
-        await Market.collection.updateOne({}, { $set: { isOpen: true } }, { session: mongoSession });
         this.isOpen = true;
+        Market.changedDocuments.add(this);
     }
 
     async close(mongoSession) {
         if(!this.isOpen) throw new Error('Market is already closed');
-        await Market.collection.updateOne({}, { $set: { isOpen: false } }, { session: mongoSession });
         this.isOpen = false;
+        Market.changedDocuments.add(this);
     }
 };

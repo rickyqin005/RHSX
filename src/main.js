@@ -26,6 +26,20 @@ const interactionHandler = async function () {
         await mongoSession.withTransaction(async () => {
             try {
                 interaction.editReply(await require(path).execute(interaction, mongoSession));
+                for(const {collection, changedDocuments } of [Market, Order, Ticker, Trader]) {
+                    if(changedDocuments.size > 0) {
+                        const writes = [];
+                        for(const document of changedDocuments) {
+                            writes.push({ replaceOne: {
+                                filter: { _id: document._id },
+                                replacement: document.toDBObject(),
+                                upsert: true
+                            } });
+                        }
+                        await collection.bulkWrite(writes, { session: mongoSession });
+                        changedDocuments.clear();
+                    }
+                }
             } catch(error) {
                 console.error(error);
                 interaction.editReply(`Error: ${error.message}`);
@@ -51,7 +65,7 @@ async function run() {
     console.log('Connected to MongoDB');
     await global.discordClient.login(process.env['BOT_TOKEN']);
     console.log(`Connected to Discord as ${global.discordClient.user.tag}`);
-    global.market = await new Market().initialize();
+    global.market = await new Market({ _id: 'market' }).resolve();
     console.log(global.market);
     await Ticker.load();
     await Trader.load();
