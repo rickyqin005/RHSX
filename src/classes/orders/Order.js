@@ -180,7 +180,7 @@ module.exports = class Order {
         return str;
     }
 
-    async setStatus(newStatus, mongoSession, cancelledReason) {
+    async setStatus(newStatus, cancelledReason) {
         if(!(Order.CANCELLED <= newStatus && newStatus <= Order.COMPLETELY_FILLED)) throw new Error('Invalid status');
         if(newStatus == this.status) return;
         this.status = newStatus;
@@ -199,28 +199,28 @@ module.exports = class Order {
         return obj;
     }
 
-    async violatesPositionLimits(mongoSession) {
+    async violatesPositionLimits() {
         return false;
     }
 
-    async submit(orderSubmissionFee, mongoSession) {
+    async submit(orderSubmissionFee) {
         this.validate();
         Order.changedDocuments.add(this);
         Order.cache.set(this._id, this);
-        if(orderSubmissionFee) await this.user.increaseBalance(-this.user.costPerOrderSubmitted, mongoSession);
-        if(await this.violatesPositionLimits(mongoSession)) {
-            this.cancel(Order.VIOLATES_POSITION_LIMITS, mongoSession); return;
+        if(orderSubmissionFee) await this.user.increaseBalance(-this.user.costPerOrderSubmitted);
+        if(await this.violatesPositionLimits()) {
+            this.cancel(Order.VIOLATES_POSITION_LIMITS); return;
         }
-        await this.fill(mongoSession);
+        await this.fill();
     }
 
-    async fill(mongoSession) {
-        await this.setStatus(Order.NOT_FILLED, mongoSession);
+    async fill() {
+        await this.setStatus(Order.NOT_FILLED);
     }
 
-    async cancel(cancelledReason, mongoSession) {
+    async cancel(cancelledReason) {
         if(this.status == Order.CANCELLED) throw new Error('Order is already cancelled');
         if(this.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled');
-        await this.setStatus(Order.CANCELLED, mongoSession, cancelledReason);
+        await this.setStatus(Order.CANCELLED, cancelledReason);
     }
 };

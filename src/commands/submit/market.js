@@ -9,7 +9,7 @@ module.exports = {
         .addStringOption(Order.OPTION.DIRECTION().setRequired(true))
         .addIntegerOption(NormalOrder.OPTION.QUANTITY().setRequired(true)),
     ephemeral: false,
-    execute: async function (interaction, mongoSession) {
+    execute: async function (interaction) {
         if(!global.market.isOpen) throw Market.ERROR.MARKET_CLOSED;
         const trader = Trader.getTrader(interaction.user.id);
         const order = await Order.assignOrderType({
@@ -19,7 +19,7 @@ module.exports = {
             ticker: interaction.options.getString('ticker'),
             quantity: interaction.options.getInteger('quantity')
         }).resolve();
-        await order.submit(true, mongoSession);
+        await order.submit(true);
         return { content: order.statusString() };
     }
 };

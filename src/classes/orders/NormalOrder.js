@@ -31,30 +31,30 @@ module.exports = class NormalOrder extends Order {
         return ((this.direction == Order.BUY) ? 1 : -1);
     }
 
-    async increaseQuantityFilled(amount, price, mongoSession) {
+    async increaseQuantityFilled(amount, price) {
         this.quantityFilled += amount;
         Order.changedDocuments.add(this);
-        if(this.quantityFilled == 0) await this.setStatus(Order.NOT_FILLED, mongoSession);
-        else if(this.quantityFilled < this.quantity) await this.setStatus(Order.PARTIALLY_FILLED, mongoSession);
-        else if(this.quantityFilled == this.quantity) await this.setStatus(Order.COMPLETELY_FILLED, mongoSession);
+        if(this.quantityFilled == 0) await this.setStatus(Order.NOT_FILLED);
+        else if(this.quantityFilled < this.quantity) await this.setStatus(Order.PARTIALLY_FILLED);
+        else if(this.quantityFilled == this.quantity) await this.setStatus(Order.COMPLETELY_FILLED);
         await this.user.addPosition(new Position({
             ticker: this.ticker._id,
             quantity: amount*this.netPositionChangeSign(),
             costBasis: amount*this.netPositionChangeSign()*price
-        }), mongoSession);
+        }));
     }
 
-    async match(existingOrder, mongoSession) {
+    async match(existingOrder) {
         const Ticker = require('../Ticker');
         const quantity = Math.min(this.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
         const price = existingOrder.price;
-        await existingOrder.increaseQuantityFilled(quantity, price, mongoSession);
-        await this.increaseQuantityFilled(quantity, price, mongoSession);
-        await existingOrder.ticker.increaseVolume(quantity, mongoSession);
+        await existingOrder.increaseQuantityFilled(quantity, price);
+        await this.increaseQuantityFilled(quantity, price);
+        await existingOrder.ticker.increaseVolume(quantity);
         return { quantity: quantity, price: price };
     }
 
-    async violatesPositionLimits(mongoSession) {
+    async violatesPositionLimits() {
         const LimitOrder = require('./LimitOrder');
         const currPosition = this.user.positions[this.ticker._id];
         const positionLimit = (this.direction == Order.BUY ? this.user.maxPositionLimit : this.user.minPositionLimit);

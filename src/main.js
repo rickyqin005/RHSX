@@ -25,7 +25,7 @@ const interactionHandler = async function () {
         console.time(path);
         await mongoSession.withTransaction(async () => {
             try {
-                interaction.editReply(await require(path).execute(interaction, mongoSession));
+                interaction.editReply(await require(path).execute(interaction));
                 for(const {collection, changedDocuments } of [Market, Order, Ticker, Trader]) {
                     if(changedDocuments.size > 0) {
                         const writes = [];

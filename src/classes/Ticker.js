@@ -64,12 +64,12 @@ module.exports = class Ticker {
         return obj;
     }
 
-    async increaseVolume(quantity, mongoSession) {
+    async increaseVolume(quantity) {
         this.volume += quantity;
         Ticker.changedDocuments.add(this);
     }
 
-    async setLastTradedPrice(newPrice, mongoSession) {
+    async setLastTradedPrice(newPrice) {
         if(this.lastTradedPrice == newPrice) return;
         const currPrice = this.lastTradedPrice;
         this.lastTradedPrice = newPrice;
@@ -85,8 +85,8 @@ module.exports = class Ticker {
             status: Order.NOT_FILLED
         }, { timestamp: 1 });
         for(const stop of triggeredStops) {
-            await stop.setStatus(Order.COMPLETELY_FILLED, mongoSession);
-            await stop.executedOrder.submit(false, mongoSession);
+            await stop.setStatus(Order.COMPLETELY_FILLED);
+            await stop.executedOrder.submit(false);
         }
     }
 };

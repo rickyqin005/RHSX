@@ -6,7 +6,7 @@ module.exports = {
         .setName('join')
         .setDescription('Become a trader'),
     ephemeral: false,
-    execute: async function (interaction, mongoSession) {
+    execute: async function (interaction) {
         try {
             const trader = Trader.getTrader(interaction.user.id);
             throw Trader.ERROR.ALREADY_A_TRADER;

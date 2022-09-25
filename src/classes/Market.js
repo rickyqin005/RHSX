@@ -21,13 +21,13 @@ module.exports = class Market {
         return obj;
     }
 
-    async open(mongoSession) {
+    async open() {
         if(this.isOpen) throw new Error('Market is already open');
         this.isOpen = true;
         Market.changedDocuments.add(this);
     }
 
-    async close(mongoSession) {
+    async close() {
         if(!this.isOpen) throw new Error('Market is already closed');
         this.isOpen = false;
         Market.changedDocuments.add(this);

@@ -5,8 +5,8 @@ module.exports = {
         .setName('open')
         .setDescription('Opens the market (Admin only)'),
     ephemeral: false,
-    execute: async function (interaction, mongoSession) {
-        await global.market.open(mongoSession);
+    execute: async function (interaction) {
+        await global.market.open();
         return { content: 'Market is now open' };
     }
 };

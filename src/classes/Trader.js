@@ -109,12 +109,12 @@ module.exports = class Trader {
         return obj;
     }
 
-    async increaseBalance(amount, mongoSession) {
+    async increaseBalance(amount) {
         this.balance += amount;
         Trader.changedDocuments.add(this);
     }
 
-    async addPosition(pos, mongoSession) {
+    async addPosition(pos) {
         if(this.positions[pos.ticker] == undefined) this.positions[pos.ticker] = pos;
         else {
             const currPos = this.positions[pos.ticker];

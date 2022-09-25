@@ -11,7 +11,7 @@ module.exports = {
         .addIntegerOption(NormalOrder.OPTION.QUANTITY().setRequired(true))
         .addNumberOption(LimitOrder.OPTION.PRICE().setRequired(true)),
     ephemeral: false,
-    execute: async function (interaction, mongoSession) {
+    execute: async function (interaction) {
         if(!global.market.isOpen) throw Market.ERROR.MARKET_CLOSED;
         const trader = Trader.getTrader(interaction.user.id);
         const order = await Order.assignOrderType({
@@ -29,7 +29,7 @@ module.exports = {
                 price: Price.toPrice(interaction.options.getNumber('limit_price'))
             }
         }).resolve();
-        await order.submit(true, mongoSession);
+        await order.submit(true);
         return { content: order.statusString() };
     }
 };
