@@ -29,7 +29,7 @@ module.exports = {
                 price: Price.toPrice(interaction.options.getNumber('limit_price'))
             }
         }).resolve();
-        await order.submit(mongoSession);
+        await order.submit(true, mongoSession);
         return { content: order.statusString() };
     }
 };

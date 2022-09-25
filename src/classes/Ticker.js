@@ -81,7 +81,7 @@ module.exports = class Ticker {
         }, { timestamp: 1 });
         for(const stop of triggeredStops) {
             await stop.setStatus(Order.COMPLETELY_FILLED, mongoSession);
-            await stop.executedOrder.submit(mongoSession);
+            await stop.executedOrder.submit(false, mongoSession);
         }
     }
 };

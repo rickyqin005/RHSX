@@ -4,6 +4,9 @@ const { Collection } = require('discord.js');
 const { ObjectId } = require('mongodb');
 
 module.exports = class Trader {
+    static DEFAULT_STARTING_BALANCE = Price.toPrice(20000);
+    static DEFAULT_COST_PER_ORDER_SUBMITTED = Price.toPrice(2);
+    static DEFAULT_COST_PER_SHARE_TRADED = Price.toPrice(0.04);
     static DEFAULT_MIN_POSITION_LIMIT = -10000;
     static DEFAULT_MAX_POSITION_LIMIT = 10000;
     static ERROR = {
@@ -34,13 +37,15 @@ module.exports = class Trader {
 
     constructor(args) {
         this._id = args._id;
-        this.joined = args.joined ?? new Date();
-        this.minPositionLimit = args.minPositionLimit ?? Trader.DEFAULT_MIN_POSITION_LIMIT;
-        this.maxPositionLimit = args.maxPositionLimit ?? Trader.DEFAULT_MAX_POSITION_LIMIT;
-        this.balance = args.balance ?? 0;
+        this.balance = args.balance ?? Trader.DEFAULT_STARTING_BALANCE;
         const Position = require('./Position');
         this.positions = args.positions ?? {};
         for(const pos in this.positions) this.positions[pos] = new Position(this.positions[pos]);
+        this.joined = args.joined ?? new Date();
+        this.costPerOrderSubmitted = args.costPerOrderSubmitted ?? Trader.DEFAULT_COST_PER_ORDER_SUBMITTED;
+        this.costPerShareTraded = args.costPerShareTraded ?? Trader.DEFAULT_COST_PER_SHARE_TRADED;
+        this.minPositionLimit = args.minPositionLimit ?? Trader.DEFAULT_MIN_POSITION_LIMIT;
+        this.maxPositionLimit = args.maxPositionLimit ?? Trader.DEFAULT_MAX_POSITION_LIMIT;
     }
 
     async infoEmbed() {
@@ -103,6 +108,11 @@ module.exports = class Trader {
         Trader.cache.set(this._id, this);
     }
 
+    async increaseBalance(amount, mongoSession) {
+        this.balance += amount;
+        await Trader.collection.updateOne({ _id: this._id }, { $inc: { balance: amount } }, { session: mongoSession });
+    }
+
     async addPosition(pos, mongoSession) {
         if(this.positions[pos.ticker] == undefined) this.positions[pos.ticker] = pos;
         else {
@@ -120,6 +130,7 @@ module.exports = class Trader {
             }
         }
         this.balance -= pos.costBasis;
+        this.balance -= Math.abs(pos.quantity)*this.costPerShareTraded;
         if(this.positions[pos.ticker].quantity == 0) delete this.positions[pos.ticker];
         await Trader.collection.replaceOne({ _id: this._id }, this, { session: mongoSession });
     }

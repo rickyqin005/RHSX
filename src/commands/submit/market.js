@@ -19,7 +19,7 @@ module.exports = {
             ticker: interaction.options.getString('ticker'),
             quantity: interaction.options.getInteger('quantity')
         }).resolve();
-        await order.submit(mongoSession);
+        await order.submit(true, mongoSession);
         return { content: order.statusString() };
     }
 };

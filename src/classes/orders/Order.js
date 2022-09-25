@@ -206,9 +206,10 @@ module.exports = class Order {
         return false;
     }
 
-    async submit(mongoSession) {
+    async submit(orderSubmissionFee, mongoSession) {
         this.validate();
         await this.addToDB(mongoSession);
+        if(orderSubmissionFee) await this.user.increaseBalance(-this.user.costPerOrderSubmitted);
         if(await this.violatesPositionLimits(mongoSession)) {
             this.cancel(Order.VIOLATES_POSITION_LIMITS, mongoSession); return;
         }
