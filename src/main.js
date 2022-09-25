@@ -26,19 +26,18 @@ const interactionHandler = async function () {
         await mongoSession.withTransaction(async () => {
             try {
                 interaction.editReply(await require(path).execute(interaction));
-                for(const {collection, changedDocuments } of [Market, Order, Ticker, Trader]) {
-                    if(changedDocuments.size > 0) {
-                        const writes = [];
-                        for(const document of changedDocuments) {
-                            writes.push({ replaceOne: {
-                                filter: { _id: document._id },
-                                replacement: document.toDBObject(),
-                                upsert: true
-                            } });
-                        }
-                        await collection.bulkWrite(writes, { session: mongoSession });
-                        changedDocuments.clear();
+                const collectionClasses = [Market, Order, Ticker, Trader].filter(element => element.changedDocuments.size > 0);
+                for(const { collection, changedDocuments } of collectionClasses) {
+                    const writes = [];
+                    for(const document of changedDocuments) {
+                        writes.push({ replaceOne: {
+                            filter: { _id: document._id },
+                            replacement: document.toDBObject(),
+                            upsert: true
+                        } });
                     }
+                    await collection.bulkWrite(writes, { ordered: false, session: mongoSession });
+                    changedDocuments.clear();
                 }
             } catch(error) {
                 console.error(error);
@@ -49,7 +48,7 @@ const interactionHandler = async function () {
         await mongoSession.endSession();
         console.timeEnd(path);
     }
-    setTimeout(interactionHandler, 200);
+    setTimeout(interactionHandler, 100);
 }
 
 global.discordClient.on('interactionCreate', async interaction => {
