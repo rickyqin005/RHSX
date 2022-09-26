@@ -221,7 +221,6 @@ module.exports = class Order {
         if(this.status != Order.UNSUBMITTED) throw Order.ERROR.ALREADY_SUBMITTED;
         this.validate();
         Order.changedDocuments.add(this);
-        Order.cache.set(this._id, this);
         this.setStatus(Order.SUBMITTED);
         if(hasOrderSubmissionFee) this.user.increaseBalance(-this.user.costPerOrderSubmitted);
     }

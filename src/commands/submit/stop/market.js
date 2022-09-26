@@ -13,20 +13,25 @@ module.exports = {
     execute: async function (interaction) {
         if(!global.market.isOpen) throw Market.ERROR.MARKET_CLOSED;
         const trader = Trader.getTrader(interaction.user.id);
+        const executedOrder = await Order.assignOrderType({
+            type: MarketOrder.TYPE,
+            user: interaction.user.id,
+            direction: interaction.options.getString('direction'),
+            ticker: interaction.options.getString('ticker'),
+            quantity: interaction.options.getInteger('quantity')
+        }).resolve();
+        Order.cache.set(executedOrder._id, executedOrder);
+        console.log(executedOrder);
         const order = await Order.assignOrderType({
             type: StopOrder.TYPE,
             user: interaction.user.id,
             direction: interaction.options.getString('direction'),
             ticker: interaction.options.getString('ticker'),
             triggerPrice: Price.toPrice(interaction.options.getNumber('trigger_price')),
-            executedOrder: {
-                type: MarketOrder.TYPE,
-                user: interaction.user.id,
-                direction: interaction.options.getString('direction'),
-                ticker: interaction.options.getString('ticker'),
-                quantity: interaction.options.getInteger('quantity')
-            }
+            executedOrder: executedOrder._id
         }).resolve();
+        Order.cache.set(order._id, order);
+        console.log(order);
         order.submit();
         await order.process();
         return { content: order.statusString() };

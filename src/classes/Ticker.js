@@ -39,6 +39,10 @@ module.exports = class Ticker {
         return this;
     }
 
+    toString() {
+        return this._id;
+    }
+
     async getBids() {
         const LimitOrder = require('./orders/LimitOrder');
         return await Order.queryOrders({

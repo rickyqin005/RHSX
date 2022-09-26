@@ -53,8 +53,7 @@ module.exports = class StopOrder extends Order {
         const obj = Order.assignOrderType(this);
         obj.user = obj.user._id;
         obj.ticker = obj.ticker._id;
-        obj.executedOrder.user = obj.executedOrder.user._id;
-        obj.executedOrder.ticker = obj.executedOrder.ticker._id;
+        obj.executedOrder = obj.executedOrder._id;
         return obj;
     }
 
