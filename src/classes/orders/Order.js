@@ -202,9 +202,7 @@ module.exports = class Order {
         Order.changedDocuments.add(this);
     }
 
-    validate() {
-        this.timestamp = new Date();
-    }
+    validate() {}
 
     toDBObject() {
         const obj = Order.assignOrderType(this);
@@ -220,6 +218,7 @@ module.exports = class Order {
     submit(hasOrderSubmissionFee = true) {
         if(this.status != Order.UNSUBMITTED) throw Order.ERROR.ALREADY_SUBMITTED;
         this.validate();
+        this.timestamp = new Date();
         Order.changedDocuments.add(this);
         this.setStatus(Order.SUBMITTED);
         if(hasOrderSubmissionFee) this.user.increaseBalance(-this.user.costPerOrderSubmitted);
@@ -227,6 +226,7 @@ module.exports = class Order {
 
     async process() {
         if(this.status != Order.SUBMITTED) throw Order.ERROR.NOT_SUBMITTED;
+        this.timestamp = new Date();
         if(await this.violatesPositionLimits()) {
             this.cancel(Order.VIOLATES_POSITION_LIMITS); return;
         }
