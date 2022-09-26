@@ -64,7 +64,7 @@ module.exports = class Ticker {
         return obj;
     }
 
-    async increaseVolume(quantity) {
+    increaseVolume(quantity) {
         this.volume += quantity;
         Ticker.changedDocuments.add(this);
     }
@@ -85,7 +85,7 @@ module.exports = class Ticker {
             status: Order.NOT_FILLED
         }, { timestamp: 1 });
         for(const stop of triggeredStops) {
-            await stop.setStatus(Order.COMPLETELY_FILLED);
+            stop.setStatus(Order.COMPLETELY_FILLED);
             await stop.executedOrder.submit(false);
         }
     }

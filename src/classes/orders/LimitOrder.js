@@ -48,13 +48,13 @@ module.exports = class LimitOrder extends NormalOrder {
             const asks = await this.ticker.getAsks();
             for(const bestAsk of asks) {
                 if(this.status == Order.COMPLETELY_FILLED || this.price < bestAsk.price) break;
-                newLastTradedPrice = (await this.match(bestAsk)).price;
+                newLastTradedPrice = this.match(bestAsk).price;
             }
         } else if(this.direction == Order.SELL) {
             const bids = await this.ticker.getBids();
             for(const bestBid of bids) {
                 if(this.status == Order.COMPLETELY_FILLED || bestBid.price < this.price) break;
-                newLastTradedPrice = (await this.match(bestBid)).price;
+                newLastTradedPrice = this.match(bestBid).price;
             }
         }
         await this.ticker.setLastTradedPrice(newLastTradedPrice);

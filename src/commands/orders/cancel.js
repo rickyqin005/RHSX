@@ -15,7 +15,7 @@ module.exports = {
             user: interaction.user.id
         });
         if(order == undefined) throw Order.ERROR.ORDER_NOT_FOUND;
-        await order.cancel(Order.CANCELLED_BY_TRADER);
+        order.cancel(Order.CANCELLED_BY_TRADER);
         return { content: order.statusString() };
     }
 };

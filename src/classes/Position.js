@@ -5,7 +5,7 @@ module.exports = class Position {
         this.costBasis = args.costBasis ?? 0;
     }
 
-    async calculateOpenPnL() {
+    calculateOpenPnL() {
         const Ticker = require('./Ticker');
         return Ticker.getTicker(this.ticker).lastTradedPrice*this.quantity - this.costBasis;
     }

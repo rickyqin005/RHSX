@@ -31,26 +31,26 @@ module.exports = class NormalOrder extends Order {
         return ((this.direction == Order.BUY) ? 1 : -1);
     }
 
-    async increaseQuantityFilled(amount, price) {
+    increaseQuantityFilled(amount, price) {
         this.quantityFilled += amount;
         Order.changedDocuments.add(this);
-        if(this.quantityFilled == 0) await this.setStatus(Order.NOT_FILLED);
-        else if(this.quantityFilled < this.quantity) await this.setStatus(Order.PARTIALLY_FILLED);
-        else if(this.quantityFilled == this.quantity) await this.setStatus(Order.COMPLETELY_FILLED);
-        await this.user.addPosition(new Position({
+        if(this.quantityFilled == 0) this.setStatus(Order.NOT_FILLED);
+        else if(this.quantityFilled < this.quantity) this.setStatus(Order.PARTIALLY_FILLED);
+        else if(this.quantityFilled == this.quantity) this.setStatus(Order.COMPLETELY_FILLED);
+        this.user.addPosition(new Position({
             ticker: this.ticker._id,
             quantity: amount*this.netPositionChangeSign(),
             costBasis: amount*this.netPositionChangeSign()*price
         }));
     }
 
-    async match(existingOrder) {
+    match(existingOrder) {
         const Ticker = require('../Ticker');
         const quantity = Math.min(this.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
         const price = existingOrder.price;
-        await existingOrder.increaseQuantityFilled(quantity, price);
-        await this.increaseQuantityFilled(quantity, price);
-        await existingOrder.ticker.increaseVolume(quantity);
+        existingOrder.increaseQuantityFilled(quantity, price);
+        this.increaseQuantityFilled(quantity, price);
+        existingOrder.ticker.increaseVolume(quantity);
         return { quantity: quantity, price: price };
     }
 

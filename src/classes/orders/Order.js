@@ -180,7 +180,7 @@ module.exports = class Order {
         return str;
     }
 
-    async setStatus(newStatus, cancelledReason) {
+    setStatus(newStatus, cancelledReason) {
         if(!(Order.CANCELLED <= newStatus && newStatus <= Order.COMPLETELY_FILLED)) throw new Error('Invalid status');
         if(newStatus == this.status) return;
         this.status = newStatus;
@@ -207,7 +207,7 @@ module.exports = class Order {
         this.validate();
         Order.changedDocuments.add(this);
         Order.cache.set(this._id, this);
-        if(orderSubmissionFee) await this.user.increaseBalance(-this.user.costPerOrderSubmitted);
+        if(orderSubmissionFee) this.user.increaseBalance(-this.user.costPerOrderSubmitted);
         if(await this.violatesPositionLimits()) {
             this.cancel(Order.VIOLATES_POSITION_LIMITS); return;
         }
@@ -215,12 +215,12 @@ module.exports = class Order {
     }
 
     async fill() {
-        await this.setStatus(Order.NOT_FILLED);
+        this.setStatus(Order.NOT_FILLED);
     }
 
-    async cancel(cancelledReason) {
+    cancel(cancelledReason) {
         if(this.status == Order.CANCELLED) throw new Error('Order is already cancelled');
         if(this.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled');
-        await this.setStatus(Order.CANCELLED, cancelledReason);
+        this.setStatus(Order.CANCELLED, cancelledReason);
     }
 };

@@ -66,9 +66,7 @@ async function run() {
     console.log(`Connected to Discord as ${global.discordClient.user.tag}`);
     global.market = await new Market({ _id: 'market' }).resolve();
     console.log(global.market);
-    await Ticker.load();
-    await Trader.load();
-    await Order.load();
+    for(const collectionClass of [Ticker, Trader, Order]) await collectionClass.load();
     await require('./actions/deploy_commands').run();
     await require('./actions/deploy_api').run();
     setTimeout(interactionHandler, 0);

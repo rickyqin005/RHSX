@@ -21,13 +21,13 @@ module.exports = class Market {
         return obj;
     }
 
-    async open() {
+    open() {
         if(this.isOpen) throw new Error('Market is already open');
         this.isOpen = true;
         Market.changedDocuments.add(this);
     }
 
-    async close() {
+    close() {
         if(!this.isOpen) throw new Error('Market is already closed');
         this.isOpen = false;
         Market.changedDocuments.add(this);

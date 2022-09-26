@@ -35,22 +35,22 @@ module.exports = class MarketOrder extends NormalOrder {
             let asksDepth = 0;
             asks.forEach(ask => asksDepth += ask.getQuantityUnfilled());
             if(this.quantity > asksDepth) {
-                await this.cancel(Order.UNFULFILLABLE); return;
+                this.cancel(Order.UNFULFILLABLE); return;
             }
             for(const bestAsk of asks) {
                 if(this.status == Order.COMPLETELY_FILLED) break;
-                newLastTradedPrice = (await this.match(bestAsk)).price;
+                newLastTradedPrice = this.match(bestAsk).price;
             }
         } else if(this.direction == Order.SELL) {
             const bids = await this.ticker.getBids();
             let bidsDepth = 0;
             bids.forEach(bid => bidsDepth += bid.getQuantityUnfilled());
             if(this.quantity > bidsDepth) {
-                await this.cancel(Order.UNFULFILLABLE); return;
+                this.cancel(Order.UNFULFILLABLE); return;
             }
             for(const bestBid of bids) {
                 if(this.status == Order.COMPLETELY_FILLED) break;
-                newLastTradedPrice = (await this.match(bestBid)).price;
+                newLastTradedPrice = this.match(bestBid).price;
             }
         }
         await this.ticker.setLastTradedPrice(newLastTradedPrice);

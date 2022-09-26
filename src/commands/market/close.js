@@ -6,7 +6,7 @@ module.exports = {
         .setDescription('Closes the market (Admin only)'),
     ephemeral: false,
     execute: async function (interaction) {
-        await global.market.close();
+        global.market.close();
         return { content: 'Market is now closed' };
     }
 };

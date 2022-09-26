@@ -53,7 +53,7 @@ module.exports = class Trader {
         const embed = (await this.templateEmbed())
             .setTitle('Trader Info')
             .addFields(
-                { name: 'Account Value', value: Price.format(await this.getAccountValue()), inline: true },
+                { name: 'Account Value', value: Price.format(this.getAccountValue()), inline: true },
                 { name: 'Cash Balance', value: Price.format(this.balance), inline: true },
                 { name: '\u200b', value: '\u200b', inline: true },
                 { name: 'Lower Position Limit', value: `${this.minPositionLimit}`, inline: true },
@@ -78,7 +78,7 @@ module.exports = class Trader {
             embed.addFields(
                 { name: position.ticker, value: Price.format(price), inline: true },
                 { name: Price.format(price*position.quantity), value: `**${position.quantity}**`, inline: true },
-                { name: Price.format(await position.calculateOpenPnL()), value: '\u200B', inline: true },
+                { name: Price.format(position.calculateOpenPnL()), value: '\u200B', inline: true },
             );
         }
         return embed;
@@ -95,7 +95,7 @@ module.exports = class Trader {
         return await global.discordClient.users.fetch(this._id);
     }
 
-    async getAccountValue() {
+    getAccountValue() {
         const Ticker = require('./Ticker');
         let accountValue = this.balance;
         for(const pos in this.positions) {
@@ -109,12 +109,12 @@ module.exports = class Trader {
         return obj;
     }
 
-    async increaseBalance(amount) {
+    increaseBalance(amount) {
         this.balance += amount;
         Trader.changedDocuments.add(this);
     }
 
-    async addPosition(pos) {
+    addPosition(pos) {
         if(this.positions[pos.ticker] == undefined) this.positions[pos.ticker] = pos;
         else {
             const currPos = this.positions[pos.ticker];
