@@ -21,6 +21,7 @@ module.exports = {
             quantity: interaction.options.getInteger('quantity'),
             price: Price.toPrice(interaction.options.getNumber('limit_price'))
         }).resolve();
+        Order.cache.set(order._id, order);
         order.submit();
         await order.process();
         return { content: order.statusString() };
