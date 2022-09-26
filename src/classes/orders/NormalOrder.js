@@ -77,7 +77,8 @@ module.exports = class NormalOrder extends Order {
     async fill() {}
 
     async process() {
-        await super.process();
+        if(!(await super.process())) return false;
         await this.fill();
+        return true;
     }
 };

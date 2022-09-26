@@ -213,9 +213,10 @@ module.exports = class Order {
         if(this.status != Order.SUBMITTED) throw Order.ERROR.NOT_SUBMITTED;
         this.timestamp = new Date();
         if(await this.violatesPositionLimits()) {
-            this.cancel(Order.VIOLATES_POSITION_LIMITS); return;
+            this.cancel(Order.VIOLATES_POSITION_LIMITS); return false;
         }
         this.setStatus(Order.NOT_FILLED);
+        return true;
     }
 
     cancel(cancelledReason) {
