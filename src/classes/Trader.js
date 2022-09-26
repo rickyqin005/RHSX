@@ -3,11 +3,6 @@ const Tools = require('../utils/Tools');
 const { Collection } = require('discord.js');
 
 module.exports = class Trader {
-    static DEFAULT_STARTING_BALANCE = Price.toPrice(20000);
-    static DEFAULT_COST_PER_ORDER_SUBMITTED = Price.toPrice(2);
-    static DEFAULT_COST_PER_SHARE_TRADED = Price.toPrice(0.02);
-    static DEFAULT_MIN_POSITION_LIMIT = -10000;
-    static DEFAULT_MAX_POSITION_LIMIT = 10000;
     static ERROR = {
         NOT_A_TRADER: new Error('Not a trader'),
         ALREADY_A_TRADER: new Error('Already a trader')
@@ -37,15 +32,15 @@ module.exports = class Trader {
 
     constructor(args) {
         this._id = args._id;
-        this.balance = args.balance ?? Trader.DEFAULT_STARTING_BALANCE;
+        this.balance = args.balance ?? global.market.defaultStartingBalance;
         const Position = require('./Position');
         this.positions = args.positions ?? {};
         for(const pos in this.positions) this.positions[pos] = new Position(this.positions[pos]);
         this.joined = args.joined ?? new Date();
-        this.costPerOrderSubmitted = args.costPerOrderSubmitted ?? Trader.DEFAULT_COST_PER_ORDER_SUBMITTED;
-        this.costPerShareTraded = args.costPerShareTraded ?? Trader.DEFAULT_COST_PER_SHARE_TRADED;
-        this.minPositionLimit = args.minPositionLimit ?? Trader.DEFAULT_MIN_POSITION_LIMIT;
-        this.maxPositionLimit = args.maxPositionLimit ?? Trader.DEFAULT_MAX_POSITION_LIMIT;
+        this.costPerOrderSubmitted = args.costPerOrderSubmitted ?? global.market.defaultCostPerOrderSubmitted;
+        this.costPerShareTraded = args.costPerShareTraded ?? global.market.defaultCostPerShareTraded;
+        this.minPositionLimit = args.minPositionLimit ?? global.market.defaultMinPositionLimit;
+        this.maxPositionLimit = args.maxPositionLimit ?? global.market.defaultMaxPositionLimit;
     }
 
     async resolve() {
