@@ -61,6 +61,4 @@ module.exports = class StopOrder extends Order {
         super.submit();
         this.executedOrder.submit(false);
     }
-
-    process() {}
 };
