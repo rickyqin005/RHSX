@@ -131,7 +131,7 @@ module.exports = class Order {
     }
 
     constructor(args) {
-        this._id = args._id ?? ObjectId();
+        this._id = args._id ?? ObjectId().toHexString();
         this.type = args.type;
         this.timestamp = args.timestamp ?? new Date();
         this.user = args.user;

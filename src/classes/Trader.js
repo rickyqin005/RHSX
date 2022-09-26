@@ -1,7 +1,6 @@
 const Price = require('../utils/Price');
 const Tools = require('../utils/Tools');
 const { Collection } = require('discord.js');
-const { ObjectId } = require('mongodb');
 
 module.exports = class Trader {
     static DEFAULT_STARTING_BALANCE = Price.toPrice(20000);
