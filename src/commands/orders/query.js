@@ -19,6 +19,7 @@ module.exports = {
         if(status == 'pending') status = { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] };
         else if(status == 'completed') status = Order.COMPLETELY_FILLED;
         else if(status == 'cancelled') status = Order.CANCELLED;
+        else status = { $in: [Order.CANCELLED, Order.NOT_FILLED, Order.PARTIALLY_FILLED, Order.COMPLETELY_FILLED] };
         const query = {};
         query.user = interaction.user.id;
         if(type != null) query.type = type;
