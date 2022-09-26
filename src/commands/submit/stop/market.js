@@ -27,7 +27,8 @@ module.exports = {
                 quantity: interaction.options.getInteger('quantity')
             }
         }).resolve();
-        await order.submit(true);
+        order.submit();
+        await order.process();
         return { content: order.statusString() };
     }
 };

@@ -20,9 +20,9 @@ module.exports = class Trader {
     static async load() {
         const startTime = new Date();
         this.cache.clear();
-        (await this.collection.find().toArray()).forEach(trader => {
-            this.cache.set(trader._id, new Trader(trader));
-        });
+        const traders = await this.collection.find().toArray();
+        for(const trader of traders) this.cache.set(trader._id, new Trader(trader));
+        for(const [id, trader] of this.cache) await trader.resolve();
         console.log(`Cached ${this.cache.size} Trader(s), took ${new Date()-startTime}ms`);
     }
 
@@ -47,6 +47,10 @@ module.exports = class Trader {
         this.costPerShareTraded = args.costPerShareTraded ?? Trader.DEFAULT_COST_PER_SHARE_TRADED;
         this.minPositionLimit = args.minPositionLimit ?? Trader.DEFAULT_MIN_POSITION_LIMIT;
         this.maxPositionLimit = args.maxPositionLimit ?? Trader.DEFAULT_MAX_POSITION_LIMIT;
+    }
+
+    async resolve() {
+        return this;
     }
 
     async infoEmbed() {

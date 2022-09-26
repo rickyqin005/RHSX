@@ -29,7 +29,7 @@ module.exports = class StopOrder extends Order {
 
     async resolve() {
         await super.resolve();
-        this.executedOrder = (Order.cache.get(this.executedOrder._id) ?? (await Order.assignOrderType(this.executedOrder).resolve()));
+        this.executedOrder = Order.getOrder(this.executedOrder);
         return this;
     }
 
@@ -58,8 +58,10 @@ module.exports = class StopOrder extends Order {
         return obj;
     }
 
-    async submit(orderSubmissionFee) {
-        await super.submit(orderSubmissionFee);
-        this.setStatus(Order.NOT_FILLED);
+    submit() {
+        super.submit();
+        this.executedOrder.submit(false);
     }
+
+    process() {}
 };

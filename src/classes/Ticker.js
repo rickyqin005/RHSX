@@ -13,9 +13,9 @@ module.exports = class Ticker {
     static async load() {
         const startTime = new Date();
         this.cache.clear();
-        (await this.collection.find().toArray()).forEach(ticker => {
-            this.cache.set(ticker._id, new Ticker(ticker));
-        });
+        const tickers = await this.collection.find().toArray();
+        for(const ticker of tickers) this.cache.set(ticker._id, new Ticker(ticker));
+        for(const [id, ticker] of this.cache) await ticker.resolve();
         console.log(`Cached ${this.cache.size} Ticker(s), took ${new Date()-startTime}ms`);
     }
 
@@ -33,6 +33,10 @@ module.exports = class Ticker {
         this._id = args._id ?? ObjectId();
         this.lastTradedPrice = args.lastTradedPrice;
         this.volume = args.volume ?? 0;
+    }
+
+    async resolve() {
+        return this;
     }
 
     async getBids() {
@@ -82,7 +86,7 @@ module.exports = class Ticker {
         }, { timestamp: 1 });
         for(const stop of triggeredStops) {
             stop.setStatus(Order.COMPLETELY_FILLED);
-            await stop.executedOrder.submit(false);
+            await stop.executedOrder.process();
         }
     }
 };

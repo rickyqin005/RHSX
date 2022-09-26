@@ -76,8 +76,8 @@ module.exports = class NormalOrder extends Order {
 
     async fill() {}
 
-    async submit(orderSubmissionFee) {
-        await super.submit(orderSubmissionFee);
+    async process() {
+        await super.process();
         await this.fill();
     }
 };

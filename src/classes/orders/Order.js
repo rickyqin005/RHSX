@@ -8,7 +8,7 @@ module.exports = class Order {
     static SELL = 'SELL';
     static CANCELLED = -1;
     static UNSUBMITTED = 0;
-    static IN_QUEUE = 1;
+    static SUBMITTED = 1;
     static NOT_FILLED = 2;
     static PARTIALLY_FILLED = 3;
     static COMPLETELY_FILLED = 4;
@@ -63,6 +63,7 @@ module.exports = class Order {
     };
     static ERROR = {
         ORDER_NOT_FOUND: new Error('Order not found'),
+        NOT_SUBMITTED: new Error('Order is not submitted'),
         ALREADY_SUBMITTED: new Error('Order is already submitted')
     };
     static collection = global.mongoClient.db('RHSX').collection('Orders');
@@ -72,7 +73,7 @@ module.exports = class Order {
     static async load() {
         const startTime = new Date();
         this.cache.clear();
-        const orders = await this.collection.find().limit(100000).toArray();
+        const orders = await this.collection.find().toArray();
         for(const order of orders) this.cache.set(order._id, this.assignOrderType(order));
         for(const [id, order] of this.cache) await order.resolve();
         const Ticker = require('../Ticker');
@@ -87,6 +88,16 @@ module.exports = class Order {
         if(order.type == LimitOrder.TYPE) return new LimitOrder(order);
         else if(order.type == MarketOrder.TYPE) return new MarketOrder(order);
         else if(order.type == StopOrder.TYPE) return new StopOrder(order);
+    }
+
+    static getOrder(_id) {
+        const res = this.cache.get(_id);
+        if(res == undefined) throw this.ORDER_NOT_FOUND;
+        return res;
+    }
+
+    static getOrders() {
+        return Array.from(this.cache.values());
     }
 
     static async queryOrder(query) {
@@ -143,7 +154,7 @@ module.exports = class Order {
     statusLabel() {
         if(this.status == Order.CANCELLED) return 'Cancelled';
         else if(this.status == Order.UNSUBMITTED) return 'Unsubmitted';
-        else if(this.status == Order.IN_QUEUE) return 'In queue';
+        else if(this.status == Order.SUBMITTED) return 'Submitted';
         else if(this.status == Order.NOT_FILLED) return 'Pending';
         else if(this.status == Order.PARTIALLY_FILLED) return 'Pending';
         else if(this.status == Order.COMPLETELY_FILLED) return 'Completed';
@@ -206,16 +217,21 @@ module.exports = class Order {
         return false;
     }
 
-    async submit(orderSubmissionFee) {
+    submit(hasOrderSubmissionFee = true) {
         if(this.status != Order.UNSUBMITTED) throw Order.ERROR.ALREADY_SUBMITTED;
         this.validate();
         Order.changedDocuments.add(this);
         Order.cache.set(this._id, this);
-        this.setStatus(Order.IN_QUEUE);
-        if(orderSubmissionFee) this.user.increaseBalance(-this.user.costPerOrderSubmitted);
+        this.setStatus(Order.SUBMITTED);
+        if(hasOrderSubmissionFee) this.user.increaseBalance(-this.user.costPerOrderSubmitted);
+    }
+
+    async process() {
+        if(this.status != Order.SUBMITTED) throw Order.ERROR.NOT_SUBMITTED;
         if(await this.violatesPositionLimits()) {
             this.cancel(Order.VIOLATES_POSITION_LIMITS); return;
         }
+        this.setStatus(Order.NOT_FILLED);
     }
 
     cancel(cancelledReason) {
