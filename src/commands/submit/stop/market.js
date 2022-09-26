@@ -21,7 +21,6 @@ module.exports = {
             quantity: interaction.options.getInteger('quantity')
         }).resolve();
         Order.cache.set(executedOrder._id, executedOrder);
-        console.log(executedOrder);
         const order = await Order.assignOrderType({
             type: StopOrder.TYPE,
             user: interaction.user.id,
@@ -31,7 +30,6 @@ module.exports = {
             executedOrder: executedOrder._id
         }).resolve();
         Order.cache.set(order._id, order);
-        console.log(order);
         order.submit();
         await order.process();
         return { content: order.statusString() };
