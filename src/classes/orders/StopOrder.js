@@ -57,4 +57,9 @@ module.exports = class StopOrder extends Order {
         obj.executedOrder.ticker = obj.executedOrder.ticker._id;
         return obj;
     }
+
+    async submit(orderSubmissionFee) {
+        await super.submit(orderSubmissionFee);
+        this.setStatus(Order.NOT_FILLED);
+    }
 };

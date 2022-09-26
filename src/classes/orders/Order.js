@@ -62,7 +62,8 @@ module.exports = class Order {
         }
     };
     static ERROR = {
-        ORDER_NOT_FOUND: new Error('Order not found')
+        ORDER_NOT_FOUND: new Error('Order not found'),
+        ALREADY_SUBMITTED: new Error('Order is already submitted')
     };
     static collection = global.mongoClient.db('RHSX').collection('Orders');
     static changedDocuments = new Set();
@@ -137,6 +138,8 @@ module.exports = class Order {
         return this;
     }
 
+    label() {}
+
     statusLabel() {
         if(this.status == Order.CANCELLED) return 'Cancelled';
         else if(this.status == Order.UNSUBMITTED) return 'Unsubmitted';
@@ -204,23 +207,20 @@ module.exports = class Order {
     }
 
     async submit(orderSubmissionFee) {
+        if(this.status != Order.UNSUBMITTED) throw Order.ERROR.ALREADY_SUBMITTED;
         this.validate();
         Order.changedDocuments.add(this);
         Order.cache.set(this._id, this);
+        this.setStatus(Order.IN_QUEUE);
         if(orderSubmissionFee) this.user.increaseBalance(-this.user.costPerOrderSubmitted);
         if(await this.violatesPositionLimits()) {
             this.cancel(Order.VIOLATES_POSITION_LIMITS); return;
         }
-        await this.fill();
-    }
-
-    async fill() {
-        this.setStatus(Order.NOT_FILLED);
     }
 
     cancel(cancelledReason) {
         if(this.status == Order.CANCELLED) throw new Error('Order is already cancelled');
-        if(this.status == Order.COMPLETELY_FILLED) throw new Error('Order is already filled');
+        if(this.status == Order.COMPLETELY_FILLED) throw new Error('Order is already completed');
         this.setStatus(Order.CANCELLED, cancelledReason);
     }
 };

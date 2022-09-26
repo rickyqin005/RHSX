@@ -73,4 +73,11 @@ module.exports = class NormalOrder extends Order {
         }
         return false;
     }
+
+    async fill() {}
+
+    async submit(orderSubmissionFee) {
+        await super.submit(orderSubmissionFee);
+        await this.fill();
+    }
 };
