@@ -7,17 +7,16 @@ module.exports = class Market {
 
     constructor(args) {
         this._id = args._id;
-        this.isOpen = args.isOpen ?? undefined;
-        this.defaultStartingBalance = args.defaultStartingBalance;
-        this.defaultCostPerOrderSubmitted = args.defaultCostPerOrderSubmitted;
-        this.defaultCostPerShareTraded = args.defaultCostPerShareTraded;
-        this.defaultMinPositionLimit = args.defaultMinPositionLimit;
-        this.defaultMaxPositionLimit = args.defaultMaxPositionLimit;
     }
 
     async resolve() {
         const args = await Market.collection.findOne({ _id: this._id });
         this.isOpen = args.isOpen;
+        this.defaultStartingBalance = args.defaultStartingBalance;
+        this.defaultCostPerOrderSubmitted = args.defaultCostPerOrderSubmitted;
+        this.defaultCostPerShareTraded = args.defaultCostPerShareTraded;
+        this.defaultMinPositionLimit = args.defaultMinPositionLimit;
+        this.defaultMaxPositionLimit = args.defaultMaxPositionLimit;
         return this;
     }
 
