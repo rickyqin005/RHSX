@@ -7,6 +7,12 @@ module.exports = class Market {
 
     constructor(args) {
         this._id = args._id;
+        this.isOpen = args.isOpen ?? undefined;
+        this.defaultStartingBalance = args.defaultStartingBalance ?? undefined;
+        this.defaultCostPerOrderSubmitted = args.defaultCostPerOrderSubmitted ?? undefined;
+        this.defaultCostPerShareTraded = args.defaultCostPerShareTraded ?? undefined;
+        this.defaultMinPositionLimit = args.defaultMinPositionLimit ?? undefined;
+        this.defaultMaxPositionLimit = args.defaultMaxPositionLimit ?? undefined;
     }
 
     async resolve() {
