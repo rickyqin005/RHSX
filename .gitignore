@@ -1,3 +1,4 @@
 .env
 *.txt
 testing.js
+snapshot.json
