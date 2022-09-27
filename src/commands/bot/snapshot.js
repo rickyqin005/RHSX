@@ -16,7 +16,7 @@ module.exports = {
             traders: Array.from(Trader.cache.values()).map(trader => trader.toDBObject()),
             orders: Array.from(Order.cache.values()).map(order => order.toDBObject())
         }
-        const fileDir = path.join(__dirname, 'snapshot.json');
+        const fileDir = path.join(__dirname, '../../../storage/snapshot.json');
         await fs.writeFile(fileDir, JSON.stringify(obj, undefined, 4), () => {});
         return { files: [{ attachment: fileDir, name: 'snapshot.json' }] };
     }
