@@ -23,14 +23,22 @@ module.exports = class StopOrder extends Order {
         this.executedOrder = args.executedOrder;
     }
 
-    label() {
-        return StopOrder.LABEL;
-    }
-
     async resolve() {
         await super.resolve();
         this.executedOrder = Order.getOrder(this.executedOrder);
         return this;
+    }
+
+    toDBObject() {
+        const obj = Order.assignOrderType(this);
+        obj.user = obj.user._id;
+        obj.ticker = obj.ticker._id;
+        obj.executedOrder = obj.executedOrder._id;
+        return obj;
+    }
+
+    label() {
+        return StopOrder.LABEL;
     }
 
     toInfoString() {
@@ -47,14 +55,6 @@ module.exports = class StopOrder extends Order {
         super.validate();
         if(this.executedOrder.direction == Order.BUY && !(this.ticker.lastTradedPrice < this.triggerPrice)) throw new Error('Trigger price must be greater than the current price');
         if(this.executedOrder.direction == Order.SELL && !(this.triggerPrice < this.ticker.lastTradedPrice)) throw new Error('Trigger price must be less than the current price');
-    }
-
-    toDBObject() {
-        const obj = Order.assignOrderType(this);
-        obj.user = obj.user._id;
-        obj.ticker = obj.ticker._id;
-        obj.executedOrder = obj.executedOrder._id;
-        return obj;
     }
 
     submit() {

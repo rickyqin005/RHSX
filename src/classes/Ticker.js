@@ -38,6 +38,11 @@ module.exports = class Ticker {
         return this;
     }
 
+    toDBObject() {
+        const obj = new Ticker(this);
+        return obj;
+    }
+
     toString() {
         return this._id;
     }
@@ -60,11 +65,6 @@ module.exports = class Ticker {
             type: LimitOrder.TYPE,
             status: { $in: [Order.NOT_FILLED, Order.PARTIALLY_FILLED] }
         }, { price: 1, timestamp: 1 });
-    }
-
-    toDBObject() {
-        const obj = new Ticker(this);
-        return obj;
     }
 
     increaseVolume(quantity) {

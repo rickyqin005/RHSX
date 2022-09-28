@@ -134,6 +134,13 @@ module.exports = class Order {
         return this;
     }
 
+    toDBObject() {
+        const obj = Order.assignOrderType(this);
+        obj.user = obj.user._id;
+        obj.ticker = obj.ticker._id;
+        return obj;
+    }
+
     label() {}
 
     statusLabel() {
@@ -146,6 +153,17 @@ module.exports = class Order {
     }
 
     toInfoString() {}
+
+    statusString() {
+        let str = `Your ${this.label()}: \`${this.toInfoString()}\` is `;
+        if(this.status == Order.CANCELLED) {
+            if(this.cancelledReason == Order.UNFULFILLABLE) str += 'cancelled because it cannot be fulfilled';
+            else if(this.cancelledReason == Order.VIOLATES_POSITION_LIMITS) str += 'cancelled because it violates your position limits'
+            else str += 'cancelled';
+        } else if(this.status == Order.COMPLETELY_FILLED) str += 'completed';
+        else str += 'submitted';
+        return str;
+    }
 
     async toEmbed() {
         const { MessageEmbed } = require('discord.js');
@@ -168,17 +186,6 @@ module.exports = class Order {
         ];
     }
 
-    statusString() {
-        let str = `Your ${this.label()}: \`${this.toInfoString()}\` is `;
-        if(this.status == Order.CANCELLED) {
-            if(this.cancelledReason == Order.UNFULFILLABLE) str += 'cancelled because it cannot be fulfilled';
-            else if(this.cancelledReason == Order.VIOLATES_POSITION_LIMITS) str += 'cancelled because it violates your position limits'
-            else str += 'cancelled';
-        } else if(this.status == Order.COMPLETELY_FILLED) str += 'completed';
-        else str += 'submitted';
-        return str;
-    }
-
     setStatus(newStatus, cancelledReason) {
         if(!(Order.CANCELLED <= newStatus && newStatus <= Order.COMPLETELY_FILLED)) throw new Error('Invalid status');
         if(newStatus == this.status) return;
@@ -188,13 +195,6 @@ module.exports = class Order {
     }
 
     validate() {}
-
-    toDBObject() {
-        const obj = Order.assignOrderType(this);
-        obj.user = obj.user._id;
-        obj.ticker = obj.ticker._id;
-        return obj;
-    }
 
     async violatesPositionLimits() {
         return false;

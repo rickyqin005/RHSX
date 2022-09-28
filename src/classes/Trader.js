@@ -47,6 +47,18 @@ module.exports = class Trader {
         return this;
     }
 
+    toDBObject() {
+        const obj = new Trader(this);
+        return obj;
+    }
+
+    async templateEmbed() {
+        const { MessageEmbed } = require('discord.js');
+        return new MessageEmbed()
+            .setAuthor({ name: (await this.getDiscordUser()).tag })
+            .setColor('#3ba55d');
+    }
+
     async infoEmbed() {
         const embed = (await this.templateEmbed())
             .setTitle('Trader Info')
@@ -82,13 +94,6 @@ module.exports = class Trader {
         return embed;
     }
 
-    async templateEmbed() {
-        const { MessageEmbed } = require('discord.js');
-        return new MessageEmbed()
-            .setAuthor({ name: (await this.getDiscordUser()).tag })
-            .setColor('#3ba55d');
-    }
-
     async getDiscordUser() {
         return await global.discordClient.users.fetch(this._id);
     }
@@ -97,14 +102,9 @@ module.exports = class Trader {
         const Ticker = require('./Ticker');
         let accountValue = this.balance;
         for(const pos in this.positions) {
-            accountValue += this.positions[pos].quantity*(Ticker.getTicker(pos).lastTradedPrice);
+            accountValue += this.positions[pos].quantity*Ticker.getTicker(pos).lastTradedPrice;
         }
         return accountValue;
-    }
-
-    toDBObject() {
-        const obj = new Trader(this);
-        return obj;
     }
 
     increaseBalance(amount) {
