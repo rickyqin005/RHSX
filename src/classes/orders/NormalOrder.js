@@ -56,7 +56,7 @@ module.exports = class NormalOrder extends Order {
 
     async violatesPositionLimits() {
         const LimitOrder = require('./LimitOrder');
-        const currPosition = this.user.positions[this.ticker._id];
+        const currPosition = this.user.positions.get(this.ticker);
         const positionLimit = (this.direction == Order.BUY ? this.user.maxPositionLimit : this.user.minPositionLimit);
         let extremePosition = (currPosition == undefined ? 0 : currPosition.quantity) + this.getQuantityUnfilled()*this.netPositionChangeSign();
         if(Math.abs(extremePosition) > Math.abs(positionLimit)) return true;

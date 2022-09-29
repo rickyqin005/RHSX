@@ -23,16 +23,14 @@ module.exports = class StopOrder extends Order {
         this.executedOrder = args.executedOrder;
     }
 
-    async resolve() {
-        await super.resolve();
+    resolve() {
+        super.resolve();
         this.executedOrder = Order.getOrder(this.executedOrder);
         return this;
     }
 
     toDBObject() {
-        const obj = Order.assignOrderType(this);
-        obj.user = obj.user._id;
-        obj.ticker = obj.ticker._id;
+        const obj = super.toDBObject();
         obj.executedOrder = obj.executedOrder._id;
         return obj;
     }

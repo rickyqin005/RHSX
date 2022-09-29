@@ -5,6 +5,8 @@ module.exports = class Market {
     static collection = global.mongoClient.db('RHSX').collection('Market');
     static changedDocuments = new Set();
 
+    static initialize() {}
+
     constructor(args) {
         this._id = args._id;
         this.isOpen = args.isOpen ?? false;
@@ -15,7 +17,7 @@ module.exports = class Market {
         this.defaultMaxPositionLimit = args.defaultMaxPositionLimit ?? 0;
     }
 
-    async resolve() {
+    async fetchData() {
         const args = await Market.collection.findOne({ _id: this._id });
         this.isOpen = args.isOpen;
         this.defaultStartingBalance = args.defaultStartingBalance;

@@ -64,9 +64,21 @@ async function run() {
     console.log('Connected to MongoDB');
     await global.discordClient.login(process.env['BOT_TOKEN']);
     console.log(`Connected to Discord as ${global.discordClient.user.tag}`);
-    global.market = await new Market({ _id: 'market' }).resolve();
+    global.market = await new Market({ _id: 'market' }).fetchData();
     console.log(global.market);
-    for(const collectionClass of [Ticker, Trader, Order]) await collectionClass.load();
+    for(const dbClass of [Ticker, Trader, Order]) {
+        console.time(dbClass.name);
+        dbClass.cache.clear();
+        const objects = await dbClass.collection.find().toArray();
+        for(const object of objects) dbClass.cache.set(object._id, dbClass.assignOrderType(object));
+        console.timeEnd(dbClass.name);
+        console.log(`Cached ${dbClass.cache.size} ${dbClass.name}(s):`);
+        console.log(dbClass.cache);
+    }
+    for(const dbClass of [Ticker, Trader, Order]) {
+        for(const object of dbClass.cache.values()) object.resolve();
+        dbClass.initialize();
+    }
     await require('./actions/deploy_commands').run();
     await require('./actions/deploy_api').run();
     setTimeout(interactionHandler, 0);

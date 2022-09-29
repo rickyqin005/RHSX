@@ -5,8 +5,16 @@ module.exports = class Position {
         this.costBasis = args.costBasis ?? 0;
     }
 
-    calculateOpenPnL() {
+    resolve() {
         const Ticker = require('./Ticker');
-        return Ticker.getTicker(this.ticker).lastTradedPrice*this.quantity - this.costBasis;
+        this.ticker = Ticker.getTicker(this.ticker);
+    }
+
+    calculateMarketValue() {
+        return this.quantity*this.ticker.lastTradedPrice;
+    }
+
+    calculateOpenPnL() {
+        return this.ticker.lastTradedPrice*this.quantity - this.costBasis;
     }
 };

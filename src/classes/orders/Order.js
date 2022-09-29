@@ -70,17 +70,6 @@ module.exports = class Order {
     static changedDocuments = new Set();
     static cache = new Collection();
 
-    static async load() {
-        const startTime = new Date();
-        this.cache.clear();
-        const orders = await this.collection.find().toArray();
-        for(const order of orders) this.cache.set(order._id, this.assignOrderType(order));
-        for(const [id, order] of this.cache) await order.resolve();
-        const Ticker = require('../Ticker');
-        Ticker.getTickers().forEach(ticker => this.TICKER_CHOICES.push({ name: ticker._id, value: ticker._id }));
-        console.log(`Cached ${this.cache.size} Order(s), took ${new Date()-startTime}ms`);
-    }
-
     static assignOrderType(order) {
         const LimitOrder = require('./LimitOrder');
         const MarketOrder = require('./MarketOrder');
@@ -88,6 +77,11 @@ module.exports = class Order {
         if(order.type == LimitOrder.TYPE) return new LimitOrder(order);
         else if(order.type == MarketOrder.TYPE) return new MarketOrder(order);
         else if(order.type == StopOrder.TYPE) return new StopOrder(order);
+    }
+
+    static initialize() {
+        const Ticker = require('../Ticker');
+        Ticker.getTickers().forEach(ticker => this.TICKER_CHOICES.push({ name: ticker._id, value: ticker._id }));
     }
 
     static getOrder(_id) {
@@ -126,7 +120,7 @@ module.exports = class Order {
         this.cancelledReason = args.cancelledReason ?? undefined;
     }
 
-    async resolve() {
+    resolve() {
         const Trader = require('../Trader');
         const Ticker = require('../Ticker');
         this.user = Trader.getTrader(this.user);

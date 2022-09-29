@@ -9,14 +9,11 @@ module.exports = class Ticker {
     static changedDocuments = new Set();
     static cache = new Collection();
 
-    static async load() {
-        const startTime = new Date();
-        this.cache.clear();
-        const tickers = await this.collection.find().toArray();
-        for(const ticker of tickers) this.cache.set(ticker._id, new Ticker(ticker));
-        for(const [id, ticker] of this.cache) await ticker.resolve();
-        console.log(`Cached ${this.cache.size} Ticker(s), took ${new Date()-startTime}ms`);
+    static assignOrderType(ticker) {
+        return new Ticker(ticker);
     }
+
+    static initialize() {}
 
     static getTicker(_id) {
         const res = this.cache.get(_id);
@@ -34,7 +31,7 @@ module.exports = class Ticker {
         this.volume = args.volume ?? 0;
     }
 
-    async resolve() {
+    resolve() {
         return this;
     }
 

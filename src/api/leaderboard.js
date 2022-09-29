@@ -22,7 +22,7 @@ module.exports = {
             res.traders.push({
                 username: (await trader.getDiscordUser()).tag,
                 accountValue: trader.getAccountValue(),
-                positions: trader.positions
+                positions: Array.from(trader.positions.values())
             });
         }
         res.traders.sort((a, b) => (b.accountValue - a.accountValue));

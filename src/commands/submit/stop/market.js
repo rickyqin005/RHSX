@@ -13,7 +13,7 @@ module.exports = {
     execute: async function (interaction) {
         if(!global.market.isOpen) throw Market.ERROR.MARKET_CLOSED;
         const trader = Trader.getTrader(interaction.user.id);
-        const executedOrder = await Order.assignOrderType({
+        const executedOrder = Order.assignOrderType({
             type: MarketOrder.TYPE,
             user: interaction.user.id,
             direction: interaction.options.getString('direction'),
@@ -21,7 +21,7 @@ module.exports = {
             quantity: interaction.options.getInteger('quantity')
         }).resolve();
         Order.cache.set(executedOrder._id, executedOrder);
-        const order = await Order.assignOrderType({
+        const order = Order.assignOrderType({
             type: StopOrder.TYPE,
             user: interaction.user.id,
             direction: interaction.options.getString('direction'),
