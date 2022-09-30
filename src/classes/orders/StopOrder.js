@@ -40,12 +40,12 @@ module.exports = class StopOrder extends Order {
     }
 
     toInfoString() {
-        return `#${this._id}, ${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
+        return `#${this._id}, ${this.ticker._id} @${Price.format(this.triggerPrice)}, ${this.executedOrder.toStopString()}`;
     }
 
     toOrderQueryEmbedFields() {
         const fields = super.toOrderQueryEmbedFields();
-        fields.push({ name: `${this.executedOrder.ticker} @${Price.format(this.triggerPrice)}`, value: `**${this.executedOrder.toStopString()}**`, inline: true });
+        fields.push({ name: `${this.ticker._id} @${Price.format(this.triggerPrice)}`, value: `**${this.executedOrder.toStopString()}**`, inline: true });
         return fields;
     }
 

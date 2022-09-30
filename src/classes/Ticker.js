@@ -36,12 +36,8 @@ module.exports = class Ticker {
     }
 
     toDBObject() {
-        const obj = new Ticker(this);
+        const obj = Object.assign({}, this);
         return obj;
-    }
-
-    toString() {
-        return this._id;
     }
 
     async getBids() {

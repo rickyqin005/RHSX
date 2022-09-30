@@ -7,8 +7,6 @@ const { PermissionFlagsBits } = require('discord-api-types/v10');
 const fs = require('fs');
 const path = require('path');
 
-const { Order, NormalOrder, LimitOrder, StopOrder } = require('../rhsx');
-
 function deployCommands(dir) {
     const commands = [];
     const NO_DESCRIPTION = '.';

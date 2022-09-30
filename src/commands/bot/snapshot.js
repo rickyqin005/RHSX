@@ -11,7 +11,7 @@ module.exports = {
     execute: async function (interaction) {
         const obj = {
             timestamp: new Date(),
-            market: global.market,
+            market: global.market.toDBObject(),
             tickers: Array.from(Ticker.cache.values()).map(ticker => ticker.toDBObject()),
             traders: Array.from(Trader.cache.values()).map(trader => trader.toDBObject()),
             orders: Array.from(Order.cache.values()).map(order => order.toDBObject())

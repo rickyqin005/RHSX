@@ -12,7 +12,7 @@ module.exports = {
             throw Trader.ERROR.ALREADY_A_TRADER;
         } catch(error) {
             if(error == Trader.ERROR.NOT_A_TRADER) {
-                const newTrader = new Trader({ _id: interaction.user.id });
+                const newTrader = new Trader({ _id: interaction.user.id }).resolve();
                 Trader.changedDocuments.add(newTrader);
                 Trader.cache.set(newTrader._id, newTrader);
                 return { content: 'You\'re now a trader.' };

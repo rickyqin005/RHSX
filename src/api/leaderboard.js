@@ -7,22 +7,23 @@ module.exports = {
             market: {
                 isOpen: global.market.isOpen
             },
-            tickers: {},
+            tickers: [],
             traders: []
         };
         const tickers = Ticker.getTickers();
         for(const ticker of tickers) {
-            res.tickers[ticker._id] = {
+            res.tickers.push({
                 lastTradedPrice: ticker.lastTradedPrice,
                 volume: ticker.volume
-            };
+            });
         }
         const traders = Trader.getTraders();
         for(const trader of traders) {
             res.traders.push({
+                id: trader._id,
                 username: (await trader.getDiscordUser()).tag,
                 accountValue: trader.getAccountValue(),
-                positions: Array.from(trader.positions.values())
+                positions: Array.from(trader.positions.values()).map(position => position.toDBObject())
             });
         }
         res.traders.sort((a, b) => (b.accountValue - a.accountValue));

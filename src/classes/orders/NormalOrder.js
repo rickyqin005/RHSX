@@ -1,5 +1,4 @@
 const Order = require('./Order');
-const Position = require('../Position');
 const { SlashCommandIntegerOption } = require('@discordjs/builders');
 
 module.exports = class NormalOrder extends Order {
@@ -32,6 +31,7 @@ module.exports = class NormalOrder extends Order {
     }
 
     increaseQuantityFilled(amount, price) {
+        const Position = require('../Position');
         this.quantityFilled += amount;
         Order.changedDocuments.add(this);
         if(this.quantityFilled == 0) this.setStatus(Order.NOT_FILLED);
@@ -41,11 +41,10 @@ module.exports = class NormalOrder extends Order {
             ticker: this.ticker._id,
             quantity: amount*this.netPositionChangeSign(),
             costBasis: amount*this.netPositionChangeSign()*price
-        }));
+        }).resolve());
     }
 
     match(existingOrder) {
-        const Ticker = require('../Ticker');
         const quantity = Math.min(this.getQuantityUnfilled(), existingOrder.getQuantityUnfilled());
         const price = existingOrder.price;
         existingOrder.increaseQuantityFilled(quantity, price);

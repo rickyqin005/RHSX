@@ -30,7 +30,7 @@ module.exports = class Trader {
     constructor(args) {
         this._id = args._id;
         this.balance = args.balance ?? global.market.defaultStartingBalance;
-        this.positions = args.positions ?? {};
+        this.positions = args.positions ?? [];
         this.joined = args.joined ?? new Date();
         this.costPerOrderSubmitted = args.costPerOrderSubmitted ?? global.market.defaultCostPerOrderSubmitted;
         this.costPerShareTraded = args.costPerShareTraded ?? global.market.defaultCostPerShareTraded;
@@ -43,12 +43,14 @@ module.exports = class Trader {
         const Position = require('./Position');
         const positions = this.positions;
         this.positions = new Map();
-        for(const pos in positions) this.positions.set(Ticker.getTicker(pos), new Position(positions[pos]).resolve());
+        for(const position of positions) {
+            this.positions.set(Ticker.getTicker(position.ticker), new Position(position).resolve());
+        }
         return this;
     }
 
     toDBObject() {
-        const obj = new Trader(this);
+        const obj = Object.assign({}, this);
         obj.positions = Array.from(obj.positions.values()).map(position => position.toDBObject());
         return obj;
     }
@@ -124,8 +126,8 @@ module.exports = class Trader {
                 currPos.costBasis = currPos.quantity*posPrice;
             }
         }
-        this.balance -= pos.costBasis;
-        this.balance -= Math.abs(pos.quantity)*this.costPerShareTraded;
+        this.increaseBalance(-pos.costBasis);
+        this.increaseBalance(-Math.abs(pos.quantity)*this.costPerShareTraded);
         if(this.positions.get(pos.ticker).quantity == 0) this.positions.delete(pos.ticker);
         Trader.changedDocuments.add(this);
     }

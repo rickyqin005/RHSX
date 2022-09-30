@@ -28,7 +28,7 @@ module.exports = class LimitOrder extends NormalOrder {
     }
 
     toInfoString() {
-        return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`;
+        return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker._id} @${Price.format(this.price)}`;
     }
 
     toStopString() {
@@ -37,7 +37,7 @@ module.exports = class LimitOrder extends NormalOrder {
 
     toOrderQueryEmbedFields() {
         const fields = super.toOrderQueryEmbedFields();
-        fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker} @${Price.format(this.price)}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
+        fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker._id} @${Price.format(this.price)}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
         return fields;
     }
 

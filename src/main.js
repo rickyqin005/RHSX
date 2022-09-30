@@ -72,12 +72,14 @@ async function run() {
         const objects = await dbClass.collection.find().toArray();
         for(const object of objects) dbClass.cache.set(object._id, dbClass.assignOrderType(object));
         console.timeEnd(dbClass.name);
-        console.log(`Cached ${dbClass.cache.size} ${dbClass.name}(s):`);
-        console.log(dbClass.cache);
     }
     for(const dbClass of [Ticker, Trader, Order]) {
         for(const object of dbClass.cache.values()) object.resolve();
         dbClass.initialize();
+        console.log(`Cached ${dbClass.cache.size} ${dbClass.name}(s)`);
+    }
+    for(const dbClass of [Ticker, Trader, Order]) {
+        for(const object of dbClass.cache.values()) console.log(object);
     }
     await require('./actions/deploy_commands').run();
     await require('./actions/deploy_api').run();

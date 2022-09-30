@@ -8,6 +8,13 @@ module.exports = class Position {
     resolve() {
         const Ticker = require('./Ticker');
         this.ticker = Ticker.getTicker(this.ticker);
+        return this;
+    }
+
+    toDBObject() {
+        const obj = Object.assign({}, this);
+        obj.ticker = obj.ticker._id;
+        return obj;
     }
 
     calculateMarketValue() {

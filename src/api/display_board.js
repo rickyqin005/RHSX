@@ -7,16 +7,17 @@ module.exports = {
             market: {
                 isOpen: global.market.isOpen
             },
-            tickers: {}
+            tickers: []
         };
         const tickers = Ticker.getTickers();
         for(const ticker of tickers) {
-            res.tickers[ticker._id] = {
+            res.tickers.push({
+                id: ticker._id,
                 lastTradedPrice: ticker.lastTradedPrice,
                 volume: ticker.volume,
                 bids: [],
                 asks: []
-            };
+            });
         }
         (await Order.collection.aggregate([
             { $match: {
@@ -45,20 +46,26 @@ module.exports = {
             let prevPrice = Number.MAX_SAFE_INTEGER;
             for(const bid of ticker.bids) {
                 if(bid.price != prevPrice) {
-                    res.tickers[ticker._id].bids.push({ price: bid.price, quantity: bid.quantity });
+                    res.tickers.find(element => element.id == ticker._id).bids.push({
+                        price: bid.price,
+                        quantity: bid.quantity
+                    });
                     prevPrice = bid.price;
                 } else {
-                    const lastBid = res.tickers[ticker._id].bids[res.tickers[ticker._id].bids.length-1];
+                    const lastBid = res.tickers.find(element => element.id == ticker._id).bids.at(-1);
                     lastBid.quantity += bid.quantity;
                 }
             }
             prevPrice = Number.MAX_SAFE_INTEGER;
             for(const ask of ticker.asks) {
                 if(ask.price != prevPrice) {
-                    res.tickers[ticker._id].asks.push({ price: ask.price, quantity: ask.quantity });
+                    res.tickers.find(element => element.id == ticker._id).asks.push({
+                        price: ask.price,
+                        quantity: ask.quantity
+                    });
                     prevPrice = ask.price;
                 } else {
-                    const lastAsk = res.tickers[ticker._id].asks[res.tickers[ticker._id].asks.length-1];
+                    const lastAsk = res.tickers.find(element => element.id == ticker._id).asks.at(-1);
                     lastAsk.quantity += ask.quantity;
                 }
             }

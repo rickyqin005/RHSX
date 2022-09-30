@@ -129,7 +129,7 @@ module.exports = class Order {
     }
 
     toDBObject() {
-        const obj = Order.assignOrderType(this);
+        const obj = Object.assign({}, this);
         obj.user = obj.user._id;
         obj.ticker = obj.ticker._id;
         return obj;

@@ -29,7 +29,7 @@ module.exports = class Market {
     }
 
     toDBObject() {
-        const obj = new Market(this);
+        const obj = Object.assign({}, this);
         return obj;
     }
 

@@ -14,7 +14,7 @@ module.exports = class MarketOrder extends NormalOrder {
     }
 
     toInfoString() {
-        return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker}`;
+        return `#${this._id}, ${this.direction} x${this.quantity} ${this.ticker._id}`;
     }
 
     toStopString() {
@@ -23,7 +23,7 @@ module.exports = class MarketOrder extends NormalOrder {
 
     toOrderQueryEmbedFields() {
         const fields = super.toOrderQueryEmbedFields();
-        fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
+        fields.push({ name: `${this.direction} x${this.quantity} ${this.ticker._id}`, value: `**(x${this.quantityFilled} filled)**`, inline: true });
         return fields;
     }
 
