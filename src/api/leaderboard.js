@@ -13,6 +13,7 @@ module.exports = {
         const tickers = Ticker.getTickers();
         for(const ticker of tickers) {
             res.tickers.push({
+                id: ticker._id,
                 lastTradedPrice: ticker.lastTradedPrice,
                 volume: ticker.volume
             });
