@@ -23,14 +23,14 @@ module.exports = class StopOrder extends Order {
         this.executedOrder = args.executedOrder;
     }
 
-    resolve() {
-        super.resolve();
+    deserialize() {
+        super.deserialize();
         this.executedOrder = Order.getOrder(this.executedOrder);
         return this;
     }
 
-    toDBObject() {
-        const obj = super.toDBObject();
+    serialize() {
+        const obj = super.serialize();
         obj.executedOrder = obj.executedOrder._id;
         return obj;
     }

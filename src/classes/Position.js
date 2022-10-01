@@ -5,13 +5,13 @@ module.exports = class Position {
         this.costBasis = args.costBasis ?? 0;
     }
 
-    resolve() {
+    deserialize() {
         const Ticker = require('./Ticker');
         this.ticker = Ticker.getTicker(this.ticker);
         return this;
     }
 
-    toDBObject() {
+    serialize() {
         const obj = Object.assign({}, this);
         obj.ticker = obj.ticker._id;
         return obj;

@@ -18,7 +18,7 @@ module.exports = {
             direction: interaction.options.getString('direction'),
             ticker: interaction.options.getString('ticker'),
             quantity: interaction.options.getInteger('quantity')
-        }).resolve();
+        }).deserialize();
         Order.cache.set(order._id, order);
         order.submit();
         await order.process();

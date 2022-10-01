@@ -120,7 +120,7 @@ module.exports = class Order {
         this.cancelledReason = args.cancelledReason ?? undefined;
     }
 
-    resolve() {
+    deserialize() {
         const Trader = require('../Trader');
         const Ticker = require('../Ticker');
         this.user = Trader.getTrader(this.user);
@@ -128,7 +128,7 @@ module.exports = class Order {
         return this;
     }
 
-    toDBObject() {
+    serialize() {
         const obj = Object.assign({}, this);
         obj.user = obj.user._id;
         obj.ticker = obj.ticker._id;

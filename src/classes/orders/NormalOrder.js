@@ -41,7 +41,7 @@ module.exports = class NormalOrder extends Order {
             ticker: this.ticker._id,
             quantity: amount*this.netPositionChangeSign(),
             costBasis: amount*this.netPositionChangeSign()*price
-        }).resolve());
+        }).deserialize());
     }
 
     match(existingOrder) {

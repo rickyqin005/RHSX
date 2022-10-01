@@ -21,7 +21,7 @@ module.exports = {
             ticker: interaction.options.getString('ticker'),
             quantity: interaction.options.getInteger('quantity'),
             price: Price.toPrice(interaction.options.getNumber('limit_price'))
-        }).resolve();
+        }).deserialize();
         Order.cache.set(executedOrder._id, executedOrder);
         const order = Order.assignOrderType({
             type: StopOrder.TYPE,
@@ -30,7 +30,7 @@ module.exports = {
             ticker: interaction.options.getString('ticker'),
             triggerPrice: Price.toPrice(interaction.options.getNumber('trigger_price')),
             executedOrder: executedOrder._id
-        }).resolve();
+        }).deserialize();
         Order.cache.set(order._id, order);
         order.submit();
         await order.process();

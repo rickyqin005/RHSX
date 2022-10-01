@@ -11,10 +11,10 @@ module.exports = {
     execute: async function (interaction) {
         const obj = {
             timestamp: new Date(),
-            market: global.market.toDBObject(),
-            tickers: Array.from(Ticker.cache.values()).map(ticker => ticker.toDBObject()),
-            traders: Array.from(Trader.cache.values()).map(trader => trader.toDBObject()),
-            orders: Array.from(Order.cache.values()).map(order => order.toDBObject())
+            market: global.market.serialize(),
+            tickers: Array.from(Ticker.cache.values()).map(ticker => ticker.serialize()),
+            traders: Array.from(Trader.cache.values()).map(trader => trader.serialize()),
+            orders: Array.from(Order.cache.values()).map(order => order.serialize())
         }
         const fileDir = path.join(__dirname, `../../../../storage/snapshot${Date.now()}.json`);
         await fs.writeFile(fileDir, JSON.stringify(obj, undefined, 4), () => {});

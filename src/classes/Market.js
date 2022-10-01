@@ -28,7 +28,7 @@ module.exports = class Market {
         return this;
     }
 
-    toDBObject() {
+    serialize() {
         const obj = Object.assign({}, this);
         return obj;
     }

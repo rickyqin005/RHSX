@@ -32,7 +32,7 @@ const interactionHandler = async function () {
                     for(const document of changedDocuments) {
                         writes.push({ replaceOne: {
                             filter: { _id: document._id },
-                            replacement: document.toDBObject(),
+                            replacement: document.serialize(),
                             upsert: true
                         } });
                     }
@@ -74,7 +74,7 @@ async function run() {
         console.timeEnd(dbClass.name);
     }
     for(const dbClass of [Ticker, Trader, Order]) {
-        for(const object of dbClass.cache.values()) object.resolve();
+        for(const object of dbClass.cache.values()) object.deserialize();
         dbClass.initialize();
         console.log(`Cached ${dbClass.cache.size} ${dbClass.name}(s)`);
     }

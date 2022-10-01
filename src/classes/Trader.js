@@ -38,20 +38,20 @@ module.exports = class Trader {
         this.maxPositionLimit = args.maxPositionLimit ?? global.market.defaultMaxPositionLimit;
     }
 
-    resolve() {
+    deserialize() {
         const Ticker = require('./Ticker');
         const Position = require('./Position');
         const positions = this.positions;
         this.positions = new Map();
         for(const position of positions) {
-            this.positions.set(Ticker.getTicker(position.ticker), new Position(position).resolve());
+            this.positions.set(Ticker.getTicker(position.ticker), new Position(position).deserialize());
         }
         return this;
     }
 
-    toDBObject() {
+    serialize() {
         const obj = Object.assign({}, this);
-        obj.positions = Array.from(obj.positions.values()).map(position => position.toDBObject());
+        obj.positions = Array.from(obj.positions.values()).map(position => position.serialize());
         return obj;
     }
 

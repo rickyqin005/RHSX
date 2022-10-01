@@ -24,7 +24,7 @@ module.exports = {
                 id: trader._id,
                 username: (await trader.getDiscordUser()).tag,
                 accountValue: trader.getAccountValue(),
-                positions: Array.from(trader.positions.values()).map(position => position.toDBObject())
+                positions: Array.from(trader.positions.values()).map(position => position.serialize())
             });
         }
         res.traders.sort((a, b) => (b.accountValue - a.accountValue));

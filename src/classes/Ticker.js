@@ -31,11 +31,11 @@ module.exports = class Ticker {
         this.volume = args.volume ?? 0;
     }
 
-    resolve() {
+    deserialize() {
         return this;
     }
 
-    toDBObject() {
+    serialize() {
         const obj = Object.assign({}, this);
         return obj;
     }
