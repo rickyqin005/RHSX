@@ -3,7 +3,7 @@ const { Trader } = require('../../rhsx');
 
 module.exports = {
     data: new SlashCommandSubcommandBuilder()
-        .setName('position')
+        .setName('positions')
         .setDescription('View your positions'),
     ephemeral: true,
     execute: async function (interaction) {
