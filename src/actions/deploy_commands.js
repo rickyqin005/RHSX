@@ -41,7 +41,7 @@ function deployCommands(dir) {
 
 module.exports = {
     run: async function () {
-        const commands = deployCommands(path.join(__dirname, '../', 'commands'));
+        const commands = deployCommands(path.join(__dirname, '../', 'interactions/command'));
         commands.forEach(command => command = command.toJSON());
         for(const [guildId, guild] of global.discordClient.guilds.cache) {
             await rest.put(Routes.applicationGuildCommands(global.discordClient.user.id, guildId), { body: commands });

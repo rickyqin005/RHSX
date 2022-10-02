@@ -1,4 +1,4 @@
-const { Order, Ticker, Trader } = require('../../../rhsx');
+const { Order, Ticker, Trader } = require('../../../../rhsx');
 const { SlashCommandSubcommandBuilder } = require('@discordjs/builders');
 const fs = require('fs');
 const path = require('path');
@@ -16,7 +16,7 @@ module.exports = {
             traders: Array.from(Trader.cache.values()).map(trader => trader.serialize()),
             orders: Array.from(Order.cache.values()).map(order => order.serialize())
         }
-        const fileDir = path.join(__dirname, `../../../../storage/snapshot${Date.now()}.json`);
+        const fileDir = path.join(__dirname, `../../../../../storage/snapshot${Date.now()}.json`);
         await fs.writeFile(fileDir, JSON.stringify(obj, undefined, 4), () => {});
         return { files: [{ attachment: fileDir, name: 'snapshot.json' }] };
     }

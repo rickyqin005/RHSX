@@ -1,5 +1,5 @@
 const { SlashCommandSubcommandBuilder } = require('@discordjs/builders');
-const { Market, Trader, Order, NormalOrder, LimitOrder, StopOrder, Price } = require('../../../rhsx');
+const { Market, Trader, Order, NormalOrder, LimitOrder, StopOrder, Price } = require('../../../../rhsx');
 
 module.exports = {
     data: new SlashCommandSubcommandBuilder()

@@ -11,7 +11,7 @@ const { Market, Order, Ticker, Trader, Tools } = require('./rhsx');
 const interactionList = [];
 
 function getCommandPath(interaction) {
-    let path = `./commands/${interaction.commandName}`;
+    let path = `./interactions/command/${interaction.commandName}`;
     if(interaction.options.getSubcommandGroup(false) != null) path += `/${interaction.options.getSubcommandGroup()}`;
     if(interaction.options.getSubcommand(false) != null) path += `/${interaction.options.getSubcommand()}`;
     return path;
