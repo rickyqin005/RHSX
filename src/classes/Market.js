@@ -15,6 +15,7 @@ module.exports = class Market {
         this.defaultCostPerShareTraded = args.defaultCostPerShareTraded ?? 0;
         this.defaultMinPositionLimit = args.defaultMinPositionLimit ?? 0;
         this.defaultMaxPositionLimit = args.defaultMaxPositionLimit ?? 0;
+        this.botActivity = args.botActivity ?? undefined;
     }
 
     async fetchData() {
@@ -25,6 +26,7 @@ module.exports = class Market {
         this.defaultCostPerShareTraded = args.defaultCostPerShareTraded;
         this.defaultMinPositionLimit = args.defaultMinPositionLimit;
         this.defaultMaxPositionLimit = args.defaultMaxPositionLimit;
+        this.botActivity = args.botActivity ?? undefined;
         return this;
     }
 

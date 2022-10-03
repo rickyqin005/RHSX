@@ -69,6 +69,7 @@ async function run() {
     console.log(`Connected to Discord as ${global.discordClient.user.tag}`);
     global.market = await new Market({ _id: 'market' }).fetchData();
     console.log(global.market);
+    global.discordClient.user.setActivity(global.market.botActivity);
     for(const dbClass of [Ticker, Trader, Order]) {
         console.time(dbClass.name);
         dbClass.cache.clear();
