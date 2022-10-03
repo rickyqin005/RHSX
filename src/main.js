@@ -8,7 +8,7 @@ const { Client, Intents } = require('discord.js');
 global.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
 const { Market, Order, Ticker, Trader, Tools } = require('./rhsx');
-const interactionList = [];
+const commandInteractions = [];
 
 function getCommandPath(interaction) {
     let path = `./interactions/command/${interaction.commandName}`;
@@ -18,8 +18,8 @@ function getCommandPath(interaction) {
 }
 
 const interactionHandler = async function () {
-    while(interactionList.length > 0) {
-        const interaction = interactionList.splice(0, 1)[0];
+    while(commandInteractions.length > 0) {
+        const interaction = commandInteractions.splice(0, 1)[0];
         const mongoSession = global.mongoClient.startSession();
         const path = getCommandPath(interaction);
         console.time(path);
@@ -52,10 +52,13 @@ const interactionHandler = async function () {
 }
 
 global.discordClient.on('interactionCreate', async interaction => {
-    if(!interaction.isCommand()) return;
-    const command = require(getCommandPath(interaction));
-    await interaction.deferReply({ ephemeral: command.ephemeral });
-    interactionList.push(interaction);
+    if(interaction.isButton()) {
+        await require(`./interactions/button/${interaction.component.customId}`).execute(interaction);
+    } else if(interaction.isCommand()) {
+        const command = require(getCommandPath(interaction));
+        await interaction.deferReply({ ephemeral: command.ephemeral });
+        commandInteractions.push(interaction);
+    }
 });
 
 async function run() {
