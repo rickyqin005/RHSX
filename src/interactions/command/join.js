@@ -6,6 +6,9 @@ module.exports = {
         .setName('join')
         .setDescription('Become a trader'),
     ephemeral: false,
+    writesToDB: false,
+    hasInteractiveMessage: false,
+
     execute: async function (interaction) {
         try {
             const trader = Trader.getTrader(interaction.user.id);

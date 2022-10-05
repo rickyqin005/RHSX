@@ -6,6 +6,9 @@ module.exports = {
         .setName('info')
         .setDescription('View general account info'),
     ephemeral: true,
+    writesToDB: false,
+    hasInteractiveMessage: false,
+
     execute: async function (interaction) {
         const trader = Trader.getTrader(interaction.user.id);
         return { embeds: [await trader.infoEmbed()] };

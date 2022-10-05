@@ -8,7 +8,7 @@ const { Client, Intents } = require('discord.js');
 global.discordClient = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
 const { Market, Order, Ticker, Trader, Tools } = require('./rhsx');
-const commandInteractions = [];
+const commandInteractionsQueue = [];
 
 function getCommandPath(interaction) {
     let path = `./interactions/command/${interaction.commandName}`;
@@ -18,14 +18,15 @@ function getCommandPath(interaction) {
 }
 
 const interactionHandler = async function () {
-    while(commandInteractions.length > 0) {
-        const interaction = commandInteractions.splice(0, 1)[0];
+    while(commandInteractionsQueue.length > 0) {
+        const interaction = commandInteractionsQueue.splice(0, 1)[0];
         const mongoSession = global.mongoClient.startSession();
         const path = getCommandPath(interaction);
+        const command = require(path);
         console.time(path);
         await mongoSession.withTransaction(async () => {
             try {
-                interaction.editReply(await require(path).execute(interaction));
+                interaction.editReply(await command.execute(interaction)).then(msg => console.log(msg));
                 const collectionClasses = [Market, Order, Ticker, Trader].filter(element => element.changedDocuments.size > 0);
                 for(const { collection, changedDocuments } of collectionClasses) {
                     const writes = [];
@@ -57,7 +58,7 @@ global.discordClient.on('interactionCreate', async interaction => {
     } else if(interaction.isCommand()) {
         const command = require(getCommandPath(interaction));
         await interaction.deferReply({ ephemeral: command.ephemeral });
-        commandInteractions.push(interaction);
+        commandInteractionsQueue.push(interaction);
     }
 });
 

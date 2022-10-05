@@ -10,6 +10,9 @@ module.exports = {
         .addStringOption(Order.OPTION.TICKER())
         .addStringOption(Order.OPTION.STATUS()),
     ephemeral: true,
+    writesToDB: false,
+    hasInteractiveMessage: false,
+
     execute: async function (interaction) {
         const trader = Trader.getTrader(interaction.user.id);
         const type = interaction.options.getString('type');

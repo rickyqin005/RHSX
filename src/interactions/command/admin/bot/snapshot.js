@@ -8,6 +8,9 @@ module.exports = {
         .setName('snapshot')
         .setDescription('Returns the objects currently stored in the bot\'s cache'),
     ephemeral: true,
+    writesToDB: false,
+    hasInteractiveMessage: false,
+
     execute: async function (interaction) {
         const obj = {
             timestamp: new Date(),

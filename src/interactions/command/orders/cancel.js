@@ -7,6 +7,9 @@ module.exports = {
         .setDescription('Cancel an order')
         .addStringOption(Order.OPTION.ID().setRequired(true)),
     ephemeral: false,
+    writesToDB: true,
+    hasInteractiveMessage: false,
+
     execute: async function (interaction) {
         const trader = Trader.getTrader(interaction.user.id);
         const order = await Order.queryOrder({

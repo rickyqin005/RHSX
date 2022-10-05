@@ -11,6 +11,9 @@ module.exports = {
         .addIntegerOption(NormalOrder.OPTION.QUANTITY().setRequired(true))
         .addNumberOption(LimitOrder.OPTION.PRICE().setRequired(true)),
     ephemeral: false,
+    writesToDB: true,
+    hasInteractiveMessage: false,
+
     execute: async function (interaction) {
         if(!global.market.isOpen) throw Market.ERROR.MARKET_CLOSED;
         const trader = Trader.getTrader(interaction.user.id);

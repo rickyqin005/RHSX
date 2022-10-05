@@ -7,6 +7,9 @@ module.exports = {
         .setDescription('Find a specific order')
         .addStringOption(Order.OPTION.ID().setRequired(true)),
     ephemeral: true,
+    writesToDB: false,
+    hasInteractiveMessage: false,
+
     execute: async function (interaction) {
         const trader = Trader.getTrader(interaction.user.id);
         const order = await Order.queryOrder({
